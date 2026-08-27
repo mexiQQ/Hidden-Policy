@@ -19,6 +19,10 @@ iclr2027_conference.sty
 # Local PDF render previews
 tmp/
 
+# Local reviewer drafts shared across browsers
+reviewer/.review-drafts.json
+reviewer/.review-drafts.json.tmp
+
 # OS / editor
 .DS_Store
 .vscode/
