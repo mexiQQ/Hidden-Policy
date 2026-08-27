@@ -9,7 +9,7 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{booktabs}
-\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{amsmath,amssymb,amsthm,mathtools,centernot}
 \usepackage{microtype}
 \usepackage{xspace}
 
@@ -180,13 +180,15 @@ Frontier-safety frameworks increasingly organize preparedness around domains suc
 
 This produces a common structure across apparently different risks:
 \begin{equation}
-    \text{capability exists}
-    \quad\longrightarrow\quad
-    \text{condition is recognized}
-    \quad\longrightarrow\quad
-    \text{policy selects whether/how to use it}
-    \quad\longrightarrow\quad
-    \text{realized behavior and risk}.
+    \begin{aligned}
+        \text{capability exists}
+        &\quad\longrightarrow\quad
+        \text{condition is recognized} \\
+        &\quad\longrightarrow\quad
+        \text{policy selects whether/how to use it}
+        \quad\longrightarrow\quad
+        \text{realized behavior and risk}.
+    \end{aligned}
     \label{eq:risk-chain}
 \end{equation}
 Equation~\ref{eq:risk-chain} does not claim that every frontier risk is caused by a hidden policy. Rather, it identifies a cross-cutting mechanism that can sit between dangerous capability and realized harm.
