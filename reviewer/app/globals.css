@@ -161,7 +161,12 @@ del { padding: 1px 2px; color: #56323b; background: var(--pink); text-decoration
 .revision-panel-header > button { width: 28px; height: 28px; flex: 0 0 auto; padding: 0; border: 1px solid #d3d5d1; border-radius: 50%; color: #656963; background: #fff; cursor: pointer; font-size: 18px; line-height: 25px; }
 .revision-panel-header > button:hover { color: #20231f; background: #f1f2ef; }
 .revision-guidance { margin: 12px 0 16px; color: #6e746f; font-size: 11px; line-height: 1.45; }
+.editor-format-toolbar { margin: 0 0 7px; display: flex; align-items: center; gap: 9px; color: #788079; font-size: 10px; }
+.editor-format-toolbar button { width: 29px; height: 27px; flex: 0 0 auto; padding: 0; border: 1px solid #b8c2ca; border-radius: 5px; color: #263746; background: #f8fafb; cursor: pointer; font-family: "Times New Roman", Times, serif; font-size: 16px; }
+.editor-format-toolbar button:hover, .editor-format-toolbar button:focus-visible { border-color: #527da3; color: #174f80; background: #eaf3fa; outline: none; box-shadow: 0 0 0 2px #5d8cbb25; }
 .revision-input { width: 100%; min-height: 150px; max-height: calc(100vh - 300px); margin: 0; padding: 12px; overflow: auto; resize: none; outline-width: 1px; font: 14px/1.55 "Times New Roman", Times, serif; text-align: left; }
+.revision-input strong, .revision-input b, .editable-bold { font-weight: 700; }
+.format-change { font-weight: 700; }
 .revision-panel .edit-note { margin: 9px 0 0; font-size: 10px; }
 .revision-panel-footer { margin-top: 16px; padding-top: 12px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e4e5e1; }
 .revision-panel-footer button { padding: 7px 11px; border: 1px solid; border-radius: 5px; cursor: pointer; font-size: 11px; }

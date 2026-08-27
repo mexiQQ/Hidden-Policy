@@ -18,10 +18,11 @@ Open <http://localhost:3000>.
 
 1. Click an editable paragraph or formula to open the docked revision editor on the right.
 2. Keep the green/pink tracked diff visible on the paper while you continue editing; paragraph highlights update as you type.
-3. Press Command/Ctrl+Enter or click **Update draft** to finish editing.
-4. Insertions appear on green; deletions appear on pink with a strike-through.
-5. Click **✓** to rebuild the PDF and commit only `main.tex`.
-6. Click **×** to discard that proposed change and restore the original text.
+3. Select text and click **B**, or press Command/Ctrl+B, to add or remove LaTeX bold formatting.
+4. Press Command/Ctrl+Enter or click **Update draft** to finish editing.
+5. Insertions and added bold formatting appear on green; deletions appear on pink with a strike-through.
+6. Click **✓** to rebuild the PDF and commit only `main.tex`.
+7. Click **×** to discard that proposed change and restore the original text.
 
 Drag the panel's left grip to change its width. Drag the horizontal grip below the text or LaTeX formula editor up and down to change its height. The grip also supports the Up and Down arrow keys.
 

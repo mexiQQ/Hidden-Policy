@@ -34,6 +34,9 @@ test("includes tracked-change controls and the local commit bridge", async () =>
   assert.match(stylesheet, /border-top:\s*1px dashed/);
   assert.match(editor, /className="editor-height-handle"/);
   assert.match(stylesheet, /cursor:\s*ns-resize/);
+  assert.match(editor, /aria-label="Apply bold"/);
+  assert.match(editor, /execCommand\("bold"/);
+  assert.match(editor, /\\\\textbf\{/);
   assert.match(server, /spawnSync\("make"/);
   assert.match(server, /\["commit", "-m", message, "--", "main\.tex"\]/);
   assert.match(server, /listen\(PORT, "127\.0\.0\.1"/);

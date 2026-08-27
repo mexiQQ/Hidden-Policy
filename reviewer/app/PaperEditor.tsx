@@ -57,6 +57,8 @@ function partsFromRaw(raw: string, fallback: Part[] = []) {
 function editorHtml(parts: Part[]) {
   return parts.map((part, index) => part.type === "text"
     ? escapeHtml(part.display)
+    : part.style === "bold"
+      ? `<strong class="editable-bold">${escapeHtml(part.display)}</strong>`
     : `<span contenteditable="false" class="locked-token token-${escapeHtml(part.style || "macro")}" data-token="${index}" title="Formatting, formulas, and references are preserved">${escapeHtml(part.display)}</span>`
   ).join("");
 }
@@ -75,6 +77,8 @@ function serializeEditor(root: HTMLElement, parts: Part[]) {
     if (tokenIndex !== undefined) return parts[Number(tokenIndex)]?.raw || "";
     if (node.tagName === "BR") return "\n";
     const inside = Array.from(node.childNodes).map(walk).join("");
+    if (node.tagName === "STRONG" || node.tagName === "B" || node.style.fontWeight === "bold" || Number(node.style.fontWeight) >= 600)
+      return `\\textbf{${inside}}`;
     return node.tagName === "DIV" ? `\n${inside}` : inside;
   };
   return Array.from(root.childNodes).map(walk).join("").replace(/^\n|\n$/g, "");
@@ -238,6 +242,19 @@ function DiffText({ before, after }: { before: string; after: string }) {
     : part.type === "insert" ? <ins key={index}>{part.value}</ins> : <del key={index}>{part.value}</del>)}</>;
 }
 
+function FormattingDiff({ block, proposal }: { block: Block; proposal: Proposal }) {
+  const parts = partsFromRaw(proposal.updatedRaw, block.parts);
+  return <>{parts.map((part, index) => {
+    if (part.type === "text") return <span key={index}>{part.display}</span>;
+    if (part.style === "bold") {
+      const bold = <strong>{part.display}</strong>;
+      return block.raw.includes(part.raw) ? <span key={index}>{bold}</span>
+        : <ins key={index} className="format-change" title="Bold formatting added">{bold}</ins>;
+    }
+    return <PartsText key={index} parts={[part]} />;
+  })}</>;
+}
+
 function FormulaDiff({ before, after }: { before: string; after: string }) {
   return <div className="formula-diff">
     <del><MathFormula source={before} displayMode /></del>
@@ -365,6 +382,28 @@ export function PaperEditor() {
       updatedRaw: serializeEditor(editorRef.current, editingParts),
       newText: editorRef.current.innerText.replace(/\s+/g, " ").trim(),
     });
+  }
+
+  function toggleBold(block: Block) {
+    const root = editorRef.current;
+    const selection = window.getSelection();
+    if (!root || !selection || !selection.rangeCount || selection.isCollapsed || !root.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+      setNotice("Select text in the revision editor before applying bold.");
+      return;
+    }
+    const includesProtectedToken = Array.from(root.querySelectorAll(".locked-token"))
+      .some((token) => selection.containsNode(token, true));
+    if (includesProtectedToken) {
+      setNotice("Bold can be applied to plain text, but not across protected citations, formulas, or references.");
+      return;
+    }
+    window.document.execCommand("styleWithCSS", false, "false");
+    if (!window.document.execCommand("bold", false)) {
+      setNotice("Could not apply bold to this selection.");
+      return;
+    }
+    root.focus();
+    updateDraftPreview(block);
   }
 
   function closeTextEditor() {
@@ -522,7 +561,9 @@ export function PaperEditor() {
                       onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); continueEditing(); } }}
                       title="Click to keep editing">{block.kind === "display" && proposal.mathSource
                         ? <><FormulaDiff before={mathSourceFromDisplay(block.raw)} after={proposal.mathSource} /><BlockPrefix block={block} /></>
-                        : <><BlockPrefix block={block} /><DiffText before={block.text} after={proposal.newText} /></>}</div>
+                        : <><BlockPrefix block={block} />{proposal.newText === block.text && proposal.updatedRaw !== block.raw
+                          ? <FormattingDiff block={block} proposal={proposal} />
+                          : <DiffText before={block.text} after={proposal.newText} />}</>}</div>
                     <div className="change-connector" aria-hidden="true" />
                     <div className="change-actions" aria-label="Review this change">
                       <button className="accept-icon" onClick={() => accept(block)} disabled={busy === block.id || isSelected} aria-label="Accept and commit" title={isSelected ? "Update or close the side editor first" : "Accept and commit"}>{busy === block.id ? "…" : "✓"}</button>
@@ -555,8 +596,13 @@ export function PaperEditor() {
           <div><p>Revision editor</p><h2>{activeBlock.label} · line {activeBlock.startLine}</h2></div>
           <button type="button" onClick={() => { closeTextEditor(); setFormulaEditing(null); }} aria-label="Close editor" title="Close without updating">×</button>
         </header>
-        <p className="revision-guidance">The tracked highlights stay visible on the paper while you edit here. Drag the left edge to change width and the grip below the editor up or down to change height.</p>
+        <p className="revision-guidance">The tracked highlights stay visible on the paper while you edit here. Select text and use Bold or ⌘/Ctrl+B for emphasis.</p>
         {editing === activeBlock.id ? <>
+          <div className="editor-format-toolbar" role="toolbar" aria-label="Text formatting">
+            <button type="button" className="format-bold" onPointerDown={(event) => event.preventDefault()}
+              onClick={() => toggleBold(activeBlock)} aria-label="Apply bold" title="Bold selected text (⌘/Ctrl+B)"><strong>B</strong></button>
+            <span>Select text to format · drag the grip below to resize</span>
+          </div>
           <div ref={(node) => {
             editorRef.current = node;
             if (node && node.dataset.editorFor !== activeBlock.id) {
@@ -567,10 +613,11 @@ export function PaperEditor() {
             onInput={() => updateDraftPreview(activeBlock)}
             onKeyDown={(event) => {
               if (event.key === "Escape") { event.preventDefault(); closeTextEditor(); }
+              if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") { event.preventDefault(); toggleBold(activeBlock); }
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); finishEditing(activeBlock); }
             }} />
           <EditorHeightHandle onPointerDown={startEditorHeightResize} onStep={resizeEditorBy} />
-          <div className="edit-note">Protected citations, math, and emphasis stay intact.</div>
+          <div className="edit-note">Bold is saved as LaTeX textbf. Citations, formulas, references, and italic emphasis remain protected.</div>
           <div className="revision-panel-footer">
             <button type="button" className="panel-cancel" onClick={closeTextEditor}>Cancel</button>
             <button type="button" className="panel-update" onClick={() => finishEditing(activeBlock)}>Update draft</button>
