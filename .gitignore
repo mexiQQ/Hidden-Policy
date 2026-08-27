@@ -13,6 +13,11 @@ main.pdf
 
 # Temporary ICLR template download
 .iclr-template/
+iclr2027_conference.bst
+iclr2027_conference.sty
+
+# Local PDF render previews
+tmp/
 
 # OS / editor
 .DS_Store
