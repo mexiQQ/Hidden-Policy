@@ -56,10 +56,17 @@ A central obstacle is the breadth of the condition space on which a hidden polic
 
 Although policy determines what a model will do, concrete harm is realized through unsafe behavior in an environment. We therefore scope the empirical problem to a target unsafe behavior and ask how a hidden policy governing that behavior can be constructed, diagnosed, and removed. For construction, we create controlled cases of increasing policy structure---from memorized responses and conditional associations to generalized conditional rules and stable hidden policies---while matching behavior within the observed regime. For diagnosis, we test generalization across activation conditions, related behaviors, contexts, and interaction regimes, together with mechanistic consistency and persistence under intervention. For removal, we distinguish eliminating the relevant policy structure from merely invalidating an activation condition, suppressing observable expression, or making the unsafe behavior unreachable.
 
-We focus here on two foundational questions. \textbf{First, what is a hidden policy?} We give a functional definition based on policy structure, conditional gating, behavioral masking, and counterfactual separability, while deliberately avoiding assumptions about mechanistic localization. \textbf{Second, why is it important?} We argue that hidden policies are both (i) a cross-cutting mechanism behind several frontier risks and (ii) a frontier risk in their own right because they undermine the reliability of behavioral evidence used for preparedness, oversight, and deployment decisions.
+\textbf{Q1: What is a hidden policy, and why does it matter?}
 
-\paragraph{Contributions.}
-Our conceptual contribution is threefold. First, we formalize \HP as an interaction-relative object and distinguish policy, objective, and behavior. Second, we introduce policy identifiability and observational equivalence as the core lens for understanding hiddenness. Third, we show how the same policy-level structure can unify seemingly different frontier-risk phenomena without reducing them to a single objective or threat model. Later sections of the full paper will operationalize this framework through construction, diagnostics, and removal tests.
+\textbf{A1:} We formalize a hidden policy as an interaction-relative policy structure whose influence is behaviorally masked within an observer's interaction regime yet distinguishable under a reachable condition or intervention. This definition separates policy from objective and observed behavior, explains why what a model has done may not determine what it will do as conditions change, and provides a common policy-level lens for condition-dependent frontier risks.
+
+\textbf{Q2: What can behavior reveal about a hidden policy?}
+
+\textbf{A2:} We show that, without restrictive assumptions or distinguishing interventions, behavior identifies a policy only up to an observational equivalence class. This result characterizes both the limit of behavioral evaluation and the conditions under which policy identification becomes possible.
+
+\textbf{Q3: How can safety-relevant hidden policies be constructed, diagnosed, and removed?}
+
+\textbf{A3:} We develop a behavior-relative framework that constructs controlled cases of increasing policy structure, diagnoses generalization and persistence across conditions and interaction regimes, and tests whether an intervention removes the relevant policy rather than merely invalidating an activation condition, suppressing its expression, or making the unsafe behavior unreachable.
 
 \section{What Is a Hidden Policy?}
 \label{sec:definition}
