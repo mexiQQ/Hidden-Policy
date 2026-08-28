@@ -48,7 +48,7 @@ where $h\in\Hist$ denotes the interaction history available to the model and $a\
 
 These observations raise two practical questions: can a hidden policy be identified from behavior, and can an intervention remove it rather than merely suppress its expression? Both questions face the same theoretical limit. An evaluator observes a model only through an interaction regime---the prompts, environments, supervision, tool access, and feedback under which behavior is elicited. Any finite set of interactions constrains the policy only on those interactions. Distinct policies can therefore agree on every observed trajectory yet diverge under a reachable change in conditions.
 
-This result specifies when identification is possible. The issue is one of \emph{policy identifiability}. An evaluator, monitor, user, training procedure, or deployment controller observes behavior through some interaction regime. Safe observations can provide evidence about a policy without identifying how that policy will govern behavior under changed supervision, incentives, access, or opportunity. In this sense,
+This result specifies when identification is possible. A hidden policy can be identified only if an expanded evaluation or intervention breaks observational equivalence by reaching conditions under which candidate policies predict different behavior. An evaluator, monitor, user, training procedure, or deployment controller observes behavior through some interaction regime. Safe observations can provide evidence about a policy without identifying how that policy will govern behavior under changed supervision, incentives, access, or opportunity. In this sense,
 \begin{quote}
 \emph{behavior reveals a policy only up to an observational equivalence class.}
 \end{quote}
