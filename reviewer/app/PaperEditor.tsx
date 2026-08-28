@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import katex from "katex";
 
-type Part = { type: "text" | "token"; raw: string; display: string; style?: string };
+type CitationTarget = { display: string; url: string };
+type Part = {
+  type: "text" | "token"; raw: string; display: string; style?: string;
+  citations?: CitationTarget[]; citationMode?: "parenthetical" | "textual";
+};
 type Block = {
   id: string; kind: string; raw: string; text: string; parts: Part[]; startLine: number;
   endLine: number; page: number; editable: boolean; label: string; number?: string; statementLabel?: string;
@@ -12,9 +16,12 @@ type Block = {
 };
 type DocumentData = { title: string; branch: string; head: string; clean: boolean; pageCount: number; blocks: Block[] };
 type Proposal = { updatedRaw: string; newText: string; mathSource?: string };
-type DraftPreview = Proposal & { blockId: string };
 type DiffPart = { type: "same" | "insert" | "delete"; value: string };
 type FormulaEditing = { blockId: string; partIndex: number | null; value: string; baseRaw: string };
+type SentenceUnit = { raw: string; suffix: string; start: number; end: number; text: string; parts: Part[] };
+type TextEditing = {
+  blockId: string; sentenceIndex: number; editorKey: string; prefix: string; suffix: string; originalSentenceRaw: string;
+};
 type StoredDraft = {
   blockId: string; originalRaw: string; kind: string; label: string; startLine: number; proposal: Proposal;
 };
@@ -47,16 +54,58 @@ function partsFromRaw(raw: string, fallback: Part[] = []) {
     else if ((inner = token.match(/^\\(?:emph|textit)\{([^}]+)\}$/))) { display = inner[1]; style = "italic"; }
     else if ((inner = token.match(/^\\textbf\{([^}]+)\}$/))) { display = inner[1]; style = "bold"; }
     else if ((inner = token.match(/^\\textsc\{([^}]+)\}$/))) { display = inner[1]; style = "smallcaps"; }
-    parts.push({ type: "token", raw: token, display, style });
+    parts.push({ type: "token", raw: token, display, style,
+      ...(known?.citations ? { citations: known.citations, citationMode: known.citationMode } : {}) });
     cursor = match.index + token.length;
   }
   if (cursor < raw.length) parts.push({ type: "text", raw: raw.slice(cursor), display: raw.slice(cursor) });
   return parts;
 }
 
+function textFromParts(parts: Part[]) {
+  return parts.map((part) => part.display).join("").replace(/\s+/g, " ").trim();
+}
+
+function sentenceUnits(raw: string, fallback: Part[] = []): SentenceUnit[] {
+  const units: SentenceUnit[] = [];
+  const boundary = /[.!?](?:["')\]}]*)\s+(?=(?:[A-Z0-9]|\\[A-Z]|["'“‘]))/g;
+  let start = 0;
+  for (const match of raw.matchAll(boundary)) {
+    const whitespace = match[0].match(/\s+$/)?.[0] || "";
+    const end = (match.index || 0) + match[0].length - whitespace.length;
+    const sentenceRaw = raw.slice(start, end);
+    const parts = partsFromRaw(sentenceRaw, fallback);
+    if (sentenceRaw) units.push({ raw: sentenceRaw, suffix: whitespace, start, end, text: textFromParts(parts), parts });
+    start = end + whitespace.length;
+  }
+  const sentenceRaw = raw.slice(start);
+  if (sentenceRaw || !units.length) {
+    const parts = partsFromRaw(sentenceRaw, fallback);
+    units.push({ raw: sentenceRaw, suffix: "", start, end: raw.length, text: textFromParts(parts), parts });
+  }
+  return units;
+}
+
+function replaceSentence(raw: string, unit: SentenceUnit, updatedRaw: string) {
+  return raw.slice(0, unit.start) + updatedRaw + raw.slice(unit.end);
+}
+
+function partIndexAtOffset(raw: string, fallback: Part[], offset: number) {
+  const parts = partsFromRaw(raw, fallback);
+  let cursor = 0;
+  for (let index = 0; index < parts.length; index++) {
+    const end = cursor + parts[index].raw.length;
+    if (offset >= cursor && offset < end) return index;
+    cursor = end;
+  }
+  return -1;
+}
+
 function editorHtml(parts: Part[]) {
   return parts.map((part, index) => part.type === "text"
     ? escapeHtml(part.display)
+    : part.style === "citation" && part.citations?.length
+      ? `<span contenteditable="false" class="locked-token token-citation" data-token="${index}" title="Click a reference to open it in Google Chrome">${part.citationMode === "parenthetical" ? "(" : ""}${part.citations.map((citation, citationIndex) => `${citationIndex ? "; " : ""}<button type="button" class="citation-link" data-citation-token="${index}" data-citation-index="${citationIndex}">${escapeHtml(citation.display)}</button>`).join("")}${part.citationMode === "parenthetical" ? ")" : ""}</span>`
     : part.style === "bold"
       ? `<strong class="editable-bold">${escapeHtml(part.display)}</strong>`
     : `<span contenteditable="false" class="locked-token token-${escapeHtml(part.style || "macro")}" data-token="${index}" title="Formatting, formulas, and references are preserved">${escapeHtml(part.display)}</span>`
@@ -131,14 +180,8 @@ function proposalFromFormulaEdit(block: Block, editing: FormulaEditing): Proposa
   return { updatedRaw, newText: partsFromRaw(updatedRaw, block.parts).map((part) => part.display).join("") };
 }
 
-function draftEntries(documentData: DocumentData, proposals: Record<string, Proposal>, transient?: DraftPreview | null) {
-  const merged = new Map(Object.entries(proposals));
-  if (transient) {
-    const block = documentData.blocks.find((item) => item.id === transient.blockId);
-    if (block && transient.updatedRaw !== block.raw) merged.set(transient.blockId, transient);
-    else merged.delete(transient.blockId);
-  }
-  return Array.from(merged, ([blockId, proposal]) => {
+function draftEntries(documentData: DocumentData, proposals: Record<string, Proposal>) {
+  return Object.entries(proposals).map(([blockId, proposal]) => {
     const block = documentData.blocks.find((item) => item.id === blockId);
     if (!block || proposal.updatedRaw === block.raw) return null;
     return { blockId, originalRaw: block.raw, kind: block.kind, label: block.label, startLine: block.startLine, proposal } satisfies StoredDraft;
@@ -173,8 +216,8 @@ function readLegacyDraftPayload() {
   }
 }
 
-function makeDraftPayload(documentData: DocumentData, proposals: Record<string, Proposal>, transient?: DraftPreview | null): StoredDraftPayload {
-  return { version: 1, head: documentData.head, savedAt: new Date().toISOString(), drafts: draftEntries(documentData, proposals, transient) };
+function makeDraftPayload(documentData: DocumentData, proposals: Record<string, Proposal>): StoredDraftPayload {
+  return { version: 1, head: documentData.head, savedAt: new Date().toISOString(), drafts: draftEntries(documentData, proposals) };
 }
 
 async function saveSharedDrafts(payload: StoredDraftPayload) {
@@ -208,7 +251,15 @@ function MathFormula({ source, displayMode = false }: { source: string; displayM
   return <span className={displayMode ? "math-output display-output" : "math-output inline-output"} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-function PartsText({ parts, onEditMath }: { parts: Part[]; onEditMath?: (index: number) => void }) {
+function CitationLink({ citation, onOpenCitation }: { citation: CitationTarget; onOpenCitation: (target: CitationTarget) => void }) {
+  return <button type="button" className="citation-link"
+    onClick={(event) => { event.stopPropagation(); onOpenCitation(citation); }}
+    aria-label={`Open ${citation.display} in Google Chrome`} title="Open reference in Google Chrome">{citation.display}</button>;
+}
+
+function PartsText({ parts, onEditMath, onOpenCitation }: {
+  parts: Part[]; onEditMath?: (index: number) => void; onOpenCitation?: (target: CitationTarget) => void;
+}) {
   return <>{parts.map((part, index) => part.type === "text"
     ? <span key={index}>{part.display}</span>
     : part.style === "math" && onEditMath ? <button key={index} type="button" className="inline-math-button"
@@ -216,6 +267,11 @@ function PartsText({ parts, onEditMath }: { parts: Part[]; onEditMath?: (index: 
       <MathFormula source={part.raw.slice(1, -1)} />
     </button>
       : part.style === "math" ? <span key={index} className="inline-math-static"><MathFormula source={part.raw.slice(1, -1)} /></span>
+      : part.style === "citation" && part.citations?.length && onOpenCitation
+        ? <span key={index} className="citation-group">{part.citationMode === "parenthetical" && "("}
+          {part.citations.map((citation, citationIndex) => <span key={citation.url}>
+            {citationIndex > 0 && "; "}<CitationLink citation={citation} onOpenCitation={onOpenCitation} />
+          </span>)}{part.citationMode === "parenthetical" && ")"}</span>
       : <span key={index} className={`token token-${part.style || "macro"}`}>{part.display}</span>)}</>;
 }
 
@@ -225,24 +281,48 @@ function BlockPrefix({ block }: { block: Block }) {
   return <span className={block.kind === "display" ? "equation-number" : "heading-number"}>{block.kind === "display" ? `(${block.number})` : block.number}</span>;
 }
 
-function BlockText({ block, onEditMath }: { block: Block; onEditMath: (index: number) => void }) {
+function BlockText({ block, onEditMath, onOpenCitation }: {
+  block: Block; onEditMath: (index: number) => void; onOpenCitation: (target: CitationTarget) => void;
+}) {
   if (block.items?.length) {
     const List = block.listType === "ordered" ? "ol" : "ul";
-    return <List>{block.items.map((item, index) => <li key={index}><PartsText parts={item.parts} /></li>)}</List>;
+    return <List>{block.items.map((item, index) => <li key={index}><PartsText parts={item.parts} onOpenCitation={onOpenCitation} /></li>)}</List>;
   }
   if (block.segments?.length) return <><BlockPrefix block={block} />{block.segments.map((segment, index) => segment.type === "text"
-    ? <span className="statement-text" key={index}><PartsText parts={segment.parts} /></span>
+    ? <span className="statement-text" key={index}><PartsText parts={segment.parts} onOpenCitation={onOpenCitation} /></span>
     : <span className="statement-math" key={index}><MathFormula source={segment.source} displayMode />{segment.number && <span className="equation-number">({segment.number})</span>}</span>)}</>;
-  return <><BlockPrefix block={block} /><PartsText parts={block.parts} onEditMath={block.editable ? onEditMath : undefined} /></>;
+  return <><BlockPrefix block={block} /><PartsText parts={block.parts} onEditMath={block.editable ? onEditMath : undefined} onOpenCitation={onOpenCitation} /></>;
 }
 
-function DiffText({ before, after }: { before: string; after: string }) {
+function LinkedCitationText({ value, citations, onOpenCitation }: {
+  value: string; citations: CitationTarget[]; onOpenCitation: (target: CitationTarget) => void;
+}) {
+  const byDisplay = new Map(citations.map((citation) => [citation.display, citation]));
+  const labels = Array.from(byDisplay.keys()).filter(Boolean).sort((left, right) => right.length - left.length);
+  if (!labels.length) return <>{value}</>;
+  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const pieces = value.split(new RegExp(`(${escaped.join("|")})`, "g"));
+  return <>{pieces.map((piece, index) => {
+    const citation = byDisplay.get(piece);
+    return citation ? <CitationLink key={`${piece}-${index}`} citation={citation} onOpenCitation={onOpenCitation} /> : <span key={index}>{piece}</span>;
+  })}</>;
+}
+
+function DiffText({ before, after, citations, onOpenCitation }: {
+  before: string; after: string; citations: CitationTarget[]; onOpenCitation: (target: CitationTarget) => void;
+}) {
   return <>{wordDiff(before, after).map((part, index) => part.type === "same"
-    ? <span key={index}>{part.value}</span>
-    : part.type === "insert" ? <ins key={index}>{part.value}</ins> : <del key={index}>{part.value}</del>)}</>;
+    ? <span key={index}><LinkedCitationText value={part.value} citations={citations} onOpenCitation={onOpenCitation} /></span>
+    : part.type === "insert" ? <ins key={index}><LinkedCitationText value={part.value} citations={citations} onOpenCitation={onOpenCitation} /></ins>
+      : <del key={index}><LinkedCitationText value={part.value} citations={citations} onOpenCitation={onOpenCitation} /></del>)}</>;
 }
 
-function FormattingDiff({ block, proposal }: { block: Block; proposal: Proposal }) {
+function citationsForChange(block: Block, proposal: Proposal) {
+  const candidates = [...block.parts, ...partsFromRaw(proposal.updatedRaw, block.parts)].flatMap((part) => part.citations || []);
+  return Array.from(new Map(candidates.map((citation) => [`${citation.display}\u0000${citation.url}`, citation])).values());
+}
+
+function FormattingDiff({ block, proposal, onOpenCitation }: { block: Block; proposal: Proposal; onOpenCitation: (target: CitationTarget) => void }) {
   const parts = partsFromRaw(proposal.updatedRaw, block.parts);
   return <>{parts.map((part, index) => {
     if (part.type === "text") return <span key={index}>{part.display}</span>;
@@ -251,7 +331,7 @@ function FormattingDiff({ block, proposal }: { block: Block; proposal: Proposal 
       return block.raw.includes(part.raw) ? <span key={index}>{bold}</span>
         : <ins key={index} className="format-change" title="Bold formatting added">{bold}</ins>;
     }
-    return <PartsText key={index} parts={[part]} />;
+    return <PartsText key={index} parts={[part]} onOpenCitation={onOpenCitation} />;
   })}</>;
 }
 
@@ -272,8 +352,8 @@ function EditorHeightHandle({ onPointerDown, onStep }: {
     }} aria-label="Resize editor height" title="Drag up or down to resize"><span /></button>;
 }
 
-function FormulaEditor({ value, displayMode, height, onChange, onDone, onCancel, onResizeStart, onResizeStep }: {
-  value: string; displayMode: boolean; height: number; onChange: (value: string) => void; onDone: () => void; onCancel: () => void;
+function FormulaEditor({ value, displayMode, height, onChange, onClose, onResizeStart, onResizeStep }: {
+  value: string; displayMode: boolean; height: number; onChange: (value: string) => void; onClose: () => void;
   onResizeStart: (event: ReactPointerEvent<HTMLButtonElement>) => void; onResizeStep: (delta: number) => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -282,14 +362,10 @@ function FormulaEditor({ value, displayMode, height, onChange, onDone, onCancel,
     <div className="formula-live-preview"><MathFormula source={value} displayMode={displayMode} /></div>
     <textarea ref={textareaRef} value={value} style={{ height }} onChange={(event) => onChange(event.target.value)}
       onKeyDown={(event) => {
-        if (event.key === "Escape") { event.preventDefault(); onCancel(); }
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); onDone(); }
+        if (event.key === "Escape") { event.preventDefault(); onClose(); }
       }} aria-label="Edit LaTeX formula" spellCheck={false} />
     <EditorHeightHandle onPointerDown={onResizeStart} onStep={onResizeStep} />
-    <div className="formula-editor-footer"><span>Edit LaTeX · live preview</span><div>
-      <button type="button" className="formula-cancel" onClick={onCancel}>Cancel</button>
-      <button type="button" className="formula-done" onClick={onDone}>Track change</button>
-    </div></div>
+    <div className="formula-editor-footer"><span>Edit LaTeX · live preview · autosaved</span></div>
   </div>;
 }
 
@@ -302,17 +378,18 @@ export function PaperEditor() {
   const [document, setDocument] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<TextEditing | null>(null);
   const [formulaEditing, setFormulaEditing] = useState<FormulaEditing | null>(null);
   const [proposals, setProposals] = useState<Record<string, Proposal>>({});
   const [editingParts, setEditingParts] = useState<Part[]>([]);
-  const [draftPreview, setDraftPreview] = useState<DraftPreview | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [panelWidth, setPanelWidth] = useState(380);
   const [editorHeight, setEditorHeight] = useState(360);
   const [draftsReady, setDraftsReady] = useState(false);
+  const [pageBlockIds, setPageBlockIds] = useState<string[][]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
+  const paperShellRef = useRef<HTMLElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -321,6 +398,7 @@ export function PaperEditor() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not load the manuscript");
       setDocument(payload);
+      setPageBlockIds([]);
       const { proposals: restored, migrated } = await readSharedDrafts(payload);
       setProposals(restored);
       setDraftsReady(true);
@@ -341,46 +419,138 @@ export function PaperEditor() {
     editorRef.current.focus();
   }, [editing]);
 
-  const transientDraft = useMemo<DraftPreview | null>(() => {
-    if (draftPreview) return draftPreview;
-    if (!document || !formulaEditing) return null;
-    const block = document.blocks.find((item) => item.id === formulaEditing.blockId);
-    return block ? { blockId: block.id, ...proposalFromFormulaEdit(block, formulaEditing) } : null;
-  }, [document, draftPreview, formulaEditing]);
-
   useEffect(() => {
     if (!draftsReady || !document) return;
-    const payload = makeDraftPayload(document, proposals, transientDraft);
+    const payload = makeDraftPayload(document, proposals);
     const timer = window.setTimeout(() => {
       saveSharedDrafts(payload).catch((caught) => setError(caught instanceof Error ? caught.message : "Could not autosave review drafts"));
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [document, draftsReady, proposals, transientDraft]);
+  }, [document, draftsReady, proposals]);
 
   const pages = useMemo(() => {
-    const grouped = new Map<number, Block[]>();
-    for (const block of document?.blocks || []) {
-      const page = Math.min(block.page, document?.pageCount || 1);
-      grouped.set(page, [...(grouped.get(page) || []), block]);
-    }
-    return grouped;
-  }, [document]);
+    if (!document) return [];
+    const byId = new Map(document.blocks.map((block) => [block.id, block]));
+    const flattened = pageBlockIds.flat();
+    const hasCompleteDynamicLayout = flattened.length === document.blocks.length &&
+      flattened.every((id, index) => id === document.blocks[index].id);
+    if (hasCompleteDynamicLayout) return pageBlockIds.map((ids) => ids.map((id) => byId.get(id)).filter((block): block is Block => Boolean(block)));
 
-  function startTextEdit(block: Block) {
-    const proposal = proposals[block.id];
-    const updatedRaw = proposal?.updatedRaw || block.raw;
+    const fallback = new Map<number, Block[]>();
+    for (const block of document.blocks) {
+      const page = Math.min(block.page, document.pageCount || 1);
+      fallback.set(page, [...(fallback.get(page) || []), block]);
+    }
+    return Array.from(fallback.keys()).sort((left, right) => left - right).map((page) => fallback.get(page) || []);
+  }, [document, pageBlockIds]);
+
+  useLayoutEffect(() => {
+    if (!document || !paperShellRef.current) return;
+    const shell = paperShellRef.current;
+    let frame = 0;
+
+    const repaginate = () => {
+      const elements = new Map<string, HTMLElement>();
+      shell.querySelectorAll<HTMLElement>("[data-paper-block-id]").forEach((element) => {
+        const id = element.dataset.paperBlockId;
+        if (id) elements.set(id, element);
+      });
+      if (elements.size !== document.blocks.length) return;
+
+      const firstContent = shell.querySelector<HTMLElement>(".paper-content");
+      const capacity = Number.parseFloat(firstContent ? window.getComputedStyle(firstContent).minHeight : "") || 864;
+      const metrics = document.blocks.map((block) => {
+        const element = elements.get(block.id)!;
+        const style = window.getComputedStyle(element);
+        return {
+          id: block.id,
+          kind: block.kind,
+          height: Math.ceil(element.offsetHeight),
+          marginTop: Number.parseFloat(style.marginTop) || 0,
+          marginBottom: Number.parseFloat(style.marginBottom) || 0,
+        };
+      });
+
+      const nextPages: string[][] = [];
+      let current: string[] = [];
+      let used = 0;
+      let previousMarginBottom = 0;
+      const keepWithNext = new Set(["section", "subsection", "subsubsection", "runin"]);
+
+      const startNewPage = () => {
+        if (current.length) nextPages.push(current);
+        current = [];
+        used = 0;
+        previousMarginBottom = 0;
+      };
+
+      metrics.forEach((metric, index) => {
+        let gap = current.length ? Math.max(previousMarginBottom, metric.marginTop) : metric.marginTop;
+        let projectedBottom = used + gap + metric.height;
+        const following = metrics[index + 1];
+        const keepTogetherHeight = keepWithNext.has(metric.kind) && following
+          ? Math.max(metric.marginBottom, following.marginTop) + following.height + following.marginBottom
+          : metric.marginBottom;
+
+        if (current.length && projectedBottom + keepTogetherHeight > capacity) {
+          startNewPage();
+          gap = metric.marginTop;
+          projectedBottom = gap + metric.height;
+        }
+
+        current.push(metric.id);
+        used = projectedBottom;
+        previousMarginBottom = metric.marginBottom;
+      });
+      startNewPage();
+
+      setPageBlockIds((currentPages) => {
+        const before = currentPages.map((page) => page.join("\u0000")).join("\u0001");
+        const after = nextPages.map((page) => page.join("\u0000")).join("\u0001");
+        return before === after ? currentPages : nextPages;
+      });
+    };
+
+    const schedule = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(repaginate);
+    };
+    schedule();
+
+    const observer = new ResizeObserver(schedule);
+    shell.querySelectorAll<HTMLElement>("[data-paper-block-id]").forEach((element) => observer.observe(element));
+    window.addEventListener("resize", schedule);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+    };
+  }, [document, pageBlockIds, proposals]);
+
+  function startTextEdit(block: Block, sentenceIndex: number) {
+    const effectiveRaw = proposals[block.id]?.updatedRaw || block.raw;
+    const units = sentenceUnits(effectiveRaw, block.parts);
+    const unit = units[sentenceIndex];
+    if (!unit) return;
+    const originalUnit = sentenceUnits(block.raw, block.parts)[sentenceIndex] || unit;
     setFormulaEditing(null);
-    setEditingParts(partsFromRaw(updatedRaw, block.parts));
-    setDraftPreview({ blockId: block.id, updatedRaw, newText: proposal?.newText || block.text });
-    setEditing(block.id);
+    setEditingParts(unit.parts);
+    setEditing({
+      blockId: block.id, sentenceIndex, editorKey: `${block.id}:${sentenceIndex}`,
+      prefix: effectiveRaw.slice(0, unit.start), suffix: effectiveRaw.slice(unit.end), originalSentenceRaw: originalUnit.raw,
+    });
   }
 
-  function updateDraftPreview(block: Block) {
-    if (!editorRef.current) return;
-    setDraftPreview({
-      blockId: block.id,
-      updatedRaw: serializeEditor(editorRef.current, editingParts),
-      newText: editorRef.current.innerText.replace(/\s+/g, " ").trim(),
+  function updateTextDraft(block: Block) {
+    if (!editorRef.current || editing?.blockId !== block.id) return;
+    const sentenceRaw = serializeEditor(editorRef.current, editingParts);
+    const updatedRaw = editing.prefix + sentenceRaw + editing.suffix;
+    const newText = textFromParts(partsFromRaw(updatedRaw, block.parts));
+    setProposals((current) => {
+      if (updatedRaw === block.raw) {
+        const next = { ...current }; delete next[block.id]; return next;
+      }
+      return { ...current, [block.id]: { updatedRaw, newText } };
     });
   }
 
@@ -403,22 +573,61 @@ export function PaperEditor() {
       return;
     }
     root.focus();
-    updateDraftPreview(block);
+    updateTextDraft(block);
+  }
+
+  async function copyLatex(value: string, successMessage: string) {
+    setError("");
+    try {
+      let copied = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(value);
+          copied = true;
+        } catch {
+          // Fall back to the selection-based copy command below.
+        }
+      }
+      if (!copied) {
+        const textarea = window.document.createElement("textarea");
+        textarea.value = value;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        window.document.body.appendChild(textarea);
+        textarea.select();
+        copied = window.document.execCommand("copy");
+        textarea.remove();
+      }
+      if (!copied) throw new Error("Copy command was not available");
+      setNotice(successMessage);
+    } catch {
+      setError("Could not copy LaTeX. Select the editor contents and copy them manually.");
+    }
+  }
+
+  function copyTextEditorLatex() {
+    if (!editorRef.current) return;
+    void copyLatex(serializeEditor(editorRef.current, editingParts), "Copied the current sentence as LaTeX.");
+  }
+
+  async function openCitationInChrome(target: CitationTarget) {
+    setError("");
+    try {
+      const response = await fetch(`${API}/open-external`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: target.url }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not open the reference");
+      setNotice(`Opened ${target.display} in Google Chrome.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not open the reference in Google Chrome");
+    }
   }
 
   function closeTextEditor() {
     setEditing(null);
     setEditingParts([]);
-    setDraftPreview(null);
-  }
-
-  function finishEditing(block: Block) {
-    if (!editorRef.current) return;
-    const updatedRaw = serializeEditor(editorRef.current, editingParts);
-    const newText = editorRef.current.innerText.replace(/\s+/g, " ").trim();
-    if (updatedRaw !== block.raw) setProposals((current) => ({ ...current, [block.id]: { updatedRaw, newText } }));
-    else setProposals((current) => { const next = { ...current }; delete next[block.id]; return next; });
-    closeTextEditor();
   }
 
   function startFormulaEdit(block: Block, partIndex: number | null) {
@@ -434,41 +643,99 @@ export function PaperEditor() {
     setFormulaEditing({ blockId: block.id, partIndex, value: part.raw.slice(1, -1), baseRaw });
   }
 
-  function finishFormulaEdit(block: Block) {
+  function updateFormulaDraft(block: Block, value: string) {
     if (!formulaEditing || formulaEditing.blockId !== block.id) return;
-    const proposal = proposalFromFormulaEdit(block, formulaEditing);
+    const nextEditing = { ...formulaEditing, value };
+    setFormulaEditing(nextEditing);
+    const proposal = proposalFromFormulaEdit(block, nextEditing);
     if (proposal.updatedRaw === block.raw) setProposals((current) => { const next = { ...current }; delete next[block.id]; return next; });
     else setProposals((current) => ({ ...current, [block.id]: proposal }));
-    setFormulaEditing(null);
   }
 
   async function accept(block: Block) {
     const proposal = proposals[block.id];
     if (!proposal) return;
+    let acceptedRaw = proposal.updatedRaw;
+    let fullDraftRaw = proposal.updatedRaw;
+    if (editing?.blockId === block.id) {
+      const originalUnit = sentenceUnits(block.raw, block.parts)[editing.sentenceIndex];
+      const sentenceRaw = editorRef.current ? serializeEditor(editorRef.current, editingParts) : editing.originalSentenceRaw;
+      fullDraftRaw = editing.prefix + sentenceRaw + editing.suffix;
+      if (originalUnit) acceptedRaw = replaceSentence(block.raw, originalUnit, sentenceRaw);
+    }
     setBusy(block.id); setError(""); setNotice("");
     try {
-      const response = await fetch(`${API}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ blockId: block.id, updatedRaw: proposal.updatedRaw }) });
+      const response = await fetch(`${API}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ blockId: block.id, updatedRaw: acceptedRaw }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not accept the change");
       setDocument(payload.document);
+      setPageBlockIds([]);
       setProposals((current) => {
         if (!document) return {};
         const remaining = draftEntries(document, current).filter((entry) => entry.blockId !== block.id);
-        return proposalsFromEntries(payload.document, remaining);
+        const restored = proposalsFromEntries(payload.document, remaining);
+        const updatedBlock = payload.document.blocks.find((candidate: Block) => candidate.raw === acceptedRaw) ||
+          payload.document.blocks.find((candidate: Block) => candidate.kind === block.kind && candidate.label === block.label && Math.abs(candidate.startLine - block.startLine) <= 2);
+        if (updatedBlock && fullDraftRaw !== acceptedRaw) {
+          restored[updatedBlock.id] = { updatedRaw: fullDraftRaw, newText: textFromParts(partsFromRaw(fullDraftRaw, updatedBlock.parts)) };
+        }
+        return restored;
       });
-      if (editing === block.id) closeTextEditor();
+      if (editing?.blockId === block.id) closeTextEditor();
       if (formulaEditing?.blockId === block.id) setFormulaEditing(null);
-      setNotice(`Accepted and committed as ${payload.commit}`);
+      setNotice(`Accepted this ${editing?.blockId === block.id ? "sentence" : "change"} and committed as ${payload.commit}`);
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not accept the change"); }
     finally { setBusy(null); }
   }
 
   function reject(block: Block) {
-    setProposals((current) => { const next = { ...current }; delete next[block.id]; return next; });
-    closeTextEditor(); setFormulaEditing(null); setNotice("Change rejected; original text restored.");
+    setProposals((current) => {
+      const next = { ...current };
+      if (editing?.blockId === block.id) {
+        const revertedRaw = editing.prefix + editing.originalSentenceRaw + editing.suffix;
+        if (revertedRaw === block.raw) delete next[block.id];
+        else next[block.id] = { updatedRaw: revertedRaw, newText: textFromParts(partsFromRaw(revertedRaw, block.parts)) };
+      } else delete next[block.id];
+      return next;
+    });
+    closeTextEditor(); setFormulaEditing(null); setNotice(`Rejected this ${editing?.blockId === block.id ? "sentence" : "change"}; the original was restored.`);
   }
 
   function blockClass(block: Block) { return `paper-block kind-${block.kind}${block.editable ? " can-edit" : ""}`; }
+
+  function sentenceEditable(block: Block) {
+    return block.editable && block.kind !== "display" && !block.items?.length && !block.segments?.length;
+  }
+
+  function sentenceContent(block: Block, proposal?: Proposal) {
+    const effectiveRaw = proposal?.updatedRaw || block.raw;
+    const units = sentenceUnits(effectiveRaw, block.parts);
+    const originalUnits = sentenceUnits(block.raw, block.parts);
+    return <div className="rendered-text sentence-flow"><BlockPrefix block={block} />{units.map((unit, sentenceIndex) => {
+      const original = originalUnits[sentenceIndex] || unit;
+      const changed = unit.raw !== original.raw;
+      const selected = editing?.blockId === block.id && editing.sentenceIndex === sentenceIndex;
+      const sentenceProposal = { updatedRaw: unit.raw, newText: unit.text };
+      const sentenceBlock = { ...block, raw: original.raw, text: original.text, parts: original.parts };
+      const edit = () => { if (!selected) startTextEdit(block, sentenceIndex); };
+      return <span key={`${block.id}:${sentenceIndex}`}>
+        <span className={`sentence-unit${changed ? " sentence-changed" : ""}${selected ? " sentence-selected" : ""}`}
+          role="button" tabIndex={0} data-sentence-index={sentenceIndex}
+          onClick={edit} onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); edit(); }
+          }}>
+          {changed ? (unit.text === original.text && unit.raw !== original.raw
+            ? <FormattingDiff block={sentenceBlock} proposal={sentenceProposal} onOpenCitation={openCitationInChrome} />
+            : <DiffText before={original.text} after={unit.text} citations={citationsForChange(sentenceBlock, sentenceProposal)} onOpenCitation={openCitationInChrome} />)
+            : <PartsText parts={unit.parts} onOpenCitation={openCitationInChrome} onEditMath={(partIndex) => {
+              const localOffset = unit.parts.slice(0, partIndex).reduce((total, part) => total + part.raw.length, 0);
+              const blockPartIndex = partIndexAtOffset(effectiveRaw, block.parts, unit.start + localOffset);
+              if (blockPartIndex >= 0) startFormulaEdit(block, blockPartIndex);
+            }} />}
+        </span>{unit.suffix}
+      </span>;
+    })}</div>;
+  }
 
   function clampPanelWidth(width: number) {
     return Math.max(310, Math.min(width, Math.min(720, Math.max(330, window.innerWidth - 420))));
@@ -512,8 +779,9 @@ export function PaperEditor() {
     window.document.body.classList.add("resizing-editor-height");
   }
 
-  const activeBlockId = editing || formulaEditing?.blockId || null;
+  const activeBlockId = editing?.blockId || formulaEditing?.blockId || null;
   const activeBlock = document?.blocks.find((block) => block.id === activeBlockId) || null;
+  const activeProposal = activeBlock ? proposals[activeBlock.id] : undefined;
   const reviewBodyStyle = activeBlock ? ({ "--review-panel-width": `${panelWidth}px` } as CSSProperties) : undefined;
 
   if (loading && !document) return <main className="center-state"><div className="spinner" /><p>Preparing the manuscript…</p></main>;
@@ -536,54 +804,44 @@ export function PaperEditor() {
         <span>{error || notice}</span><button onClick={() => { setError(""); setNotice(""); }} aria-label="Dismiss">×</button>
       </div>}
 
-      <div className="editor-hint"><span>Click any paragraph or formula to edit in the side panel</span><span><kbd>⌘</kbd> + <kbd>Enter</kbd> to update · <kbd>Esc</kbd> to cancel</span></div>
+      <div className="editor-hint"><span>Hover or click a sentence to highlight and edit it</span><span>Changes save automatically · <kbd>Esc</kbd> closes the editor</span></div>
 
       <div className={`review-body${activeBlock ? " panel-open" : ""}`} style={reviewBodyStyle}>
-      <section className="paper-shell" aria-label="Tracked-change manuscript editor">
-        {Array.from({ length: document?.pageCount || 1 }, (_, index) => index + 1).map((page) => (
+      <section ref={paperShellRef} className="paper-shell" aria-label="Tracked-change manuscript editor">
+        {pages.map((pageBlocks, index) => {
+          const page = index + 1;
+          return (
           <article className="paper-page" key={page} aria-label={`Page ${page}`}>
             <div className="top-rule" />
             <div className="line-numbers" aria-hidden="true">{lineNumbers(page).map((line) => <span key={line}>{line}</span>)}</div>
             <div className="paper-content">
-              {(pages.get(page) || []).map((block) => {
-                const storedProposal = proposals[block.id];
+              {pageBlocks.map((block) => {
+                const proposal = proposals[block.id];
                 const isSelected = activeBlockId === block.id;
-                let proposal = storedProposal;
-                if (editing === block.id && draftPreview?.blockId === block.id)
-                  proposal = draftPreview.updatedRaw === block.raw ? undefined : draftPreview;
-                const continueEditing = () => {
-                  if (isSelected) return;
-                  if (block.kind === "display") startFormulaEdit(block, null); else startTextEdit(block);
-                };
-                return <div className={`${blockClass(block)}${proposal ? " has-change" : ""}${isSelected ? " editing-target" : ""}`} key={block.id} data-line={block.startLine}>
-                  {proposal ? <>
-                    <div className="diff-text" role="button" tabIndex={0} onClick={continueEditing}
-                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); continueEditing(); } }}
+                return <div className={`${blockClass(block)}${proposal ? " has-change" : ""}${isSelected ? " editing-target" : ""}`} key={block.id}
+                  data-line={block.startLine} data-paper-block-id={block.id}>
+                  {sentenceEditable(block) ? sentenceContent(block, proposal)
+                    : proposal ?
+                    <div className="diff-text" role="button" tabIndex={0}
+                      onClick={() => { if (!isSelected && block.kind === "display") startFormulaEdit(block, null); }}
+                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); if (block.kind === "display") startFormulaEdit(block, null); } }}
                       title="Click to keep editing">{block.kind === "display" && proposal.mathSource
                         ? <><FormulaDiff before={mathSourceFromDisplay(block.raw)} after={proposal.mathSource} /><BlockPrefix block={block} /></>
                         : <><BlockPrefix block={block} />{proposal.newText === block.text && proposal.updatedRaw !== block.raw
-                          ? <FormattingDiff block={block} proposal={proposal} />
-                          : <DiffText before={block.text} after={proposal.newText} />}</>}</div>
-                    <div className="change-connector" aria-hidden="true" />
-                    <div className="change-actions" aria-label="Review this change">
-                      <button className="accept-icon" onClick={() => accept(block)} disabled={busy === block.id || isSelected} aria-label="Accept and commit" title={isSelected ? "Update or close the side editor first" : "Accept and commit"}>{busy === block.id ? "…" : "✓"}</button>
-                      <button className="reject-icon" onClick={() => reject(block)} disabled={busy === block.id || isSelected} aria-label="Reject and restore" title={isSelected ? "Update or close the side editor first" : "Reject and restore"}>×</button>
-                    </div>
-                  </> : block.kind === "display" ? <div className="rendered-text rendered-formula" role="button" tabIndex={0}
+                          ? <FormattingDiff block={block} proposal={proposal} onOpenCitation={openCitationInChrome} />
+                          : <DiffText before={block.text} after={proposal.newText} citations={citationsForChange(block, proposal)} onOpenCitation={openCitationInChrome} />}</>}</div>
+                    : block.kind === "display" ? <div className="rendered-text rendered-formula" role="button" tabIndex={0}
                     onClick={() => { if (!isSelected) startFormulaEdit(block, null); }}
                     onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); startFormulaEdit(block, null); } }}>
                     <MathFormula source={mathSourceFromDisplay(block.raw)} displayMode /><BlockPrefix block={block} />
-                  </div> : block.editable ? <div className="rendered-text" role="button" tabIndex={0}
-                    onClick={() => { if (!isSelected) startTextEdit(block); }}
-                    onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); startTextEdit(block); } }}>
-                    <BlockText block={block} onEditMath={(index) => startFormulaEdit(block, index)} />
-                  </div> : <div className="rendered-text"><BlockText block={block} onEditMath={(index) => startFormulaEdit(block, index)} /></div>}
+                  </div> : <div className="rendered-text"><BlockText block={block} onEditMath={(index) => startFormulaEdit(block, index)} onOpenCitation={openCitationInChrome} /></div>}
                 </div>;
               })}
             </div>
             <div className="page-number">{page}</div>
           </article>
-        ))}
+          );
+        })}
       </section>
       {activeBlock && <aside className="revision-panel" aria-label="Revision editor">
         <button type="button" className="panel-width-handle" aria-label="Resize revision panel" title="Drag to resize the revision panel"
@@ -593,39 +851,58 @@ export function PaperEditor() {
             if (event.key === "ArrowRight") { event.preventDefault(); setPanelWidth((width) => clampPanelWidth(width - 24)); }
           }}><span /></button>
         <header className="revision-panel-header">
-          <div><p>Revision editor</p><h2>{activeBlock.label} · line {activeBlock.startLine}</h2></div>
-          <button type="button" onClick={() => { closeTextEditor(); setFormulaEditing(null); }} aria-label="Close editor" title="Close without updating">×</button>
+          <div><p>Revision editor</p><h2>{editing?.blockId === activeBlock.id ? `Sentence ${editing.sentenceIndex + 1}` : activeBlock.label} · line {activeBlock.startLine}</h2></div>
+          <button type="button" onClick={() => { closeTextEditor(); setFormulaEditing(null); }} aria-label="Close editor" title="Close editor">×</button>
         </header>
-        <p className="revision-guidance">The tracked highlights stay visible on the paper while you edit here. Select text and use Bold or ⌘/Ctrl+B for emphasis.</p>
-        {editing === activeBlock.id ? <>
+        <p className="revision-guidance">Edit this sentence while the tracked highlights remain visible on the paper. Changes are saved automatically.</p>
+        {editing?.blockId === activeBlock.id ? <>
           <div className="editor-format-toolbar" role="toolbar" aria-label="Text formatting">
             <button type="button" className="format-bold" onPointerDown={(event) => event.preventDefault()}
               onClick={() => toggleBold(activeBlock)} aria-label="Apply bold" title="Bold selected text (⌘/Ctrl+B)"><strong>B</strong></button>
-            <span>Select text to format · drag the grip below to resize</span>
+            <button type="button" className="copy-latex" onPointerDown={(event) => event.preventDefault()}
+              onClick={copyTextEditorLatex} aria-label="Copy editor LaTeX" title="Copy the current editor contents as LaTeX">Copy LaTeX</button>
+            <span>Copies unsaved edits too · drag the grip below to resize</span>
           </div>
           <div ref={(node) => {
             editorRef.current = node;
-            if (node && node.dataset.editorFor !== activeBlock.id) {
+            if (node && node.dataset.editorFor !== editing.editorKey) {
               node.innerHTML = editorHtml(editingParts);
-              node.dataset.editorFor = activeBlock.id;
+              node.dataset.editorFor = editing.editorKey;
             }
-          }} className="inline-editor revision-input" style={{ height: editorHeight }} contentEditable role="textbox" aria-multiline="true" aria-label={`Edit ${activeBlock.label}`} tabIndex={0} suppressContentEditableWarning
-            onInput={() => updateDraftPreview(activeBlock)}
+          }} className="inline-editor revision-input" style={{ height: editorHeight }} contentEditable role="textbox" aria-multiline="true" aria-label={`Edit sentence ${editing.sentenceIndex + 1} in ${activeBlock.label}`} tabIndex={0} suppressContentEditableWarning
+            onClick={(event) => {
+              const citationButton = (event.target as HTMLElement).closest<HTMLElement>("[data-citation-token]");
+              if (!citationButton) return;
+              event.preventDefault(); event.stopPropagation();
+              const tokenIndex = Number(citationButton.dataset.citationToken);
+              const citationIndex = Number(citationButton.dataset.citationIndex);
+              const citation = editingParts[tokenIndex]?.citations?.[citationIndex];
+              if (citation) void openCitationInChrome(citation);
+            }}
+            onInput={() => updateTextDraft(activeBlock)}
             onKeyDown={(event) => {
               if (event.key === "Escape") { event.preventDefault(); closeTextEditor(); }
               if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") { event.preventDefault(); toggleBold(activeBlock); }
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); finishEditing(activeBlock); }
             }} />
           <EditorHeightHandle onPointerDown={startEditorHeightResize} onStep={resizeEditorBy} />
           <div className="edit-note">Bold is saved as LaTeX textbf. Citations, formulas, references, and italic emphasis remain protected.</div>
-          <div className="revision-panel-footer">
-            <button type="button" className="panel-cancel" onClick={closeTextEditor}>Cancel</button>
-            <button type="button" className="panel-update" onClick={() => finishEditing(activeBlock)}>Update draft</button>
+        </> : formulaEditing?.blockId === activeBlock.id ? <>
+          <div className="editor-format-toolbar" role="toolbar" aria-label="Formula tools">
+            <button type="button" className="copy-latex" onClick={() => void copyLatex(formulaEditing.value, "Copied the current formula as LaTeX.")}
+              aria-label="Copy formula LaTeX" title="Copy the current formula source">Copy LaTeX</button>
+            <span>Copies the current formula source</span>
           </div>
-        </> : formulaEditing?.blockId === activeBlock.id ? <FormulaEditor value={formulaEditing.value} displayMode={formulaEditing.partIndex === null} height={editorHeight}
-          onChange={(value) => setFormulaEditing({ ...formulaEditing, value })}
-          onDone={() => finishFormulaEdit(activeBlock)} onCancel={() => setFormulaEditing(null)}
-          onResizeStart={startEditorHeightResize} onResizeStep={resizeEditorBy} /> : null}
+          <FormulaEditor value={formulaEditing.value} displayMode={formulaEditing.partIndex === null} height={editorHeight}
+            onChange={(value) => updateFormulaDraft(activeBlock, value)} onClose={() => setFormulaEditing(null)}
+            onResizeStart={startEditorHeightResize} onResizeStep={resizeEditorBy} />
+        </> : null}
+        <div className="revision-autosave-status"><span />{activeProposal ? "Draft autosaved" : "No changes yet"}</div>
+        <div className="revision-panel-footer">
+          <button type="button" className="panel-reject" onClick={() => reject(activeBlock)} disabled={!activeProposal || busy === activeBlock.id}
+            aria-label="Reject this change" title="Reject and restore the original">× <span>Reject</span></button>
+          <button type="button" className="panel-accept" onClick={() => accept(activeBlock)} disabled={!activeProposal || busy === activeBlock.id}
+            aria-label="Accept and commit this change" title="Accept this change and create a commit">{busy === activeBlock.id ? "…" : "✓"} <span>Accept & commit</span></button>
+        </div>
       </aside>}
       </div>
     </main>

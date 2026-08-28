@@ -17,6 +17,9 @@ function stop(signal = "SIGTERM") {
 }
 
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => stop(signal));
-for (const child of children) child.on("exit", (code) => {
-  if (!stopping && code) { stop(); process.exitCode = code; }
+for (const child of children) child.on("exit", (code, signal) => {
+  if (!stopping) {
+    stop();
+    process.exitCode = code ?? (signal ? 1 : 0);
+  }
 });

@@ -35,16 +35,35 @@ function parseBibliography(source) {
     const year = body.match(/year\s*=\s*\{?([^},\n]+)\}?/i)?.[1]?.trim() || "";
     const authors = author.split(/\s+and\s+/i);
     const first = authors[0].trim().split(/\s+/).at(-1)?.replace(/[{},]/g, "") || key;
-    entries.set(key, `${first}${authors.length > 1 ? " et al." : ""}${year ? `, ${year}` : ""}`);
+    const label = `${first}${authors.length > 1 ? " et al." : ""}${year ? `, ${year}` : ""}`;
+    const field = (name) => body.match(new RegExp(`^\\s*${name}\\s*=\\s*\\{(.*)\\}\\s*,?\\s*$`, "im"))?.[1]?.trim() || "";
+    const title = field("title").replace(/[{}]/g, "");
+    const url = field("url") || (field("doi") ? `https://doi.org/${field("doi")}` : "") ||
+      (field("eprint") ? `https://arxiv.org/abs/${field("eprint")}` : "") ||
+      `https://scholar.google.com/scholar?q=${encodeURIComponent(title || key)}`;
+    entries.set(key, { label, title, url });
   }
   return entries;
 }
 
 function citationLabel(keys, bibliography, textual = false) {
-  const labels = keys.split(",").map((key) => bibliography.get(key.trim()) || key.trim());
+  const labels = keys.split(",").map((key) => bibliography.get(key.trim())?.label || key.trim());
   if (!textual) return `(${labels.join("; ")})`;
   const [author, year] = (labels[0] || "").split(/,\s*/);
   return year ? `${author} (${year})` : author;
+}
+
+function citationTargets(keys, bibliography, textual = false) {
+  const targets = keys.split(",").map((key) => {
+    const trimmed = key.trim();
+    const entry = bibliography.get(trimmed);
+    return { display: entry?.label || trimmed, url: entry?.url || `https://scholar.google.com/scholar?q=${encodeURIComponent(trimmed)}` };
+  });
+  if (!textual) return targets;
+  const first = targets[0];
+  if (!first) return [];
+  const [author, year] = first.display.split(/,\s*/);
+  return [{ ...first, display: year ? `${author} (${year})` : author }];
 }
 
 function mathLabel(raw) {
@@ -67,12 +86,20 @@ function tokenizeInline(raw, bibliography, references = new Map()) {
     const token = match[0];
     let display = token;
     let style = "macro";
+    let citations;
+    let citationMode;
     let inner;
     if (token.startsWith("$")) { display = mathLabel(token); style = "math"; }
-    else if ((inner = token.match(/^\\citep\{([^}]+)\}$/))) { display = citationLabel(inner[1], bibliography); style = "citation"; }
-    else if ((inner = token.match(/^\\citet\{([^}]+)\}$/))) { display = citationLabel(inner[1], bibliography, true); style = "citation"; }
+    else if ((inner = token.match(/^\\citep?\{([^}]+)\}$/))) {
+      display = citationLabel(inner[1], bibliography); style = "citation";
+      citations = citationTargets(inner[1], bibliography); citationMode = "parenthetical";
+    }
+    else if ((inner = token.match(/^\\citet\{([^}]+)\}$/))) {
+      display = citationLabel(inner[1], bibliography, true); style = "citation";
+      citations = citationTargets(inner[1], bibliography, true); citationMode = "textual";
+    }
     else if ((inner = token.match(/^\\eqref\{([^}]+)\}$/))) { display = `(${references.get(inner[1]) || "?"})`; style = "reference"; }
-    else if ((inner = token.match(/^\\(?:cite|ref)\{([^}]+)\}$/))) { display = references.get(inner[1]) || inner[1]; style = "reference"; }
+    else if ((inner = token.match(/^\\ref\{([^}]+)\}$/))) { display = references.get(inner[1]) || inner[1]; style = "reference"; }
     else if ((inner = token.match(/^\\(?:emph|textit)\{([^}]+)\}$/))) { display = inner[1]; style = "italic"; }
     else if ((inner = token.match(/^\\textbf\{([^}]+)\}$/))) { display = inner[1]; style = "bold"; }
     else if ((inner = token.match(/^\\textsc\{([^}]+)\}$/))) { display = inner[1]; style = "smallcaps"; }
@@ -82,7 +109,8 @@ function tokenizeInline(raw, bibliography, references = new Map()) {
       const macros = { "\\HP": "Hidden Policy", "\\Rint": "R", "\\Rreveal": "R′", "\\Hist": "H", "\\Act": "A", "\\Traj": "T" };
       display = macros[token] || token;
     }
-    parts.push({ type: "token", raw: token, display, style });
+    parts.push({ type: "token", raw: token, display, style,
+      ...(citations ? { citations, citationMode } : {}) });
     cursor = match.index + token.length;
   }
   if (cursor < raw.length) parts.push({ type: "text", raw: raw.slice(cursor), display: raw.slice(cursor) });
@@ -298,16 +326,13 @@ async function documentPayload() {
   const bibliography = parseBibliography(bibSource);
   const blocks = parseDocument(source, bibliography);
   const pageCount = Number(logSource.match(/Output written on main\.pdf \((\d+) pages?/)?.[1] || 7);
-  // These source-line boundaries are calibrated to the current seven-page PDF.
-  // Blocks that cross a TeX page break start on the following HTML page so the
-  // paper cards remain fixed-size instead of overflowing into one another.
-  const calibratedPageStarts = pageCount === 7 ? [1, 47, 83, 136, 170, 222, 257] : null;
+  // This is only an initial, pre-measurement estimate. The browser repaginates
+  // blocks from their rendered heights so source-code line breaks cannot leave
+  // a mostly empty paper card.
   const lastLine = Math.max(1, ...blocks.map((block) => block.endLine));
   const sourceLinesPerPage = Math.ceil(lastLine / pageCount);
   for (const block of blocks) {
-    block.page = calibratedPageStarts
-      ? Math.min(pageCount, calibratedPageStarts.filter((line) => block.startLine >= line).length)
-      : Math.min(pageCount, Math.max(1, Math.floor((block.startLine - 1) / sourceLinesPerPage) + 1));
+    block.page = Math.min(pageCount, Math.max(1, Math.floor((block.startLine - 1) / sourceLinesPerPage) + 1));
   }
   const mainStatus = commandOutput(["status", "--porcelain", "--", "main.tex"]);
   return {
@@ -420,6 +445,16 @@ async function acceptChange(payload) {
   return { commit: commandOutput(["rev-parse", "--short", "HEAD"]), message, document: await documentPayload() };
 }
 
+function openExternal(payload) {
+  if (!payload || typeof payload.url !== "string") throw new Error("Invalid external link");
+  let url;
+  try { url = new URL(payload.url); } catch { throw new Error("Invalid external link"); }
+  if (!new Set(["http:", "https:"]).has(url.protocol)) throw new Error("Only web links can be opened");
+  const result = spawnSync("/usr/bin/open", ["-a", "Google Chrome", url.href], { encoding: "utf8", timeout: 10_000 });
+  if (result.status !== 0) throw new Error(result.stderr.trim() || "Google Chrome could not be opened");
+  return { ok: true };
+}
+
 const server = createServer(async (request, response) => {
   if (!allowedOrigin(request)) return json(response, 403, { error: "Origin not allowed" });
   if (request.method === "OPTIONS") {
@@ -431,6 +466,7 @@ const server = createServer(async (request, response) => {
     if (request.method === "GET" && request.url === "/api/document") return json(response, 200, await documentPayload());
     if (request.method === "GET" && request.url === "/api/drafts") return json(response, 200, await readDraftPayload());
     if (request.method === "POST" && request.url === "/api/drafts") return json(response, 200, await saveDraftPayload(await readJson(request)));
+    if (request.method === "POST" && request.url === "/api/open-external") return json(response, 200, openExternal(await readJson(request)));
     if (request.method === "POST" && request.url === "/api/accept") return json(response, 200, await acceptChange(await readJson(request)));
     return json(response, 404, { error: "Not found" });
   } catch (error) {
