@@ -52,7 +52,7 @@ This yields a fundamental limit on global identification. Unless we impose assum
 \begin{quote}
 \emph{behavior reveals a policy only up to an observational equivalence class.}
 \end{quote}
-Identification therefore requires evidence that separates policy structures, not merely additional samples from an unchanged interaction regime.
+This is a limit on global policy identification, not a claim that safety-relevant progress is impossible.
 
 This perspective also changes how mitigation should be interpreted. If unsafe behavior disappears after fine-tuning, red teaming, routing, or access control, the intervention may have invalidated a trigger, blocked a behavioral route, changed the conditions under which the policy is expressed, or actually removed the relevant policy structure. These outcomes are not equivalent. The disappearance of a behavior is therefore not sufficient evidence that the policy that generated it has been removed. This concern is already visible in sleeper-agent experiments, where adversarial training can suppress observed failures while improving trigger recognition \citep{hubinger2024sleeper}; we generalize it beyond backdoors into a policy-level research problem.
 
