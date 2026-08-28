@@ -48,7 +48,7 @@ where $h\in\Hist$ denotes the interaction history available to the model and $a\
 
 A central obstacle is the breadth of the condition space on which a hidden policy may depend. Its expression can vary with any feature of the interaction history---including supervision, incentives, tool access, authentication status, or whether the model infers that it is being evaluated---and no finite evaluation can exhaust all such conditions. Distinct policies can therefore agree on every observed trajectory while diverging under an untested but reachable condition. Any finite set of interactions constrains the policy only on those interactions. Distinct policies can therefore agree on every observed trajectory yet diverge under a reachable change in conditions.
 
-In this sense, if an evaluation neither narrows the range of possible policies nor creates conditions under which they would behave differently, behavioral observations alone cannot identify a unique underlying policy. 
+In this sense, if an evaluation neither narrows the range of possible policies nor creates conditions under which they would behave differently, behavioral observations alone cannot identify a unique underlying policy, which means a benchmark evaluation can reveal the underlying policy only up to an observational equivalence class.
 \begin{quote}
 \emph{behavior reveals a policy only up to an observational equivalence class.}
 \end{quote}
