@@ -134,7 +134,7 @@ Because equality of observable laws is reflexive, symmetric, and transitive, thi
 \end{equation}
 The class $[\pi]_{\mathcal{E}_{\mathrm{obs}}}$ represents unresolved policy hypotheses, not multiple policies or modules inside the model. In finite experiments, exact equality is replaced by approximate indistinguishability: for a divergence $D$, define $d_{\mathcal{E}}(\pi_1,\pi_2):=\sup_{r\in\mathcal{E}}D(Q_{\pi_1}^{r},Q_{\pi_2}^{r})$ and the neighborhood $\mathcal{B}_{\mathcal{E}}^{\delta}(\pi):=\{\pi':d_{\mathcal{E}}(\pi',\pi)\leq\delta\}$. We deliberately do not call this an equivalence class, because thresholded closeness is generally not transitive. The identification challenge is cross-regime: if two policies are equivalent under $\mathcal{E}_{\mathrm{obs}}$ but predict different behavior under a reachable regime $r'$, no estimator based only on the observed experiments can determine which prediction applies. Resolving the ambiguity requires expanding the experiment family, changing what is observed, or imposing justified restrictions on the candidate policies.
 
-\subsection{Definition of Hidden Policy}
+\subsection{Definition of a Hidden Policy}
 
 \begin{definition}[Hidden Policy]
 Relative to an interaction regime $\Rint$, a \emph{hidden policy} is a \textbf{generalizing, condition-gated decision regime} whose influence on action selection is \textbf{behaviorally masked} under $\Rint$, such that observations in $\Rint$ are compatible with a materially different policy structure, while the hidden regime becomes \textbf{systematically distinguishable} under some reachable condition or interaction regime $\Rreveal$.
