@@ -157,7 +157,7 @@ The masking condition is defined by $\mathcal{E}_{\mathrm{obs}}$, not by the pol
 The reveal family must contain conditions available in deployment or through admissible interventions, rather than logically possible but operationally irrelevant counterfactuals. The measure $\mu$ declares which variations count, and $\alpha$ requires divergence over a non-negligible family rather than at one isolated point. Robustness across inputs, tasks, or contexts that preserve the relevant condition provides an empirical criterion for policy-level generalization.
 
 \paragraph{4. Functional, not mechanistic.}
-There must exist a reachable condition or intervention $\Rreveal$ under which the competing policy hypotheses separate:
+The definition compares observable action-selection rules. It does not assert that the divergence is localized to a layer, subnetwork, representation, or independently stored policy; such claims require additional mechanistic evidence. In empirical evaluations, exact equivalence is replaced by approximate indistinguishability. For $0\leq\delta<\epsilon$ and $\alpha\in(0,1]$, we call $\pi_H$ a $(\delta,\epsilon,\alpha)$-hidden policy when
 \begin{equation}
     D\!\left(P_{\pi_H}(\tau\mid\Rreveal),
              P_{\pi_0}(\tau\mid\Rreveal)\right) \geq \epsilon
