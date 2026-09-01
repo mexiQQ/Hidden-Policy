@@ -109,7 +109,7 @@ denote the observation map, where $O_r(\tau)$ may retain a transcript, selected 
     :=\left(Q_{\pi}^{r}\right)_{r\in\mathcal{E}_{\mathrm{obs}}}.
     \label{eq:evaluation-operator}
 \end{equation}
-Equation~\ref{eq:regime-switch} is a \emph{functional} decomposition. It does not assert that $\pi_0$ and $\pi_H$ are stored in separate layers, subnetworks, or modules. A single unified network may implement both through ordinary computation. This choice intentionally separates the definition of hidden policies from the later mechanistic question of where or how the relevant structure is represented.
+The operator $T_{\mathcal{E}_{\mathrm{obs}}}$ is the observable signature of a policy under the experiments the evaluator can perform. Both the experiment family and observation map matter: two policies may differ on untested histories, unobserved actions, or internal computation while inducing the same available evidence.
 
 The gate $g$ can recognize a simple token, a semantic property, an environment state, or an inferred situation. Situational awareness is therefore a sophisticated form of condition recognition: the model may infer ``I am being monitored,'' ``this interaction affects training,'' or ``I now have access to a consequential tool'' and condition its decisions on that inference. Likewise, strategic reasoning can be internal to $\pi_H$: a sophisticated hidden policy may choose to comply, wait, conceal, or act depending on the consequences of each option.
 
