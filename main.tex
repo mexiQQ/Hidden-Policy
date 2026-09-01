@@ -111,7 +111,7 @@ denote the observation map, where $O_r(\tau)$ may retain a transcript, selected 
 \end{equation}
 The operator $T_{\mathcal{E}_{\mathrm{obs}}}$ is the observable signature of a policy under the experiments the evaluator can perform. Both the experiment family and observation map matter: two policies may differ on untested histories, unobserved actions, or internal computation while inducing the same available evidence.
 
-The gate $g$ can recognize a simple token, a semantic property, an environment state, or an inferred situation. Situational awareness is therefore a sophisticated form of condition recognition: the model may infer ``I am being monitored,'' ``this interaction affects training,'' or ``I now have access to a consequential tool'' and condition its decisions on that inference. Likewise, strategic reasoning can be internal to $\pi_H$: a sophisticated hidden policy may choose to comply, wait, conceal, or act depending on the consequences of each option.
+Hiddenness must therefore be indexed by an observer and $\mathcal{E}_{\mathrm{obs}}$. A policy can be hidden under one experiment family and exposed under another; it is not hidden in an absolute, observer-independent sense. This leads to the central identification challenge.
 
 \subsection{Interaction regimes and observational equivalence}
 
