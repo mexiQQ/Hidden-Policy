@@ -103,12 +103,11 @@ An evaluator rarely observes every part of a trajectory. For each interaction re
 \end{equation}
 denote the observation map, where $O_r(\tau)$ may retain a transcript, selected actions, a benchmark score, or any other evidence available to the observer. Let $Q_{\pi}^{r}$ be the resulting distribution over observable evidence. An evaluation is a family of experiments $\mathcal{E}_{\mathrm{obs}}$ available to the observer, not merely one realized dataset. It induces the evaluation operator
 \begin{equation}
-    a \sim
-    \begin{cases}
-        \pi_0(\cdot\mid h), & g(h)=0,\\
-        \pi_H(\cdot\mid h), & g(h)=1.
-    \end{cases}
-    \label{eq:regime-switch}
+    Q_{\pi}^{r}:=(O_r)_{\#}P_{\pi}^{r},
+    \qquad
+    T_{\mathcal{E}_{\mathrm{obs}}}(\pi)
+    :=\left(Q_{\pi}^{r}\right)_{r\in\mathcal{E}_{\mathrm{obs}}}.
+    \label{eq:evaluation-operator}
 \end{equation}
 Equation~\ref{eq:regime-switch} is a \emph{functional} decomposition. It does not assert that $\pi_0$ and $\pi_H$ are stored in separate layers, subnetworks, or modules. A single unified network may implement both through ordinary computation. This choice intentionally separates the definition of hidden policies from the later mechanistic question of where or how the relevant structure is represented.
 
