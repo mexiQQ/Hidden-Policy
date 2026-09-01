@@ -169,7 +169,7 @@ The definition compares observable action-selection rules. It does not assert th
     \qquad \epsilon>\delta.
     \label{eq:hidden-policy-approx}
 \end{align}
-for a meaningful $\epsilon>0$. This requirement keeps the object empirical and falsifiable: a ``policy'' that can never affect any reachable behavior is outside our operational scope.
+Here $\delta$ captures what the available evaluation cannot reliably separate, while $\epsilon$ and $\alpha$ require a meaningfully larger and systematic reveal-regime difference. For a behavior-relative safety claim, $D$ can be replaced by $\left|P_{\pi_H}^{r}(B)-P_{\pi_{\mathrm{ref}}}^{r}(B)\right|$ for a target unsafe behavior $B$. This separates the value-neutral property of hiddenness from the consequential behavior that motivates a particular analysis.
 
 A concise summary is:
 \begin{quote}
