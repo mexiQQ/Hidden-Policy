@@ -74,7 +74,7 @@ Our contributions are organized around four questions. \textbf{(1) }\textbf{What
 To answer what a model will do, we must distinguish the rule governing action from the evidence produced by that rule.
 
 \paragraph{Objective.}
-Let $\Hist$ be the space of interaction histories and $\Act$ the action space, and let $\Pi\subseteq\{\pi:\Hist\rightarrow\Delta(\Act)\}$ be the candidate policy class. A hidden objective, for example, concerns what outcome a model persistently optimizes while not disclosing that objective \citep{marks2025hidden}.
+Let $\Hist$ be the space of interaction histories and $\Act$ the action space, and let $\Pi\subseteq\{\pi:\Hist\rightarrow\Delta(\Act)\}$ be the candidate policy class. Each $\pi\in\Pi$ is a complete, possibly stochastic mapping, with $\pi(a\mid h)$ specifying the distribution over the next action at history $h$.
 
 \paragraph{Policy.}
 A policy $\pi(a\mid h)$ is a rule---possibly stochastic---for selecting actions from interaction history. Strategic reasoning can therefore be part of a policy; it need not be modeled as an additional ingredient outside the policy.
