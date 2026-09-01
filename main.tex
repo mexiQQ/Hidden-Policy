@@ -178,7 +178,7 @@ The part--whole ambiguity can now be stated precisely:
 
 \subsection{Condition-gated policies as one realization}
 
-The definition is intentionally value-neutral and mechanism-agnostic. A hidden policy need not be malicious, intentionally implanted, deterministic, strategically deceptive, objective-driven, or localized to a separable internal component. These exclusions matter because they prevent the concept from collapsing into backdoors or scheming.
+A condition gate is a useful but nonessential realization. A complete policy may be written functionally as $\pi_H(a\mid h)=(1-g(h))\pi_{\mathrm{ref}}(a\mid h)+g(h)\pi_{\mathrm{alt}}(a\mid h)$, where $g(h)\in[0,1]$. If observed regimes concentrate on histories with $g(h)\approx0$ and reachable regimes induce histories with appreciable $g(h)$, the resulting policy can satisfy the definition. Here $\pi_H$ is the complete hidden policy; $\pi_{\mathrm{alt}}$ is only a branch used to represent its behavior on part of the history space.
 
 First, \emph{determinism is unnecessary}. Modern language-model policies are stochastic, and a stable change in the distribution of actions can be policy-structured even if repeated runs do not produce identical outputs. Second, \emph{intentional formation is unnecessary}. A hidden policy may be implanted by an attacker, induced by post-training, or emerge unintentionally from optimization and correlations in data. Third, \emph{an explicit hidden objective is unnecessary}. Objectives and policies are distinct axes: a model can have a condition-gated strategy without a stable alternative objective, or can pursue an undisclosed objective continuously without switching policy regimes.
 
