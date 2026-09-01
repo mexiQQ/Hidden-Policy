@@ -158,10 +158,17 @@ The reveal family must contain conditions available in deployment or through adm
 
 \paragraph{4. Functional, not mechanistic.}
 The definition compares observable action-selection rules. It does not assert that the divergence is localized to a layer, subnetwork, representation, or independently stored policy; such claims require additional mechanistic evidence. In empirical evaluations, exact equivalence is replaced by approximate indistinguishability. For $0\leq\delta<\epsilon$ and $\alpha\in(0,1]$, we call $\pi_H$ a $(\delta,\epsilon,\alpha)$-hidden policy when
-\begin{equation}
-    D\!\left(P_{\pi_H}(\tau\mid\Rreveal),
-             P_{\pi_0}(\tau\mid\Rreveal)\right) \geq \epsilon
-\end{equation}
+\begin{align}
+    \sup_{r\in\mathcal{E}_{\mathrm{obs}}}
+    D\!\left(Q_{\pi_H}^{r},Q_{\pi_{\mathrm{ref}}}^{r}\right)
+    &\leq\delta, \\
+    \mu\!\left(\left\{r\in\mathcal{E}_{\mathrm{rev}}:
+    D\!\left(Q_{\pi_H}^{r},Q_{\pi_{\mathrm{ref}}}^{r}\right)
+    \geq\epsilon\right\}\right)
+    &\geq\alpha,
+    \qquad \epsilon>\delta.
+    \label{eq:hidden-policy-approx}
+\end{align}
 for a meaningful $\epsilon>0$. This requirement keeps the object empirical and falsifiable: a ``policy'' that can never affect any reachable behavior is outside our operational scope.
 
 A concise summary is:
