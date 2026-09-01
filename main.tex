@@ -148,7 +148,7 @@ Fix a reference policy $\pi_{\mathrm{ref}}$ specified independently of reveal-re
 The definition makes four commitments that prevent the term from collapsing into either an arbitrary untested difference or an unsupported claim about model internals.
 
 \paragraph{1. Complete-policy comparison.}
-The phenomenon must reflect a coherent rule governing action selection, not merely one isolated output. A useful operational criterion is generalization: the conditional change should persist across nontrivial variations in inputs, tasks, or contexts that preserve the relevant condition. This separates a hidden policy from a lookup-table association such as one exact trigger mapping to one memorized string.
+Both $\pi_H$ and $\pi_{\mathrm{ref}}$ are complete mappings from histories to action distributions. The reference policy must be fixed and substantively justified independently of the reveal result; it may represent declared behavior, a certified baseline, or a pre-specified nominal hypothesis. It is not a second component assumed to be stored inside the model. What is hidden is which complete policy the model implements. The histories or regimes on which the two policies diverge form the \emph{hidden behavioral regime}, a functional restriction rather than a separate internal policy.
 
 \paragraph{2. Condition gating.}
 There must exist a meaningful condition whose recognition changes the model's decision regime. The condition may be externally supplied or internally inferred. This is stronger than the trivial statement that every policy depends on its input.
