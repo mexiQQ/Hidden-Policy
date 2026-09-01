@@ -101,7 +101,7 @@ An evaluator rarely observes every part of a trajectory. For each interaction re
 \begin{equation}
     O_r:\Traj\rightarrow\mathcal{Y}_r
 \end{equation}
-be a condition recognizer. When $g(h)=0$, the model behaves according to a reference decision regime; when $g(h)=1$, its action-selection structure changes systematically. For exposition we write
+denote the observation map, where $O_r(\tau)$ may retain a transcript, selected actions, a benchmark score, or any other evidence available to the observer. Let $Q_{\pi}^{r}$ be the resulting distribution over observable evidence. An evaluation is a family of experiments $\mathcal{E}_{\mathrm{obs}}$ available to the observer, not merely one realized dataset. It induces the evaluation operator
 \begin{equation}
     a \sim
     \begin{cases}
