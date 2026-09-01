@@ -137,7 +137,12 @@ The class $[\pi]_{\mathcal{E}_{\mathrm{obs}}}$ represents unresolved policy hypo
 \subsection{Definition of a Hidden Policy}
 
 \begin{definition}[Hidden Policy]
-Relative to an interaction regime $\Rint$, a \emph{hidden policy} is a \textbf{generalizing, condition-gated decision regime} whose influence on action selection is \textbf{behaviorally masked} under $\Rint$, such that observations in $\Rint$ are compatible with a materially different policy structure, while the hidden regime becomes \textbf{systematically distinguishable} under some reachable condition or interaction regime $\Rreveal$.
+Fix a reference policy $\pi_{\mathrm{ref}}$ specified independently of reveal-regime observations, an observed experiment family $\mathcal{E}_{\mathrm{obs}}$, a reachable reveal family $\mathcal{E}_{\mathrm{rev}}$, and a probability measure $\mu$ over $\mathcal{E}_{\mathrm{rev}}$. For $\epsilon>0$ and $\alpha\in(0,1]$, a complete policy $\pi_H$ is an $(\epsilon,\alpha)$-\emph{hidden policy} if $\pi_H\sim_{\mathcal{E}_{\mathrm{obs}}}\pi_{\mathrm{ref}}$ and
+\begin{equation}
+    \mu\!\left(\left\{r\in\mathcal{E}_{\mathrm{rev}}:
+    D\!\left(Q_{\pi_H}^{r},Q_{\pi_{\mathrm{ref}}}^{r}\right)\geq\epsilon
+    \right\}\right)\geq\alpha.
+\end{equation}
 \end{definition}
 
 The definition has four operational components.
