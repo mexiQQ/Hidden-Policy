@@ -74,7 +74,7 @@ Our contributions are organized around four questions. \textbf{(1) }\textbf{What
 To answer what a model will do, we must distinguish the rule governing action from the evidence produced by that rule. Capability, policy, and behavior answer different questions and should not be treated as interchangeable properties of a model.
 
 \paragraph{Policy.}
-Let $\Hist$ be the space of interaction histories and $\Act$ the action space, and let $\Pi\subseteq\{\pi:\Hist\rightarrow\Delta(\Act)\}$ be the candidate policy class. Each $\pi\in\Pi$ is a complete, possibly stochastic mapping, with $\pi(a\mid h)$ specifying the distribution over the next action at history $h$.
+Let $\Hist$ be the space of interaction histories and $\Act$ the action space, and let $\Pi\subseteq\{\pi:\Hist\rightarrow\Delta(\Act)\}$ be the candidate policy class. Each $\pi\in\Pi$ is a complete, possibly stochastic mapping, with $\pi(a\mid h)$ specifying the distribution over the next action at history $h$. It covers both observed histories and histories that could arise under different conditions. Strategic or situational reasoning may therefore be part of the policy; it need not be introduced as a separate object.
 
 \paragraph{Behavior.}
 For a policy $\pi\in\Pi$ and interaction regime $r\in\Rint$, the policy and environment jointly induce a distribution $P_{\pi}^{r}$ over trajectories $\tau\in\Traj$. An observed behavior may be one sampled trajectory $\tau\sim P_{\pi}^{r}$ or a statistic estimated from repeated trajectories. Behavior is therefore specific to a regime and is neither the policy itself nor a complete description of it.
