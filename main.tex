@@ -82,7 +82,8 @@ For a policy $\pi\in\Pi$ and interaction regime $r\in\Rint$, the policy and envi
 \paragraph{Capability.}
 Fix a target behavior $B\subseteq\Traj$ and an admissible family of elicitation regimes $\mathcal{E}_{\mathrm{cap}}\subseteq\Rint$. We define the operational capability
 \begin{equation}
-    P_{\pi}(\tau\mid \Rint).
+    \operatorname{Cap}_{B}(\pi;\mathcal{E}_{\mathrm{cap}})
+    :=\sup_{r\in\mathcal{E}_{\mathrm{cap}}}P_{\pi}^{r}(B).
 \end{equation}
 Here $\Rint$ denotes the \emph{interaction regime}: the inputs, environment states, supervision, tool access, feedback, and other interaction conditions available to the observer and model.
 
