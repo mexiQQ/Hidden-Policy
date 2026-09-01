@@ -118,12 +118,11 @@ Hiddenness must therefore be indexed by an observer and $\mathcal{E}_{\mathrm{ob
 Even unlimited repetition of a fixed evaluation family need not identify a unique policy. Repetition can estimate the observable signature more precisely, but it cannot separate policies that induce the same signature.
 
 \begin{definition}[Observational equivalence]
-Two policies $\pi_1$ and $\pi_2$ are $\delta$-equivalent under interaction regime $\Rint$ if the distributions over observable trajectories are close:
+Two complete policies $\pi_1,\pi_2\in\Pi$ are observationally equivalent under $\mathcal{E}_{\mathrm{obs}}$, written $\pi_1\sim_{\mathcal{E}_{\mathrm{obs}}}\pi_2$, if
 \begin{equation}
-    D\!\left(P_{\pi_1}(\tau\mid\Rint),
-             P_{\pi_2}(\tau\mid\Rint)\right) \leq \delta,
+    Q_{\pi_1}^{r}=Q_{\pi_2}^{r}
+    \qquad\text{for every }r\in\mathcal{E}_{\mathrm{obs}}.
 \end{equation}
-for a task-appropriate divergence or distinguishability measure $D$.
 \end{definition}
 
 The observations available under $\Rint$ therefore identify an equivalence class
