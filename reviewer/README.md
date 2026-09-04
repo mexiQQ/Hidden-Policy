@@ -19,7 +19,7 @@ Open <http://localhost:3000>.
 1. Hover over a sentence to highlight it, then click that sentence or a formula to open the docked revision editor on the right.
 2. Edit one sentence at a time while the green/pink tracked diff remains visible on the paper.
 3. Select text and click **B**, or press Command/Ctrl+B, to add or remove LaTeX bold formatting.
-4. Click **Copy LaTeX** to copy the editor's current source, including unsaved edits and protected LaTeX tokens. Formula editors copy their current formula source.
+4. Click **Copy sentence** to copy the current sentence as LaTeX, or **Copy paragraph** to copy the complete paragraph with all current draft edits. Formula editors copy their current formula source.
 5. Changes are saved automatically as you type; press Escape or close the panel when you are done editing.
 6. Insertions and added bold formatting appear on green; deletions appear on pink with a strike-through.
 7. Use **✓ Accept & commit** in the Revision Editor to rebuild the PDF and commit the selected sentence change to `main.tex`.

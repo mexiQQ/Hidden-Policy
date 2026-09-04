@@ -61,6 +61,8 @@ kbd { padding: 1px 4px; border: 1px solid #c6c5bf; border-bottom-width: 2px; bor
 .page-number { position: absolute; bottom: 37px; left: 0; right: 0; text-align: center; font-size: 13px; }
 
 .paper-block { position: relative; margin: 0 0 8px; }
+.paper-block.fragment-continuation { margin-top: 0; }
+.paper-block.fragment-continues { margin-bottom: 0; }
 .paper-block .rendered-text, .paper-block .diff-text { white-space: pre-line; }
 .kind-title { margin: 0 0 27px; font-size: 26.667px; line-height: 1.1; font-variant: small-caps; letter-spacing: .055em; font-weight: 500; text-align: left; }
 .kind-author { margin: 0 0 32px; line-height: 1.1; text-align: left; }
@@ -79,7 +81,7 @@ kbd { padding: 1px 4px; border: 1px solid #c6c5bf; border-bottom-width: 2px; bor
 .kind-runin + .kind-paragraph .rendered-text, .kind-runin + .kind-paragraph .diff-text { display: inline; }
 .kind-runin + .kind-paragraph::after { content: ""; display: block; margin-bottom: 8px; }
 .kind-statement { padding: 2px 0; text-align: justify; font-style: italic; }
-.kind-quote { margin: 12px 48px; text-align: justify; font-style: italic; }
+.kind-quote { margin: 12px 48px; text-align: justify; font-style: normal; }
 .kind-list { margin: 6px 0 10px; text-align: justify; }
 .kind-list ol, .kind-list ul { margin: 0; padding-left: 48px; }
 .kind-list ol { list-style: decimal outside; }
@@ -165,14 +167,19 @@ del { padding: 1px 2px; color: #56323b; background: var(--pink); text-decoration
 .revision-panel-header > button { width: 28px; height: 28px; flex: 0 0 auto; padding: 0; border: 1px solid #d3d5d1; border-radius: 50%; color: #656963; background: #fff; cursor: pointer; font-size: 18px; line-height: 25px; }
 .revision-panel-header > button:hover { color: #20231f; background: #f1f2ef; }
 .revision-guidance { margin: 12px 0 16px; color: #6e746f; font-size: 11px; line-height: 1.45; }
-.editor-format-toolbar { margin: 0 0 7px; display: flex; align-items: center; gap: 9px; color: #788079; font-size: 10px; }
+.editor-format-toolbar { margin: 0 0 7px; display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: #788079; font-size: 10px; }
 .editor-format-toolbar button { height: 27px; flex: 0 0 auto; padding: 0 9px; border: 1px solid #b8c2ca; border-radius: 5px; color: #263746; background: #f8fafb; cursor: pointer; font-size: 10px; font-weight: 600; }
-.editor-format-toolbar .format-bold { width: 29px; padding: 0; font-family: "Times New Roman", Times, serif; font-size: 16px; }
-.editor-format-toolbar .copy-latex { min-width: 79px; letter-spacing: .01em; }
+.editor-format-toolbar .format-bold, .editor-format-toolbar .format-italic { width: 29px; padding: 0; font-family: "Times New Roman", Times, serif; font-size: 16px; }
+.editor-format-toolbar .format-italic { font-style: italic; }
+.editor-format-toolbar .copy-latex { min-width: 86px; letter-spacing: .01em; }
+.editor-format-toolbar .copy-paragraph { min-width: 94px; }
+.editor-format-toolbar > span { flex: 1 1 120px; line-height: 1.25; }
 .editor-format-toolbar button:hover, .editor-format-toolbar button:focus-visible { border-color: #527da3; color: #174f80; background: #eaf3fa; outline: none; box-shadow: 0 0 0 2px #5d8cbb25; }
 .revision-input { width: 100%; min-height: 150px; max-height: calc(100vh - 300px); margin: 0; padding: 12px; overflow: auto; resize: none; outline-width: 1px; font: 14px/1.55 "Times New Roman", Times, serif; text-align: left; }
 .revision-input strong, .revision-input b, .editable-bold { font-weight: 700; }
+.revision-input em, .revision-input i, .editable-italic { font-style: italic; }
 .format-change { font-weight: 700; }
+.format-change-italic { font-weight: 400; font-style: italic; }
 .revision-panel .edit-note { margin: 9px 0 0; font-size: 10px; }
 .revision-panel-footer { margin-top: 16px; padding-top: 12px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e4e5e1; }
 .revision-panel-footer button { padding: 7px 11px; border: 1px solid; border-radius: 5px; cursor: pointer; font-size: 11px; }

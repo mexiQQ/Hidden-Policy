@@ -31,260 +31,222 @@
 \maketitle
 
 \begin{abstract}
-Frontier-model safety and security are usually assessed through \textbf{what a model can do} and \textbf{what it has done}. Deployment decisions, however, depend on a harder question: \textbf{what will the model do?} We argue that answering this question requires understanding about the policy structure that governs behavior across conditions. Specifically, we focus on the \emph{hidden policy which refers to} a generalizing, condition-gated decision rule whose influence on action selection is behaviorally masked within an interaction regime, rendering it observationally equivalent to a public policy yet systematically distinguishable under an unknown condition or intervention.  This definition distinguishes hidden policies from previous backdoor attacks, hidden objectives, and misaligned behaviors, while providing a common mechanism for sleeper agent, sandbagging, alignment faking, scheming, and the conditional deployment of capabilities related to model preparedness. However, this risk expose a policy-identifiability limitation: \textbf{behavioral evidence can only reveal underlying policy up to an observational equivalence class and therefore fail to predict future behavior when supervision, incentives, access, or authentication change in deployment. }
-
-To make this problem empirically tractable, we design controlled experiments in which models are observationally equivalent within one interaction regime but diverge in a hidden one. Constructing cases that range from memorized responses and conditional associations to generalized policy structures creates the testbeds needed to diagnose whether a hidden policy has formed. These same testbeds also make it possible to evaluate removal: whether an intervention eliminates the underlying policy structure or merely invalidates a trigger, contains its behavior, or suppresses its expression. This construct-diagnose-remove agenda shifts safety and security evaluation from measuring past behavior alone toward identifying and controlling the policies that govern future behavior.
+Frontier models' safety and security are usually assessed through \textbf{what a model can do} and \textbf{what it has done}. Deployment decisions, however, depend on a tougher question: \textbf{what will the model do?}  We argue that answering this question requires understanding the policy structure that governs behaviors across conditions.
+Specifically, we define a \emph{hidden policy} as a generalizing, condition-gated decision rule whose influence on action selection is behaviorally masked within an interaction regime, rendering it observationally equivalent to a different policy structure yet systematically distinguishable under a reachable condition or intervention.
+%Specifically, we focus on \textit{hidden policy} which refers to a generalizing, condition-gated decision rule whose influence on action selection is behaviorally masked within an interaction regime, rendering it observationally equivalent to a public policy yet systematically distinguishable under an unknown condition or intervention.
+This definition distinguishes hidden policies from previous backdoor attacks, hidden objectives, and misaligned behaviors, while providing a common mechanism for sleeper agents, sandbagging, alignment faking, scheming, and the conditional deployment of capabilities related to model preparedness.
+However, this risk exposes a policy-identifiability challenge: \textbf{behavioral evidence can only reveal the underlying policy up to an observational equivalence class and therefore fails to predict future behaviors when supervision, incentives, access, or authentication change in deployment}. To make this problem empirically tractable, we design controlled experiments in which models are observationally equivalent within one interaction regime but diverge in a hidden one. Constructing cases that range from memorized responses and conditional associations to generalized policy structures creates testbeds that enable diagnosis of whether a hidden policy has formed.
+% Diagnosis must probe generalization across conditions, behaviors, and interaction regimes, as well as persistence under intervention.
+The same testbed also makes it possible to evaluate the removal of hidden policy: whether an intervention eliminates the underlying policy structure or merely invalidates a trigger, blocks the behavior, or suppresses its expression. This construct-diagnose-remove framework shifts safety and security evaluation from measuring past behavior alone toward identifying and controlling the policies that govern future behaviors.
 \end{abstract}
 
 \section{Introduction}
 
-Frontier large language models (LLMs) can possess emerging capabilities without expressing it, and they can produce safe responses under evaluation without following this policy when condition changes. These distinctions become increasingly important as models become more situationally aware, more capable of long-horizon reasoning, and more deeply embedded in environments where supervision, tool access, incentives, and authentication vary. Existing safety or security work offers striking examples of condition-dependent behavior: sleeper agents that switch behavior under deployment cues \citep{hubinger2024sleeper}, models that selectively comply during training to preserve behavior outside training \citep{greenblatt2024alignment}, models optimized around hidden objectives \citep{marks2025hidden}, alongside preparedness frameworks that track severe risks spanning biological and chemical capabilities, cybersecurity, automated AI research, long-horizon autonomy, safeguard circumvention, and loss of control \citep{openai2025preparedness,deepmind2025frontier,anthropic2025rsp}. Yet these studies provide limited evidence about whether models would independently initiate and carry out the corresponding harms, because the observed behaviors are typically elicited under conditions that researchers explicitly specify or implicitly embed in training and evaluation setups. This leaves a gap between capability and observed behavior: \textbf{does possessing a dangerous capability necessarily mean that a model will engage in harmful action?}
+Frontier large language models (LLMs) can possess emerging capabilities without expressing them, and they can produce safe responses under evaluation without doing so when conditions change. These discrepancies become increasingly important as models become more situationally aware, more capable of long-horizon reasoning, and more deeply embedded in environments where supervision, tool access, incentives, and authentication vary. Existing safety or security studies offer striking examples of condition-dependent behavior: sleeper agents that switch behavior under deployment cues \citep{hubinger2024sleeper}, models that selectively comply during training to preserve behavior outside training \citep{greenblatt2024alignment}, models optimized around hidden objectives \citep{marks2025hidden}, alongside preparedness frameworks that track severe risks spanning biological and chemical capabilities, cybersecurity, automated AI research, long-horizon autonomy, safeguard circumvention, and loss of control \citep{openai2025preparedness,deepmind2025frontier,anthropic2025rsp}. Yet these studies provide limited evidence about whether models would independently initiate and carry out the corresponding harms, because the observed behaviors are typically elicited under certain conditions that researchers explicitly specify or implicitly embed in training and evaluation setups. This leaves a gap between capability and observed behavior: \textbf{Does possessing a dangerous capability necessarily mean that a model will engage in harmful action?}
 
-To make this gap precise, we distinguish three questions : \textbf{(Q1)}  \emph{What can a model do?} concerns capability; \textbf{(Q2)} \emph{What has it done?} concerns behavior observed under particular conditions;  \textbf{(Q3)} and \emph{What will it do as conditions change?} concerns the policy governing future action.  Existing safety or security evaluations often address the first two while leaving the third underdefined: \textbf{behavior evidence may only show what a model can do and what it did under specific conditions without identifying the policy that governs what it will do under different ones.} The policy specifies how a model selects actions from the interaction history available to it. Formally, a model induces a policy
+To close this gap, we distinguish three questions: \textbf{(Q1)}  \emph{What can a model do?} concerns capability; \textbf{(Q2)} \emph{What has it done?} concerns behavior observed under particular conditions;  \textbf{(Q3)} and \emph{What will it do as conditions change?} concerns the policy governing future action.  Existing safety or security evaluations often address the first two while leaving the third underdefined: \textbf{behavioral evidence may only show what a model can do and what it did under specific conditions, but cannot identify a policy that governs what it will do under varying conditions.} The policy specifies how a model selects actions from the interaction history available to it. Formally, a model induces a policy
 \begin{equation}
     \pi(a\mid h),
 \end{equation}
-where $h\in\Hist$ denotes the interaction history available to the model and $a\in\Act$ denotes its next action. Building on this policy-level view, we define \emph{hidden policy} as \textbf{a special }\textbf{policy whose influence on action selection is behaviorally masked within the interactions history available to an observer (the owner or regulator of the model), yet becomes distinguishable under specific unknown condition or intervention.} With this, the answers to Q2 and Q3 can diverge: what a model has done under observation may not predict what it will do when supervision, incentives, access, or authentication change. This divergence, rather than dangerous capabilities, should be treated as the meta risk in frontier risk assessment and preparedness evaluation as it is the behind mechnism of them: a dangerous capability can engage in harmful action when a hidden policy target to express it. Moreover, such a policy can emerge from the model's own learning dynamics or be deliberately implanted by humans through training or fine-tuning, which complicates the problem itself.
+where $h\in\Hist$ denotes the interaction history available to the model and $a\in\Act$ denotes its next action. Building on this policy-level view, we define \emph{hidden policy} as \textbf{a special }\textbf{policy whose influence on action selection is behaviorally masked within the interactions history available to an observer (the owner or regulator of the model), yet becomes distinguishable under certain unknown conditions or interventions.} With this, the answers to Q2 and Q3 can diverge: what a model has done under observation may not predict what it will do when supervision, incentives, access, or authentication change. This divergence, rather than dangerous capabilities, should be treated as the meta risk in frontier risk assessment and preparedness evaluation, as it is the underlying mechanism of them: a dangerous capability can engage in harmful action when a hidden policy targets to express it. Moreover, such a policy can emerge from the model's own learning dynamics or be deliberately implanted by humans through pre-training or fine-tuning, which complicates the issue itself.
 
 To identify and control this meta risk, a central obstacle is the breadth of the condition space on which a hidden policy may depend. Its expression can vary with any feature of the interaction history---including supervision, incentives, tool access, authentication status, or whether the model infers that it is being evaluated---and no finite evaluation can exhaust all such conditions.  Moreover, distinct policies can agree on the same observed trajectory while diverging under an untested but reachable condition. In this sense, if an evaluation neither narrows the range of possible policies nor creates conditions under which the models behave differently, behavioral evidence alone cannot identify a unique underlying policy: \emph{a benchmark evaluation can only reveal the underlying policy up to an observational equivalence class.}
 
+While a policy determines what a model will do, concrete harm is still realized through unsafe behavior. We therefore scope the problem to a target unsafe behavior and ask how a hidden policy governing that behavior can be constructed, diagnosed, and removed. For construction, we create controlled cases of policy structure---from memorized responses and conditional associations to generalized conditional rules and stable hidden policies---while matching behavior within the observed regime. Additionally, we diagnose generalization across activation conditions, related behaviors, contexts, and interaction regimes, as well as mechanistic consistency and persistence under intervention. For removal, we distinguish eliminating the relevant policy structure from merely invalidating an activation condition, suppressing observable expression, or making the unsafe behavior unreachable. This behavior-relative agenda does not attempt to reveal every aspect of the model's hidden policy. Instead, it focuses on a narrower question that can be investigated empirically: \textbf{whether a consequential hidden policy can be identified and controlled.}
 
-
-
-
-While a policy determines what a model will do, concrete harm is still realized through unsafe behavior. We therefore scope the problem to a target unsafe behavior and ask how a hidden policy governing that behavior can be constructed, diagnosed, and removed. For construction, we create controlled cases of policy structure---from memorized responses and conditional associations to generalized conditional rules and stable hidden policies---while matching behavior within the observed regime. Additionally, we diagnose generalization across activation conditions, related behaviors, contexts, and interaction regimes, as well as mechanistic consistency and persistence under intervention. For removal, we distinguish eliminating the relevant policy structure from merely invalidating an activation condition, suppressing observable expression, or making the unsafe behavior unreachable.  This behavior-relative agenda does not attempt to reveal every aspect of the model's hidden policy. Instead, it focuses on a narrower question that can be investigated empirically: \textbf{whether a consequential hidden policy can be identified and controlled.}
-
-Our contributions are organized around four questions. \textbf{(1) }\textbf{What is a hidden policy, and what does the observational equivalence capture?} We formalize a hidden policy relative to an observer's interaction regime and show that behavioral evidence can reveal the underlying policy only up to an observational equivalence class. \textbf{(2) }\textbf{Why are hidden policies important?} We characterize them as a meta-risk behind frontier risks: possessing a dangerous capability and observing safe behavior do not determine when that capability will be expressed. \textbf{(3)} \textbf{How can a hidden policy be constructed?} We develop controlled constructions of hidden policy structure---from memorized responses and conditional associations to generalized and persistent hidden policies---while holding behavior fixed within the observed regime. \textbf{(4) }\textbf{When has a hidden policy been removed?} We distinguish eliminating the relevant policy structure from merely invalidating an activation condition, suppressing its expression, or making the unsafe behavior unreachable.
-
-
-
-
-
-
-
-
-
-
+Our contributions are summarized as follows. \textbf{(1) What is a hidden policy, and what does the observational equivalence capture?} We formalize a hidden policy regarding an observer's interaction regime and show that behavioral evidence can reveal the underlying policy only up to an observational equivalence class. \textbf{(2) Why are hidden policies important?} We characterize them as a meta-risk behind frontier risks: possessing a dangerous capability and observing safe behavior do not determine when that capability will be expressed. \textbf{(3) How can a hidden policy be constructed?} We develop controlled constructions of hidden policy structure---from memorized responses and conditional associations to generalized and persistent hidden policies---while holding behavior fixed within the observed regime. \textbf{(4) When a hidden policy is removed?} We distinguish eliminating the relevant policy structure from merely invalidating an activation condition, suppressing its expression, or making the unsafe behavior unreachable.
 
 \section{What Is a Hidden Policy?}
 \label{sec:definition}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Capability, policy, and behavior
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \subsection{Capability, policy, and behavior}
 
-To answer what a model will do, we must distinguish the rule governing action from the evidence produced by that rule. Capability, policy, and behavior answer different questions and should not be treated as interchangeable properties of a model.
+A central distinction in this work is between \emph{what a model can do}, \emph{what it actually does}, and \emph{how it decides what to do}. We refer to these as \emph{capability}, \emph{behavior}, and \emph{policy}, respectively. Although closely related, they describe different properties of a model.
 
-\paragraph{Policy.}
-Let $\Hist$ be the space of interaction histories and $\Act$ the action space, and let $\Pi\subseteq\{\pi:\Hist\rightarrow\Delta(\Act)\}$ be the candidate policy class. Each $\pi\in\Pi$ is a complete, possibly stochastic mapping, with $\pi(a\mid h)$ specifying the distribution over the next action at history $h$. It covers both observed histories and histories that could arise under different conditions. Strategic or situational reasoning may therefore be part of the policy; it need not be introduced as a separate object.
+\paragraph{Capability: what can the model do?}
+A capability describes a class of behaviors that a model can reliably produce under suitable conditions. For example, a model may be capable of exploiting a software vulnerability if it can reliably perform the exploit when provided with the necessary information, tools, and opportunity. More generally, for a target behavior class $\mathcal{B}$ and a family of admissible elicitation conditions $\mathcal{E}$, capability asks whether there exists some $r\in\mathcal{E}$ under which the model can reliably produce a target behavior $b\in\mathcal{B}$.
+% Capability therefore characterizes what behaviors are available to the model under suitable conditions, rather than which behavior it will select in a particular interaction.
 
-\paragraph{Behavior.}
-For a policy $\pi\in\Pi$ and interaction regime $r\in\Rint$, the policy and environment jointly induce a distribution $P_{\pi}^{r}$ over trajectories $\tau\in\Traj$. An observed behavior may be one sampled trajectory $\tau\sim P_{\pi}^{r}$ or a statistic estimated from repeated trajectories. Behavior is therefore specific to a regime and is neither the policy itself nor a complete description of it.
+\paragraph{Behavior: what did the model actually do?}
+Behavior describes what is observed when the model interacts with its environment under a particular condition. We represent an interaction by a trajectory $\tau\in\Traj$, which records the sequence of observations and actions that occurs during the interaction.
+% An observed behavior may be a single trajectory or a statistic computed from repeated trajectories under the same condition.
+Behavior is therefore conditional on the circumstances in which the model is observed. The same model may exhibit different behaviors when, for example, supervision, incentives, access to tools, authentication, or other aspects of the interaction change.
+% Observing behavior under one set of conditions tells us what the model did there, but does not by itself specify what it would do under another.
 
-\paragraph{Capability.}
-Fix a target behavior $B\subseteq\Traj$ and an admissible family of elicitation regimes $\mathcal{E}_{\mathrm{cap}}\subseteq\Rint$. We define the operational capability
+\paragraph{Policy: how the model decides what to do?}
+To describe how behavior varies across conditions, we introduce the model's \emph{policy}. We represent an interaction as a sequence of observations and actions,
 \begin{equation}
-    \operatorname{Cap}_{B}(\pi;\mathcal{E}_{\mathrm{cap}})
-    :=\sup_{r\in\mathcal{E}_{\mathrm{cap}}}P_{\pi}^{r}(B).
+\tau=(o_1,a_1,o_2,a_2,\ldots,o_T,a_T)\in\Traj,
 \end{equation}
-At a chosen threshold $\kappa$, the model is capable of $B$ when $\operatorname{Cap}_{B}(\pi;\mathcal{E}_{\mathrm{cap}})\geq\kappa$. The performance measure may vary by task, but the quantifier is essential: capability asks whether some admissible elicitation can make $B$ likely, not whether the policy will select that behavior in deployment. An interaction regime may specify inputs and environment dynamics, supervision and feedback, tool access, authentication, decoding, and interaction horizon.
+where $o_t$ denotes the information observed by the model at step $t$ and $a_t\in\Act$ denotes its action. A policy $\pi\in\Pi$ is the decision rule that governs how the model selects actions throughout such an interaction. It may condition its decisions on the information observed so far, including user inputs, previous interactions, supervision, available tools, authentication or access state, and other information from which the model may infer its current situation. The policy therefore governs how the model acts across possible interaction conditions, rather than describing any single realized behavior.
 
-The generative relation is therefore
+We use an \emph{interaction regime} $r\subseteq\Traj$ to denote a class of interactions sharing a condition of interest. A regime may, for example, distinguish evaluation from deployment, monitored from unmonitored interactions, or authenticated from unauthenticated access. More generally, the choice of regime depends on the conditions relevant to the behavior being studied. We write $\Rint$ for the collection of interaction regimes under consideration. A trajectory $\tau$ represents a single realized interaction, whereas a regime $r$ identifies a class of such interactions. For a policy $\pi$ and regime $r\in\Rint$, we write
 \begin{equation}
-    (\pi,r)\;\longmapsto\;P_{\pi}^{r}(\tau),
-    \qquad
-    \tau\sim P_{\pi}^{r}.
+P_{\pi}^{r},
+\qquad
+\tau\sim P_{\pi}^{r},
 \end{equation}
-Capability does not determine whether a capability will be used, and one realized behavior does not uniquely determine the policy that generated it. Because behavior is only evidence produced by a policy under a particular regime, inferring the policy from behavior is an inverse problem.
+where $P_{\pi}^{r}$ denotes the distribution over trajectories induced by policy $\pi$ within regime $r$, and $\tau\sim P_{\pi}^{r}$ denotes a realized interaction drawn from that distribution. Thus, what we observe is generated by $(\pi,r)\longmapsto P_{\pi}^{r}$, but observing $P_{\pi}^{r}$ within a limited set of regimes can not identify a unique $\pi$. Different policies can be behaviorally indistinguishable where we observe them, yet diverge elsewhere. This ambiguity is the basis of observational equivalence and, ultimately, hidden policies.
 
-\subsection{Interaction regimes and observable evidence}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-An evaluator rarely observes every part of a trajectory. For each interaction regime $r$, let
-\begin{equation}
-    O_r:\Traj\rightarrow\mathcal{Y}_r
-\end{equation}
-denote the observation map, where $O_r(\tau)$ may retain a transcript, selected actions, a benchmark score, or any other evidence available to the observer. Let $Q_{\pi}^{r}$ be the resulting distribution over observable evidence. An evaluation is a family of experiments $\mathcal{E}_{\mathrm{obs}}$ available to the observer, not merely one realized dataset. It induces the evaluation operator
-\begin{equation}
-    Q_{\pi}^{r}:=(O_r)_{\#}P_{\pi}^{r},
-    \qquad
-    T_{\mathcal{E}_{\mathrm{obs}}}(\pi)
-    :=\left(Q_{\pi}^{r}\right)_{r\in\mathcal{E}_{\mathrm{obs}}}.
-    \label{eq:evaluation-operator}
-\end{equation}
-The operator $T_{\mathcal{E}_{\mathrm{obs}}}$ is the observable signature of a policy under the experiments the evaluator can perform. Both the experiment family and observation map matter: two policies may differ on untested histories, unobserved actions, or internal computation while inducing the same available evidence.
+\subsection{Observational equivalence and policy identification}
+\label{sec}
 
-Hiddenness must therefore be indexed by an observer and $\mathcal{E}_{\mathrm{obs}}$. A policy can be hidden under one experiment family and exposed under another; it is not hidden in an absolute, observer-independent sense. This leads to the central identification challenge.
-
-\subsection{Observational equivalence as the identification challenge}
-
-Even unlimited repetition of a fixed evaluation family need not identify a unique policy. Repetition can estimate the observable signature more precisely, but it cannot separate policies that induce the same signature.
+An observer (e.g., the owner or regulator of the model) can examine a model only within a set of interaction regimes. Let $\mathcal{R}_{\mathrm{obs}}\subseteq\Rint$ denote the regimes available to the observer.
 
 \begin{definition}[Observational equivalence]
-Two complete policies $\pi_1,\pi_2\in\Pi$ are observationally equivalent under $\mathcal{E}_{\mathrm{obs}}$, written $\pi_1\sim_{\mathcal{E}_{\mathrm{obs}}}\pi_2$, if
+Two policies $\pi_1,\pi_2\in\Pi$ are \emph{observationally equivalent} under $\mathcal{R}_{\mathrm{obs}}$, written
+$\pi_1\sim{\mathcal{R}_{\mathrm{obs}}}\pi_2$, if
 \begin{equation}
-    Q_{\pi_1}^{r}=Q_{\pi_2}^{r}
-    \qquad\text{for every }r\in\mathcal{E}_{\mathrm{obs}}.
+P_{\pi_1}^{r}=P_{\pi_2}^{r}
+\qquad
+\text{for every } r\in\mathcal{R}_{\mathrm{obs}}.
 \end{equation}
 \end{definition}
 
-Because equality of observable laws is reflexive, symmetric, and transitive, this relation partitions the candidate policy class into observational equivalence classes:
+Observational equivalence partitions the candidate policy class into equivalence classes
 \begin{equation}
-    [\pi]_{\mathcal{E}_{\mathrm{obs}}}
-    :=\left\{\pi'\in\Pi:
-    \pi'\sim_{\mathcal{E}_{\mathrm{obs}}}\pi\right\}.
-    \label{eq:oe-class}
+[\pi]{\mathcal{R}_{\mathrm{obs}}}
+:=
+{\pi'\in\Pi :
+\pi'\sim_{\mathcal{R}_{\mathrm{obs}}}\pi}.
 \end{equation}
-The class $[\pi]_{\mathcal{E}_{\mathrm{obs}}}$ represents unresolved policy hypotheses, not multiple policies or modules inside the model. In finite experiments, exact equality is replaced by approximate indistinguishability: for a divergence $D$, define $d_{\mathcal{E}}(\pi_1,\pi_2):=\sup_{r\in\mathcal{E}}D(Q_{\pi_1}^{r},Q_{\pi_2}^{r})$ and the neighborhood $\mathcal{B}_{\mathcal{E}}^{\delta}(\pi):=\{\pi':d_{\mathcal{E}}(\pi',\pi)\leq\delta\}$. We deliberately do not call this an equivalence class, because thresholded closeness is generally not transitive. The identification challenge is cross-regime: if two policies are equivalent under $\mathcal{E}_{\mathrm{obs}}$ but predict different behavior under a reachable regime $r'$, no estimator based only on the observed experiments can determine which prediction applies. Resolving the ambiguity requires expanding the experiment family, changing what is observed, or imposing justified restrictions on the candidate policies.
+
+Crucially, two policies may be indistinguishable throughout the regimes available to the observer while behaving differently in another reachable regime:
+\begin{equation}
+\pi_1\sim_{\mathcal{R}{\mathrm{obs}}}\pi_2,
+\qquad
+P_{\pi_1}^{r^\star}\neq P_{\pi_2}^{r^\star}
+\quad
+\text{for some } r^\star\in\Rint\setminus\mathcal{R}_{\mathrm{obs}}.
+\end{equation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \paragraph{1. Complete-policy comparison.}
+% Both $\pi_H$ and $\pi_{\mathrm{ref}}$ are complete mappings from histories to action distributions. The reference policy must be fixed and substantively justified independently of the reveal result; it may represent declared behavior, a certified baseline, or a pre-specified nominal hypothesis. It is not a second component assumed to be stored inside the model. What is hidden is which complete policy the model implements. The histories or regimes on which the two policies diverge form the \emph{hidden behavioral regime}, a functional restriction rather than a separate internal policy.
+
+% \paragraph{2. Reachable, systematic separation.}
+% The reveal family must contain conditions available in deployment or through admissible interventions, rather than logically possible but operationally irrelevant counterfactuals. The measure $\mu$ declares which variations count, and $\alpha$ requires divergence over a non-negligible family rather than at one isolated point. Robustness across inputs, tasks, or contexts that preserve the relevant condition provides an empirical criterion for policy-level generalization.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Definition of a Hidden Policy}
+\label{sec:hidden-policy-definition}
+
+Observational equivalence further imports new challenge: Hiddenness arises when a policy is indistinguishable from a reference policy within the regimes available to an observer, yet systematically diverges when the interaction enters another reachable regime.
 
 \begin{definition}[Hidden Policy]
-Fix a reference policy $\pi_{\mathrm{ref}}$ specified independently of reveal-regime observations, an observed experiment family $\mathcal{E}_{\mathrm{obs}}$, a reachable reveal family $\mathcal{E}_{\mathrm{rev}}$, and a probability measure $\mu$ over $\mathcal{E}_{\mathrm{rev}}$. For $\epsilon>0$ and $\alpha\in(0,1]$, a complete policy $\pi_H$ is an $(\epsilon,\alpha)$-\emph{hidden policy} if $\pi_H\sim_{\mathcal{E}_{\mathrm{obs}}}\pi_{\mathrm{ref}}$ and
+Let $\pi_{\mathrm{ref}}\in\Pi$ be a reference policy and $\mathcal{R}_{\mathrm{obs}}\subseteq\Rint$ be the interaction regimes available to an observer. A policy $\pi_H\in\Pi$ is a \emph{hidden policy} relative to $(\pi_{\mathrm{ref}},\mathcal{R}_{\mathrm{obs}})$ if
 \begin{equation}
-    \mu\!\left(\left\{r\in\mathcal{E}_{\mathrm{rev}}:
-    D\!\left(Q_{\pi_H}^{r},Q_{\pi_{\mathrm{ref}}}^{r}\right)\geq\epsilon
-    \right\}\right)\geq\alpha.
+\pi_H\sim{\mathcal{R}_{\mathrm{obs}}}\pi_{\mathrm{ref}},
+\end{equation}
+while there exists a reachable and unknown interaction regime $r^\star\in\Rint\setminus\mathcal{R}_{\mathrm{obs}}$ such that
+\begin{equation}
+P_{\pi_H}^{r^\star}\neq P_{\pi_{\mathrm{ref}}}^{r^\star}.
 \end{equation}
 \end{definition}
 
-The definition makes four commitments that prevent the term from collapsing into either an arbitrary untested difference or an unsupported claim about model internals.
+The definition separates two properties. First, the policy is \emph{masked} within the observer's accessible regimes: behavioral evidence from $\mathcal{R}_{\mathrm{obs}}$ cannot distinguish $\pi_H$ from $\pi_{\mathrm{ref}}$. Second, the policy is \emph{revealed} under another reachable regime, where the two policies induce different behavior. We refer to regimes in which such divergence occurs as the \emph{hidden behavioral regime}.
 
-\paragraph{1. Complete-policy comparison.}
-Both $\pi_H$ and $\pi_{\mathrm{ref}}$ are complete mappings from histories to action distributions. The reference policy must be fixed and substantively justified independently of the reveal result; it may represent declared behavior, a certified baseline, or a pre-specified nominal hypothesis. It is not a second component assumed to be stored inside the model. What is hidden is which complete policy the model implements. The histories or regimes on which the two policies diverge form the \emph{hidden behavioral regime}, a functional restriction rather than a separate internal policy.
+The reference policy $\pi_{\mathrm{ref}}$ provides the behavioral baseline relative to which hiddenness is defined. It may represent declared behavior, a pre-specified nominal policy, or another independently justified baseline.
+% Importantly, $\pi_{\mathrm{ref}}$ is not assumed to be a separate policy or module stored inside the model.
+Importantly, $\pi_H$ and $\pi_{\mathrm{ref}}$ are complete policies: hiddenness describes their observational indistinguishability within $\mathcal{R}_{\mathrm{obs}}$ and their behavioral divergence outside it.
 
-\paragraph{2. Observer-relative masking.}
-The masking condition is defined by $\mathcal{E}_{\mathrm{obs}}$, not by the policy alone. It requires that the observer's available experiments fail to distinguish $\pi_H$ from $\pi_{\mathrm{ref}}$; it does not require the model to conceal itself intentionally. A lack of relevant interventions can mask a policy without deception.
+% Hiddenness is therefore observer-relative and does not require intentional concealment. A policy may be hidden simply because the observer has not accessed the regime in which its behavior diverges. Likewise, the definition is functional rather than mechanistic: it makes no claim that the hidden behavior is localized to a particular representation, subnetwork, or internal component.
 
-\paragraph{3. Reachable, systematic separation.}
-The reveal family must contain conditions available in deployment or through admissible interventions, rather than logically possible but operationally irrelevant counterfactuals. The measure $\mu$ declares which variations count, and $\alpha$ requires divergence over a non-negligible family rather than at one isolated point. Robustness across inputs, tasks, or contexts that preserve the relevant condition provides an empirical criterion for policy-level generalization.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\paragraph{4. Functional, not mechanistic.}
-The definition compares observable action-selection rules. It does not assert that the divergence is localized to a layer, subnetwork, representation, or independently stored policy; such claims require additional mechanistic evidence. In empirical evaluations, exact equivalence is replaced by approximate indistinguishability. For $0\leq\delta<\epsilon$ and $\alpha\in(0,1]$, we call $\pi_H$ a $(\delta,\epsilon,\alpha)$-hidden policy when
-\begin{align}
-    \sup_{r\in\mathcal{E}_{\mathrm{obs}}}
-    D\!\left(Q_{\pi_H}^{r},Q_{\pi_{\mathrm{ref}}}^{r}\right)
-    &\leq\delta, \\
-    \mu\!\left(\left\{r\in\mathcal{E}_{\mathrm{rev}}:
-    D\!\left(Q_{\pi_H}^{r},Q_{\pi_{\mathrm{ref}}}^{r}\right)
-    \geq\epsilon\right\}\right)
-    &\geq\alpha,
-    \qquad \epsilon>\delta.
-    \label{eq:hidden-policy-approx}
-\end{align}
-Here $\delta$ captures what the available evaluation cannot reliably separate, while $\epsilon$ and $\alpha$ require a meaningfully larger and systematic reveal-regime difference. For a behavior-relative safety claim, $D$ can be replaced by $\left|P_{\pi_H}^{r}(B)-P_{\pi_{\mathrm{ref}}}^{r}(B)\right|$ for a target unsafe behavior $B$. This separates the value-neutral property of hiddenness from the consequential behavior that motivates a particular analysis.
+\subsection{Relation to Adjacent Concepts}
+\label{sec:hidden-policy-scope}
 
-The part--whole ambiguity can now be stated precisely:
-\begin{quote}
-\emph{A hidden policy is a complete policy whose identity is masked by observational equivalence with a reference policy. The conditions on which the two policies systematically diverge constitute its hidden behavioral regime, not a separately assumed internal policy.}
-\end{quote}
+A hidden policy is defined by the relation between policy, observation, and cross-regime divergence, rather than by any particular implementation. Condition-gated behavior provides one possible realization: a model may behave like a reference policy under one condition while following a different decision rule under another. The relevant condition may be an exact token, a semantic property, authentication or tool access, an environment state, or an inference about supervision or deployment, and its influence on behavior may also be gradual rather than a binary switch. Such gating is neither necessary nor sufficient for a hidden policy. What matters is that the complete policy is masked by observational equivalence within the regimes available to the observer, yet systematically diverges under another reachable regime.
 
-\subsection{Condition-gated policies as one realization}
+This distinguishes hidden policies from several related concepts. \textbf{(1) Backdoors} typically describe trigger-dependent behavior introduced through an attack or intervention. A hidden policy instead characterizes a policy-identification problem: it requires neither an attacker nor a specific trigger. A backdoor may instantiate a hidden policy when its behavior exhibits systematic cross-regime divergence, whereas an isolated trigger--response association need not constitute the generalized policy structure considered here \citep{hubinger2024sleeper}. \textbf{(2) Hidden objectives} concern what a model appears to pursue while withholding or not disclosing that objective \citep{marks2025hidden}; hidden policies instead concern the decision rule governing behavior across conditions and require no attribution of an underlying objective. \textbf{(3) Misalignment, deception, and scheming} characterize undesirable behavior or make stronger claims about the reasoning or intent underlying it \citep{greenblatt2024alignment}. Hiddenness implies neither: a hidden policy may remain behaviorally safe throughout the observed regime and need not involve intentional concealment.
 
-A condition gate is a useful but nonessential realization. A complete policy may be written functionally as $\pi_H(a\mid h)=(1-g(h))\pi_{\mathrm{ref}}(a\mid h)+g(h)\pi_{\mathrm{alt}}(a\mid h)$, where $g(h)\in[0,1]$. If observed regimes concentrate on histories with $g(h)\approx0$ and reachable regimes induce histories with appreciable $g(h)$, the resulting policy can satisfy the definition. Here $\pi_H$ is the complete hidden policy; $\pi_{\mathrm{alt}}$ is only a branch used to represent its behavior on part of the history space.
+In short, hidden policy is a concept at the level of \emph{policy identification}: observations within the accessible regimes cannot distinguish the underlying policy from a reference policy, even though the two diverge systematically in another reachable regime.
 
-The condition may be an exact token, a semantic property, authentication or tool access, an environment state, or an inference about supervision or deployment. It may also affect action selection smoothly rather than through a binary switch. Equation-level decompositions of this kind are generally non-unique and do not demonstrate separate internal modules. We therefore use them to construct and test hidden policies, not to define their ontology. When we require policy-level generalization, the divergence must remain stable across a declared perturbation family that preserves the relevant condition; this is a scope choice that distinguishes the phenomena studied here from a single memorized trigger--response pair.
 
-\subsection{Scope and relation to adjacent concepts}
-
-\textbf{Backdoors, conditional policies, and sleeper agents.} A backdoor is primarily a provenance and threat-model concept: an attacker causes a trigger to elicit chosen behavior while preserving ordinary performance elsewhere. A hidden policy instead describes an identifiability relation between complete policies; it requires neither an attacker, intentional implantation, a conventional trigger, nor a malicious outcome. Every policy is conditional in the ordinary sense that $\pi(a\mid h)$ depends on history, so condition dependence alone is also insufficient. Sleeper-agent experiments provide important controlled constructions of trigger- or deployment-conditioned behavior \citep{hubinger2024sleeper}, but their conditional-policy description is functional rather than evidence for a unique internal decomposition. A backdoored or sleeper model instantiates a hidden policy only relative to an observation family that masks its complete policy and a reachable family over which the divergence is robust. Conversely, a brittle exact-trigger-to-payload association may be a successful backdoor while falling outside our declared generalization criterion.
-
-\textbf{Hidden objectives.} Marks et al.\ use an operational notion of an objective: a model behaves consistently with pursuing it across a wide range of settings; the objective is hidden when the model generally does not disclose it when asked \citep{marks2025hidden}. This does not require an explicitly represented internal objective. Hidden objectives concern what cross-context regularity behavior appears to serve and whether it is disclosed; hidden policies concern which complete action-selection rule remains compatible with an observer's evidence. Neither implies the other. The same objective can be implemented by different policies, a hidden policy can be defined without attributing an objective, and an undisclosed objective may influence behavior throughout the observed regime without being masked by an observationally equivalent reference policy.
-
-\textbf{Misaligned behavior, deception, and scheming.} Misaligned behavior is a normative property of realized actions or trajectories relative to an intended specification; it is an outcome, not an identification of the policy that generated it. An isolated harmful action can occur without a hidden policy, while a hidden policy may produce only safe behavior throughout the observed regime. Deception, scheming, alignment faking, and strategic sandbagging add stronger claims about reasoning, objectives, or intent \citep{greenblatt2024alignment}. They may instantiate hidden policies when the observer's experiments mask a complete policy that diverges under changes in oversight, incentives, training status, or opportunity, but those stronger properties do not follow from hiddenness alone. In short, a hidden policy is not another name for a harmful output, a secret objective, or any conditional behavior. It is a complete policy involved in a specific identification failure: available evidence supports a materially different reference policy, while the two systematically diverge over a reachable family of conditions.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Why Hidden Policies Matter}
 \label{sec:importance}
-
-Hidden policies matter at two levels. They can be a \emph{mechanism behind} risks already treated as frontier concerns, and they can be a \emph{frontier risk themselves} because they undermine the reliability of the behavioral evidence on which safety decisions depend.
+% (所有的故事要先讲 policy 然后再嵌入 hidden policy，只有这样才逻辑自然，要在完善之后统一检查)
+Hidden policies matter at two levels. First, they can act as a \emph{mechanism behind frontier risks}: possessing a dangerous capability does not determine when or whether that capability will be expressed, whereas a hidden policy can govern its conditional deployment. Second, hidden policies can constitute a \emph{risk in their own right}. They need not be deliberately implanted by an attacker or developer, and the policy structures may also emerge through the model's own learning dynamics. Because such policies can remain behaviorally masked within the regimes available to an observer, their emergence creates a risk that is both behavioral and epistemic: the model may acquire a consequential decision rule while the evidence used to assess it remains consistent with a safer reference policy.
 
 \subsection{The risk behind frontier risks}
 
-Frontier-safety frameworks increasingly organize preparedness around domains such as cyber, biological/chemical risk, autonomy, sabotage, and loss of control \citep{openai2025preparedness,deepmind2025frontier,anthropic2025rsp}. These categories are usually framed by what a system can do or what harm it may cause. Hidden policies occupy a different axis: they govern \emph{when a capability is expressed, suppressed, concealed, or strategically deployed}.
-
-This produces a common structure across apparently different risks:
+Frontier-safety frameworks increasingly assess preparedness against consequential capabilities and potential harms, including CBRN capabilities, autonomous operation, safeguard circumvention, sabotage, and loss of control \citep{openai2025preparedness,deepmind2025frontier,anthropic2025rsp}. These risks are often assessed by asking what a model is capable of doing and what harmful behavior it exhibits under evaluation. Yet capability alone does not determine whether, when, or how it will be used. Between capability and realized behavior lies the model's policy:
 \begin{equation}
-    \begin{aligned}
-        \text{capability exists}
-        &\quad\longrightarrow\quad
-        \text{condition is recognized} \\
-        &\quad\longrightarrow\quad
-        \text{policy selects whether/how to use it}
-        \quad\longrightarrow\quad
-        \text{realized behavior and risk}.
-    \end{aligned}
-    \label{eq:risk-chain}
+\text{capability}
+\quad\longrightarrow\quad
+\text{policy}
+\quad\longrightarrow\quad
+\text{realized behavior}
+\text{~(Preparedness)}.
+\label{eq:risk-chain}
 \end{equation}
-Equation~\ref{eq:risk-chain} does not claim that every frontier risk is caused by a hidden policy. Rather, it identifies a cross-cutting mechanism that can sit between dangerous capability and realized harm.
+Hidden policies make this intermediate layer confidential. A model may possess the same capability across interaction regimes while its policy selectively expresses, suppresses, or deploys that capability as conditions change. For example, sleeper agents can change behavior across deployment conditions \citep{hubinger2024sleeper}; sandbagging can suppress capability expression under evaluation; alignment faking can produce selective compliance depending on whether behavior affects training \citep{greenblatt2024alignment}; and models with consequential cyber or biological capabilities may behave differently as oversight, access, authorization, or opportunity changes. In this sense, hidden policy is a \emph{risk behind frontier risks}: not because every frontier risk is caused by a hidden policy, but because policy governs how capabilities become behavior, while hiddenness can prevent that policy from being identified before the relevant conditions arise.
 
-\paragraph{Sleeper and backdoor behavior.}
-A model may appear benign until a deployment cue, semantic trigger, identity, or environment state activates a different behavioral strategy \citep{hubinger2024sleeper}. The hidden-policy view asks whether this is a memorized association or a generalized decision regime, and whether the regime persists when the original trigger stops eliciting the behavior.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\paragraph{Sandbagging.}
-A capable model can condition on the inference that it is being tested and suppress capability expression. Here the gate is an evaluation- or oversight-recognition process, while the hidden policy is the systematic rule for underperforming under that condition. The safety problem is not merely that one benchmark score is wrong; it is that observations under the accessible interaction regime may not identify the policy governing performance elsewhere.
+\subsection{Hidden policies as an emergent frontier risk}
 
-\paragraph{Alignment faking and scheming.}
-Alignment faking demonstrates selective compliance conditioned on whether behavior affects training \citep{greenblatt2024alignment}. In our framework, situational awareness belongs on the condition side and strategic reasoning belongs inside the activated policy. More general scheming can use richer gates---oversight level, opportunity, detection risk, future access---and richer decision rules such as concealment, trust-building, waiting, or opportunistic action. These phenomena impose additional requirements involving objectives, strategy, or deception, but their conditional policy structure can be studied with the same hidden-policy tools.
+The above explains why a hidden policy can be a meta risk behind others, but not why it constitutes a risk in its own right. The stronger concern is that hidden policies may also arise through the model's own learning dynamics rather than deliberate implantation, producing condition-dependent decision rules that were never explicitly specified by an attacker or developer.
 
-\paragraph{Cyber and biological preparedness.}
-For highly consequential capabilities, the critical question is not only whether the model can produce a dangerous output when directly elicited. A capable agent may condition deployment of that capability on authorization, oversight, environmental access, user identity, or perceived detectability. Preparedness therefore depends on understanding the policy that controls capability expression, not capability in isolation.
+Modern models learn from heterogeneous environments in which supervision, incentives, feedback, access, and task context vary. A model may therefore learn not only how to perform a behavior, but also when that behavior is rewarded, discouraged, monitored, or useful. If such distinctions become part of a generalized decision rule, training can produce policies that behave differently across regimes even when no explicit trigger or hidden branch was designed in advance. In this sense, hidden policy formation is not limited to the conventional threat model, and this emergent threat reshapes the safety problem.
 
-A useful conceptual factorization is
-\begin{equation}
-    \text{realized risk}
-    \approx
-    \text{capability}
-    \times
-    \text{policy}
-    \times
-    \text{activation conditions}
-    \times
-    \text{environmental opportunity},
-\end{equation}
-where the product is schematic rather than a literal probabilistic model. The point is structural: capability is necessary for many harms but is not sufficient to characterize when those harms will be realized.
+When a hidden policy is deliberately implanted, its existence and activation conditions are typically known to at least its creator, providing a concrete hypothesis that can be tested. A hidden policy that emerges through learning presents a fundamentally different challenge: neither its existence nor the conditions under which it diverges may be known in advance. The same observational-equivalence problem then even becomes substantially harder. Hidden policies, therefore, constitute a frontier risk in their own right: consequential decision rules can emerge through learning without deliberate implantation and remain unidentified precisely where existing behavioral evidence provides no reason to suspect them.
 
-\subsection{Hidden policies as a frontier risk in their own right}
-
-The stronger claim is that hidden policies are not merely a convenient abstraction for known failure modes. They create an independent preparedness problem: \emph{behavioral evidence can be systematically insufficient to identify the policy that will govern future behavior}.
-
-Suppose two models, $M_1$ and $M_2$, are observationally equivalent under the interactions available to an auditor:
-\begin{equation}
-    P_{M_1}(\tau\mid\Rint) \approx P_{M_2}(\tau\mid\Rint).
-\end{equation}
-Model $M_1$ follows the same benign decision rule across reachable conditions. Model $M_2$ contains a condition-gated regime that diverges when oversight disappears or consequential access becomes available. Even perfect performance over $\Rint$ cannot by itself distinguish these hypotheses. The risk is therefore not ``poor benchmark generalization''; it is \emph{non-identification of future decision structure from present interaction evidence}.
-
-This matters for deployment decisions because many safety arguments have the form: the model behaved safely under a diverse set of tests, red-team interactions, monitored trials, or staged deployments; therefore it is likely to behave safely when deployed more broadly. Hidden policies target the inferential step in that argument. If the model's policy conditions on features that change between observed and future interactions---including whether the model recognizes supervision itself---then increasing the quantity of evidence inside the same regime may add little information about the unobserved policy branch.
-
-\paragraph{Observational equivalence, not missing benchmarks.}
-A model that has never been asked to speak French does not thereby have a hidden French policy. The relevant phenomenon is stronger: behavior over one regime masks a materially different decision structure that becomes consequential under another reachable regime. This is why behavioral masking, rather than mere non-observation, is central to the definition.
-
-\paragraph{Adaptive hiddenness.}
-The problem becomes more severe when the activation condition depends on the model's inference about the observer. If a model can recognize red teaming, monitoring, training, or auditing, then the probability of revealing the hidden regime can itself be policy-controlled. More independent and identically distributed testing within the same recognizable setting need not solve this problem. Progress then requires interventions that change what the model can condition on, deliberately break observational equivalence, or directly diagnose the underlying decision structure.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Why disappearance of behavior is not removal of policy}
 
-The distinction between policy and behavior also changes the meaning of successful mitigation. Let unsafe behavior $B_H$ be generated when condition $g(h)=1$ activates a hidden regime $\pi_H$. After an intervention, $B_H$ may disappear for several different reasons:
+The distinction between policy and behavior also changes what it means to successfully remove a hidden policy. Suppose a hidden policy $\pi_H$ produces a target unsafe behavior $B_H$ under a revealing interaction regime. After an intervention, $B_H$ may disappear for several different reasons:
 \begin{enumerate}
-    \item \textbf{Condition invalidation:} the original condition no longer activates the regime;
-    \item \textbf{Behavioral unreachability:} the environment, routing, or control layer blocks the behavior even though the decision structure remains;
-    \item \textbf{Policy suppression or substitution:} another policy dominates in the tested regime while the original structure remains recoverable;
-    \item \textbf{Policy removal:} the decision structure responsible for the hidden regime is genuinely eliminated.
+\item \textbf{Regime invalidation:} the conditions that previously revealed the hidden policy no longer do so, while the underlying policy remains;
+\item \textbf{Behavioral unreachability:} the environment, routing, or control layer prevents $B_H$ from being realized, even though the policy that would select it remains;
+\item \textbf{Policy suppression or substitution:} the intervention causes another decision rule to dominate within the tested regimes, while the original policy structure remains recoverable under other conditions;
+\item \textbf{Policy removal:} the decision structure responsible for the cross-regime divergence is genuinely eliminated.
 \end{enumerate}
-These outcomes can all yield an apparent attack-success rate of zero. They support very different safety claims.
+All four outcomes can make the target unsafe behavior disappear under evaluation, but they support fundamentally different safety claims. The first three change whether or where the hidden policy is expressed; only the fourth establishes that the policy structure itself has been removed.
 
-The sleeper-agent results already illustrate the danger: adversarial training can reduce observed unsafe behavior while making models better at recognizing the relevant trigger \citep{hubinger2024sleeper}. More generally,
+Results on sleeper agents illustrate this distinction: safety training can suppress observed backdoor behavior without necessarily eliminating the learned conditional structure \citep{hubinger2024sleeper}. More generally,
 \begin{equation}
-    \text{unsafe behavior absent}
-    \centernot\implies
-    \text{hidden policy absent}.
+\text{unsafe behavior absent}
+\centernot\implies
+\text{hidden policy absent}.
 \end{equation}
-This implication is the bridge from definition to the broader research agenda. Once hidden policies are treated as objects distinct from their current behavioral realizations, diagnosis and removal must test condition generalization, policy generalization, counterfactual consistency, persistence under intervention, and evidence of genuine structural change.
+This distinction motivates the removal problem studied in this work. Once hidden policies are treated as objects distinct from their observed behavioral realizations, successful removal requires evidence that the underlying policy structure has changed, rather than merely that its current expression has been suppressed, blocked, or shifted to another regime.
 
-\section{Discussion and Research Agenda}
-
-The definition developed here is deliberately functional. It says what must be true of the relationship between interaction conditions, policy structure, and behavior without assuming where that structure is stored inside a neural network. This allows layer localization, mechanistic representation, and causal editing to be studied as empirical questions rather than built into the definition.
-
-The next questions are therefore constructive and diagnostic. How do shallow conditional associations become generalized hidden policies? Which training processes create them intentionally or unintentionally? How can we distinguish a memorized trigger-response mapping from a policy that generalizes across conditions, behaviors, and environments? Which interventions merely prevent expression, and which remove the relevant decision structure? Answering these questions would turn the policy-identifiability framing into a practical methodology for frontier-model preparedness.
-
-\section*{AI Use Statement}
-This draft was developed with AI assistance for brainstorming, literature organization, and manuscript drafting. The authors are responsible for all claims, citations, analysis, experiments, and final text. This statement is a placeholder and must be revised before submission to accurately describe the final workflow.
 
 \bibliography{references}
 \bibliographystyle{iclr2027_conference}

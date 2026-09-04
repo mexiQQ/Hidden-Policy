@@ -19,6 +19,7 @@ type Proposal = { updatedRaw: string; newText: string; mathSource?: string };
 type DiffPart = { type: "same" | "insert" | "delete"; value: string };
 type FormulaEditing = { blockId: string; partIndex: number | null; value: string; baseRaw: string };
 type SentenceUnit = { raw: string; suffix: string; start: number; end: number; text: string; parts: Part[] };
+type LayoutItem = { token: string; block: Block; sentenceStart?: number; sentenceEnd?: number };
 type TextEditing = {
   blockId: string; sentenceIndex: number; editorKey: string; prefix: string; suffix: string; originalSentenceRaw: string;
 };
@@ -90,6 +91,48 @@ function replaceSentence(raw: string, unit: SentenceUnit, updatedRaw: string) {
   return raw.slice(0, unit.start) + updatedRaw + raw.slice(unit.end);
 }
 
+const SENTENCE_LAYOUT_SEPARATOR = "::sentences:";
+
+function sentenceLayoutToken(blockId: string, start: number, end: number) {
+  return `${blockId}${SENTENCE_LAYOUT_SEPARATOR}${start}:${end}`;
+}
+
+function parseLayoutToken(token: string) {
+  const [blockId, range] = token.split(SENTENCE_LAYOUT_SEPARATOR);
+  if (!range) return { blockId };
+  const [sentenceStart, sentenceEnd] = range.split(":").map(Number);
+  return Number.isFinite(sentenceStart) && Number.isFinite(sentenceEnd)
+    ? { blockId, sentenceStart, sentenceEnd }
+    : { blockId };
+}
+
+function editableRegion(block: Block, raw: string, fallbackRaw = "") {
+  if (block.kind !== "quote") return { prefix: "", content: raw, suffix: "" };
+  const splitQuote = (value: string) => {
+    const opening = value.match(/^\\begin\{quote\}\s*/);
+    const closing = value.match(/\s*\\end\{quote\}\s*$/);
+    if (!opening || !closing || closing.index === undefined || closing.index < opening[0].length) return null;
+    return {
+      prefix: value.slice(0, opening[0].length),
+      content: value.slice(opening[0].length, closing.index),
+      suffix: value.slice(closing.index),
+    };
+  };
+  const region = splitQuote(raw);
+  if (region) return region;
+  const fallback = splitQuote(fallbackRaw);
+  return fallback ? { prefix: fallback.prefix, content: raw, suffix: fallback.suffix } : { prefix: "", content: raw, suffix: "" };
+}
+
+function normalizeEditedRaw(block: Block, raw: string) {
+  if (block.kind === "quote" && !editableRegion(block, raw, block.raw).content.trim()) return "";
+  return raw;
+}
+
+function textFromBlockRaw(block: Block, raw: string) {
+  return textFromParts(partsFromRaw(editableRegion(block, raw, block.raw).content, block.parts));
+}
+
 function partIndexAtOffset(raw: string, fallback: Part[], offset: number) {
   const parts = partsFromRaw(raw, fallback);
   let cursor = 0;
@@ -108,6 +151,8 @@ function editorHtml(parts: Part[]) {
       ? `<span contenteditable="false" class="locked-token token-citation" data-token="${index}" title="Click a reference to open it in Google Chrome">${part.citationMode === "parenthetical" ? "(" : ""}${part.citations.map((citation, citationIndex) => `${citationIndex ? "; " : ""}<button type="button" class="citation-link" data-citation-token="${index}" data-citation-index="${citationIndex}">${escapeHtml(citation.display)}</button>`).join("")}${part.citationMode === "parenthetical" ? ")" : ""}</span>`
     : part.style === "bold"
       ? `<strong class="editable-bold">${escapeHtml(part.display)}</strong>`
+    : part.style === "italic"
+      ? `<em class="editable-italic">${escapeHtml(part.display)}</em>`
     : `<span contenteditable="false" class="locked-token token-${escapeHtml(part.style || "macro")}" data-token="${index}" title="Formatting, formulas, and references are preserved">${escapeHtml(part.display)}</span>`
   ).join("");
 }
@@ -128,6 +173,8 @@ function serializeEditor(root: HTMLElement, parts: Part[]) {
     const inside = Array.from(node.childNodes).map(walk).join("");
     if (node.tagName === "STRONG" || node.tagName === "B" || node.style.fontWeight === "bold" || Number(node.style.fontWeight) >= 600)
       return `\\textbf{${inside}}`;
+    if (node.tagName === "EM" || node.tagName === "I" || node.style.fontStyle === "italic")
+      return `\\emph{${inside}}`;
     return node.tagName === "DIV" ? `\n${inside}` : inside;
   };
   return Array.from(root.childNodes).map(walk).join("").replace(/^\n|\n$/g, "");
@@ -323,13 +370,21 @@ function citationsForChange(block: Block, proposal: Proposal) {
 }
 
 function FormattingDiff({ block, proposal, onOpenCitation }: { block: Block; proposal: Proposal; onOpenCitation: (target: CitationTarget) => void }) {
-  const parts = partsFromRaw(proposal.updatedRaw, block.parts);
+  const visibleRaw = block.kind === "quote"
+    ? proposal.updatedRaw.replace(/^\\begin\{quote\}\s*/, "").replace(/\s*\\end\{quote\}\s*$/, "")
+    : proposal.updatedRaw;
+  const parts = partsFromRaw(visibleRaw, block.parts);
   return <>{parts.map((part, index) => {
     if (part.type === "text") return <span key={index}>{part.display}</span>;
     if (part.style === "bold") {
       const bold = <strong>{part.display}</strong>;
       return block.raw.includes(part.raw) ? <span key={index}>{bold}</span>
         : <ins key={index} className="format-change" title="Bold formatting added">{bold}</ins>;
+    }
+    if (part.style === "italic") {
+      const italic = <em>{part.display}</em>;
+      return block.raw.includes(part.raw) ? <span key={index}>{italic}</span>
+        : <ins key={index} className="format-change format-change-italic" title="Italic formatting added">{italic}</ins>;
     }
     return <PartsText key={index} parts={[part]} onOpenCitation={onOpenCitation} />;
   })}</>;
@@ -428,18 +483,28 @@ export function PaperEditor() {
     return () => window.clearTimeout(timer);
   }, [document, draftsReady, proposals]);
 
-  const pages = useMemo(() => {
+  const pages = useMemo<LayoutItem[][]>(() => {
     if (!document) return [];
     const byId = new Map(document.blocks.map((block) => [block.id, block]));
     const flattened = pageBlockIds.flat();
-    const hasCompleteDynamicLayout = flattened.length === document.blocks.length &&
-      flattened.every((id, index) => id === document.blocks[index].id);
-    if (hasCompleteDynamicLayout) return pageBlockIds.map((ids) => ids.map((id) => byId.get(id)).filter((block): block is Block => Boolean(block)));
+    const dynamicItems = flattened.map((token) => {
+      const parsed = parseLayoutToken(token);
+      const block = byId.get(parsed.blockId);
+      return block ? { token, block, sentenceStart: parsed.sentenceStart, sentenceEnd: parsed.sentenceEnd } : null;
+    }).filter((item): item is LayoutItem => Boolean(item));
+    const representedIds = dynamicItems.map((item) => item.block.id)
+      .filter((id, index, ids) => index === 0 || id !== ids[index - 1]);
+    const hasCompleteDynamicLayout = dynamicItems.length === flattened.length &&
+      representedIds.length === document.blocks.length && representedIds.every((id, index) => id === document.blocks[index].id);
+    if (hasCompleteDynamicLayout) {
+      let cursor = 0;
+      return pageBlockIds.map((tokens) => tokens.map(() => dynamicItems[cursor++]));
+    }
 
-    const fallback = new Map<number, Block[]>();
+    const fallback = new Map<number, LayoutItem[]>();
     for (const block of document.blocks) {
       const page = Math.min(block.page, document.pageCount || 1);
-      fallback.set(page, [...(fallback.get(page) || []), block]);
+      fallback.set(page, [...(fallback.get(page) || []), { token: block.id, block }]);
     }
     return Array.from(fallback.keys()).sort((left, right) => left - right).map((page) => fallback.get(page) || []);
   }, [document, pageBlockIds]);
@@ -451,23 +516,43 @@ export function PaperEditor() {
 
     const repaginate = () => {
       const elements = new Map<string, HTMLElement>();
-      shell.querySelectorAll<HTMLElement>("[data-paper-block-id]").forEach((element) => {
-        const id = element.dataset.paperBlockId;
-        if (id) elements.set(id, element);
+      shell.querySelectorAll<HTMLElement>("[data-paper-layout-key]").forEach((element) => {
+        const token = element.dataset.paperLayoutKey;
+        if (token) elements.set(token, element);
       });
-      if (elements.size !== document.blocks.length) return;
+      const renderedItems = pages.flat();
+      if (elements.size !== renderedItems.length) return;
 
       const firstContent = shell.querySelector<HTMLElement>(".paper-content");
       const capacity = Number.parseFloat(firstContent ? window.getComputedStyle(firstContent).minHeight : "") || 864;
-      const metrics = document.blocks.map((block) => {
-        const element = elements.get(block.id)!;
+      type Metric = {
+        token: string; blockId: string; kind: string; height: number; marginTop: number; marginBottom: number;
+        sentenceStart?: number; sentenceEnd?: number; lineHeight: number;
+        sentences: Array<{ index: number; bottom: number }>;
+      };
+      const metrics: Metric[] = renderedItems.map((item) => {
+        const element = elements.get(item.token)!;
         const style = window.getComputedStyle(element);
+        const elementRect = element.getBoundingClientRect();
+        const renderedText = element.querySelector<HTMLElement>(".rendered-text");
+        const lineHeight = Number.parseFloat(renderedText ? window.getComputedStyle(renderedText).lineHeight : "") || 15;
+        const sentences = Array.from(element.querySelectorAll<HTMLElement>(".sentence-unit")).map((sentence) => ({
+          index: Number(sentence.dataset.sentenceIndex),
+          bottom: sentence.getBoundingClientRect().bottom - elementRect.top,
+        })).filter((sentence) => Number.isFinite(sentence.index));
         return {
-          id: block.id,
-          kind: block.kind,
-          height: Math.ceil(element.offsetHeight),
+          token: item.token,
+          blockId: item.block.id,
+          kind: item.block.kind,
+          // A run-in heading and the paragraph after it share the same first line.
+          // The paragraph's inline box already accounts for that line height.
+          height: item.block.kind === "runin" ? 0 : Math.ceil(element.offsetHeight),
           marginTop: Number.parseFloat(style.marginTop) || 0,
           marginBottom: Number.parseFloat(style.marginBottom) || 0,
+          sentenceStart: item.sentenceStart,
+          sentenceEnd: item.sentenceEnd,
+          lineHeight,
+          sentences,
         };
       });
 
@@ -484,24 +569,76 @@ export function PaperEditor() {
         previousMarginBottom = 0;
       };
 
-      metrics.forEach((metric, index) => {
-        let gap = current.length ? Math.max(previousMarginBottom, metric.marginTop) : metric.marginTop;
-        let projectedBottom = used + gap + metric.height;
-        const following = metrics[index + 1];
+      const queue = [...metrics];
+      while (queue.length) {
+        const metric = queue.shift()!;
+        const gap = current.length ? Math.max(previousMarginBottom, metric.marginTop) : metric.marginTop;
+        const projectedBottom = used + gap + metric.height;
+        const following = queue[0];
+        const followingMinimum = following?.sentences.length
+          ? Math.min(following.height, Math.max(following.lineHeight * 2, following.sentences[0].bottom))
+          : following?.height || 0;
         const keepTogetherHeight = keepWithNext.has(metric.kind) && following
-          ? Math.max(metric.marginBottom, following.marginTop) + following.height + following.marginBottom
+          ? Math.max(metric.marginBottom, following.marginTop) + followingMinimum
           : metric.marginBottom;
 
         if (current.length && projectedBottom + keepTogetherHeight > capacity) {
+          const available = capacity - used - gap;
+          const fitting = metric.sentences.filter((sentence) => sentence.bottom <= available + 0.5);
+          if (fitting.length && fitting.length < metric.sentences.length) {
+            const lastFitting = fitting[fitting.length - 1];
+            const end = metric.sentenceEnd ?? (metric.sentences.at(-1)!.index + 1);
+            current.push(sentenceLayoutToken(metric.blockId, metric.sentenceStart ?? metric.sentences[0].index, lastFitting.index + 1));
+            used += gap + lastFitting.bottom;
+            previousMarginBottom = 0;
+            startNewPage();
+            const remainderSentences = metric.sentences.slice(fitting.length).map((sentence) => ({
+              index: sentence.index,
+              bottom: Math.max(metric.lineHeight, sentence.bottom - lastFitting.bottom + metric.lineHeight),
+            }));
+            queue.unshift({
+              ...metric,
+              token: sentenceLayoutToken(metric.blockId, lastFitting.index + 1, end),
+              sentenceStart: lastFitting.index + 1,
+              sentenceEnd: end,
+              height: Math.max(metric.lineHeight, metric.height - lastFitting.bottom + metric.lineHeight),
+              marginTop: 0,
+              sentences: remainderSentences,
+            });
+            continue;
+          }
           startNewPage();
-          gap = metric.marginTop;
-          projectedBottom = gap + metric.height;
+          queue.unshift(metric);
+          continue;
         }
 
-        current.push(metric.id);
+        if (!current.length && projectedBottom + keepTogetherHeight > capacity && metric.sentences.length > 1) {
+          const fitting = metric.sentences.filter((sentence) => sentence.bottom <= capacity + 0.5);
+          if (fitting.length && fitting.length < metric.sentences.length) {
+            const lastFitting = fitting[fitting.length - 1];
+            const end = metric.sentenceEnd ?? (metric.sentences.at(-1)!.index + 1);
+            current.push(sentenceLayoutToken(metric.blockId, metric.sentenceStart ?? metric.sentences[0].index, lastFitting.index + 1));
+            startNewPage();
+            queue.unshift({
+              ...metric,
+              token: sentenceLayoutToken(metric.blockId, lastFitting.index + 1, end),
+              sentenceStart: lastFitting.index + 1,
+              sentenceEnd: end,
+              height: Math.max(metric.lineHeight, metric.height - lastFitting.bottom + metric.lineHeight),
+              marginTop: 0,
+              sentences: metric.sentences.slice(fitting.length).map((sentence) => ({
+                index: sentence.index,
+                bottom: Math.max(metric.lineHeight, sentence.bottom - lastFitting.bottom + metric.lineHeight),
+              })),
+            });
+            continue;
+          }
+        }
+
+        current.push(metric.token);
         used = projectedBottom;
         previousMarginBottom = metric.marginBottom;
-      });
+      }
       startNewPage();
 
       setPageBlockIds((currentPages) => {
@@ -525,27 +662,32 @@ export function PaperEditor() {
       observer.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [document, pageBlockIds, proposals]);
+  }, [document, pageBlockIds, pages, proposals]);
 
   function startTextEdit(block: Block, sentenceIndex: number) {
-    const effectiveRaw = proposals[block.id]?.updatedRaw || block.raw;
-    const units = sentenceUnits(effectiveRaw, block.parts);
+    const effectiveRaw = proposals[block.id]?.updatedRaw ?? block.raw;
+    const effectiveRegion = editableRegion(block, effectiveRaw, block.raw);
+    const units = sentenceUnits(effectiveRegion.content, block.parts);
     const unit = units[sentenceIndex];
     if (!unit) return;
-    const originalUnit = sentenceUnits(block.raw, block.parts)[sentenceIndex] || unit;
+    const originalRegion = editableRegion(block, block.raw);
+    const originalUnit = sentenceUnits(originalRegion.content, block.parts)[sentenceIndex] || unit;
     setFormulaEditing(null);
     setEditingParts(unit.parts);
     setEditing({
       blockId: block.id, sentenceIndex, editorKey: `${block.id}:${sentenceIndex}`,
-      prefix: effectiveRaw.slice(0, unit.start), suffix: effectiveRaw.slice(unit.end), originalSentenceRaw: originalUnit.raw,
+      prefix: effectiveRegion.prefix + effectiveRegion.content.slice(0, unit.start),
+      suffix: effectiveRegion.content.slice(unit.end) + effectiveRegion.suffix,
+      originalSentenceRaw: originalUnit.raw,
     });
   }
 
   function updateTextDraft(block: Block) {
     if (!editorRef.current || editing?.blockId !== block.id) return;
     const sentenceRaw = serializeEditor(editorRef.current, editingParts);
-    const updatedRaw = editing.prefix + sentenceRaw + editing.suffix;
-    const newText = textFromParts(partsFromRaw(updatedRaw, block.parts));
+    const updatedRaw = normalizeEditedRaw(block, editing.prefix + sentenceRaw + editing.suffix);
+    const newText = textFromBlockRaw(block, updatedRaw);
+    setPageBlockIds([]);
     setProposals((current) => {
       if (updatedRaw === block.raw) {
         const next = { ...current }; delete next[block.id]; return next;
@@ -570,6 +712,28 @@ export function PaperEditor() {
     window.document.execCommand("styleWithCSS", false, "false");
     if (!window.document.execCommand("bold", false)) {
       setNotice("Could not apply bold to this selection.");
+      return;
+    }
+    root.focus();
+    updateTextDraft(block);
+  }
+
+  function toggleItalic(block: Block) {
+    const root = editorRef.current;
+    const selection = window.getSelection();
+    if (!root || !selection || !selection.rangeCount || selection.isCollapsed || !root.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+      setNotice("Select text in the revision editor before applying italics.");
+      return;
+    }
+    const includesProtectedToken = Array.from(root.querySelectorAll(".locked-token"))
+      .some((token) => selection.containsNode(token, true));
+    if (includesProtectedToken) {
+      setNotice("Italics can be applied to plain text, but not across protected citations, formulas, or references.");
+      return;
+    }
+    window.document.execCommand("styleWithCSS", false, "false");
+    if (!window.document.execCommand("italic", false)) {
+      setNotice("Could not apply italics to this selection.");
       return;
     }
     root.focus();
@@ -611,6 +775,14 @@ export function PaperEditor() {
     void copyLatex(serializeEditor(editorRef.current, editingParts), "Copied the current sentence as LaTeX.");
   }
 
+  function copyParagraphLatex(block: Block) {
+    let paragraphRaw = proposals[block.id]?.updatedRaw ?? block.raw;
+    if (editorRef.current && editing?.blockId === block.id) {
+      paragraphRaw = editing.prefix + serializeEditor(editorRef.current, editingParts) + editing.suffix;
+    }
+    void copyLatex(paragraphRaw, "Copied the complete paragraph as LaTeX.");
+  }
+
   async function openCitationInChrome(target: CitationTarget) {
     setError("");
     try {
@@ -648,6 +820,7 @@ export function PaperEditor() {
     const nextEditing = { ...formulaEditing, value };
     setFormulaEditing(nextEditing);
     const proposal = proposalFromFormulaEdit(block, nextEditing);
+    setPageBlockIds([]);
     if (proposal.updatedRaw === block.raw) setProposals((current) => { const next = { ...current }; delete next[block.id]; return next; });
     else setProposals((current) => ({ ...current, [block.id]: proposal }));
   }
@@ -658,10 +831,12 @@ export function PaperEditor() {
     let acceptedRaw = proposal.updatedRaw;
     let fullDraftRaw = proposal.updatedRaw;
     if (editing?.blockId === block.id) {
-      const originalUnit = sentenceUnits(block.raw, block.parts)[editing.sentenceIndex];
+      const originalRegion = editableRegion(block, block.raw);
+      const originalUnit = sentenceUnits(originalRegion.content, block.parts)[editing.sentenceIndex];
       const sentenceRaw = editorRef.current ? serializeEditor(editorRef.current, editingParts) : editing.originalSentenceRaw;
-      fullDraftRaw = editing.prefix + sentenceRaw + editing.suffix;
-      if (originalUnit) acceptedRaw = replaceSentence(block.raw, originalUnit, sentenceRaw);
+      fullDraftRaw = normalizeEditedRaw(block, editing.prefix + sentenceRaw + editing.suffix);
+      if (originalUnit) acceptedRaw = normalizeEditedRaw(block,
+        originalRegion.prefix + replaceSentence(originalRegion.content, originalUnit, sentenceRaw) + originalRegion.suffix);
     }
     setBusy(block.id); setError(""); setNotice("");
     try {
@@ -677,7 +852,7 @@ export function PaperEditor() {
         const updatedBlock = payload.document.blocks.find((candidate: Block) => candidate.raw === acceptedRaw) ||
           payload.document.blocks.find((candidate: Block) => candidate.kind === block.kind && candidate.label === block.label && Math.abs(candidate.startLine - block.startLine) <= 2);
         if (updatedBlock && fullDraftRaw !== acceptedRaw) {
-          restored[updatedBlock.id] = { updatedRaw: fullDraftRaw, newText: textFromParts(partsFromRaw(fullDraftRaw, updatedBlock.parts)) };
+          restored[updatedBlock.id] = { updatedRaw: fullDraftRaw, newText: textFromBlockRaw(updatedBlock, fullDraftRaw) };
         }
         return restored;
       });
@@ -689,29 +864,35 @@ export function PaperEditor() {
   }
 
   function reject(block: Block) {
+    setPageBlockIds([]);
     setProposals((current) => {
       const next = { ...current };
       if (editing?.blockId === block.id) {
-        const revertedRaw = editing.prefix + editing.originalSentenceRaw + editing.suffix;
+        const revertedRaw = normalizeEditedRaw(block, editing.prefix + editing.originalSentenceRaw + editing.suffix);
         if (revertedRaw === block.raw) delete next[block.id];
-        else next[block.id] = { updatedRaw: revertedRaw, newText: textFromParts(partsFromRaw(revertedRaw, block.parts)) };
+        else next[block.id] = { updatedRaw: revertedRaw, newText: textFromBlockRaw(block, revertedRaw) };
       } else delete next[block.id];
       return next;
     });
     closeTextEditor(); setFormulaEditing(null); setNotice(`Rejected this ${editing?.blockId === block.id ? "sentence" : "change"}; the original was restored.`);
   }
 
-  function blockClass(block: Block) { return `paper-block kind-${block.kind}${block.editable ? " can-edit" : ""}`; }
+  function blockClass(block: Block) { return `paper-block kind-${block.kind}${block.editable || block.kind === "quote" ? " can-edit" : ""}`; }
 
   function sentenceEditable(block: Block) {
-    return block.editable && block.kind !== "display" && !block.items?.length && !block.segments?.length;
+    return (block.editable || block.kind === "quote") && block.kind !== "display" && !block.items?.length && !block.segments?.length;
   }
 
-  function sentenceContent(block: Block, proposal?: Proposal) {
-    const effectiveRaw = proposal?.updatedRaw || block.raw;
-    const units = sentenceUnits(effectiveRaw, block.parts);
-    const originalUnits = sentenceUnits(block.raw, block.parts);
-    return <div className="rendered-text sentence-flow"><BlockPrefix block={block} />{units.map((unit, sentenceIndex) => {
+  function sentenceContent(block: Block, proposal?: Proposal, sentenceStart = 0, sentenceEnd?: number) {
+    const effectiveRaw = proposal?.updatedRaw ?? block.raw;
+    const effectiveRegion = editableRegion(block, effectiveRaw, block.raw);
+    const originalRegion = editableRegion(block, block.raw);
+    const allUnits = sentenceUnits(effectiveRegion.content, block.parts);
+    const originalUnits = sentenceUnits(originalRegion.content, block.parts);
+    const boundedEnd = Math.min(sentenceEnd ?? allUnits.length, allUnits.length);
+    const units = allUnits.slice(sentenceStart, boundedEnd);
+    return <div className="rendered-text sentence-flow">{sentenceStart === 0 && <BlockPrefix block={block} />}{units.map((unit, localIndex) => {
+      const sentenceIndex = sentenceStart + localIndex;
       const original = originalUnits[sentenceIndex] || unit;
       const changed = unit.raw !== original.raw;
       const selected = editing?.blockId === block.id && editing.sentenceIndex === sentenceIndex;
@@ -729,7 +910,7 @@ export function PaperEditor() {
             : <DiffText before={original.text} after={unit.text} citations={citationsForChange(sentenceBlock, sentenceProposal)} onOpenCitation={openCitationInChrome} />)
             : <PartsText parts={unit.parts} onOpenCitation={openCitationInChrome} onEditMath={(partIndex) => {
               const localOffset = unit.parts.slice(0, partIndex).reduce((total, part) => total + part.raw.length, 0);
-              const blockPartIndex = partIndexAtOffset(effectiveRaw, block.parts, unit.start + localOffset);
+              const blockPartIndex = partIndexAtOffset(effectiveRegion.content, block.parts, unit.start + localOffset);
               if (blockPartIndex >= 0) startFormulaEdit(block, blockPartIndex);
             }} />}
         </span>{unit.suffix}
@@ -815,12 +996,18 @@ export function PaperEditor() {
             <div className="top-rule" />
             <div className="line-numbers" aria-hidden="true">{lineNumbers(page).map((line) => <span key={line}>{line}</span>)}</div>
             <div className="paper-content">
-              {pageBlocks.map((block) => {
+              {pageBlocks.map((item) => {
+                const { block, token, sentenceStart, sentenceEnd } = item;
                 const proposal = proposals[block.id];
                 const isSelected = activeBlockId === block.id;
-                return <div className={`${blockClass(block)}${proposal ? " has-change" : ""}${isSelected ? " editing-target" : ""}`} key={block.id}
-                  data-line={block.startLine} data-paper-block-id={block.id}>
-                  {sentenceEditable(block) ? sentenceContent(block, proposal)
+                const effectiveRaw = proposal?.updatedRaw ?? block.raw;
+                const sentenceCount = sentenceEditable(block)
+                  ? sentenceUnits(editableRegion(block, effectiveRaw, block.raw).content, block.parts).length : 0;
+                const continuesFromPreviousPage = sentenceStart !== undefined && sentenceStart > 0;
+                const continuesOnNextPage = sentenceEnd !== undefined && sentenceEnd < sentenceCount;
+                return <div className={`${blockClass(block)}${proposal ? " has-change" : ""}${isSelected ? " editing-target" : ""}${continuesFromPreviousPage ? " fragment-continuation" : ""}${continuesOnNextPage ? " fragment-continues" : ""}`} key={token}
+                  data-line={block.startLine} data-paper-block-id={block.id} data-paper-layout-key={token}>
+                  {sentenceEditable(block) ? sentenceContent(block, proposal, sentenceStart, sentenceEnd)
                     : proposal ?
                     <div className="diff-text" role="button" tabIndex={0}
                       onClick={() => { if (!isSelected && block.kind === "display") startFormulaEdit(block, null); }}
@@ -859,9 +1046,13 @@ export function PaperEditor() {
           <div className="editor-format-toolbar" role="toolbar" aria-label="Text formatting">
             <button type="button" className="format-bold" onPointerDown={(event) => event.preventDefault()}
               onClick={() => toggleBold(activeBlock)} aria-label="Apply bold" title="Bold selected text (⌘/Ctrl+B)"><strong>B</strong></button>
+            <button type="button" className="format-italic" onPointerDown={(event) => event.preventDefault()}
+              onClick={() => toggleItalic(activeBlock)} aria-label="Apply italics" title="Italicize selected text (⌘/Ctrl+I)"><em>I</em></button>
             <button type="button" className="copy-latex" onPointerDown={(event) => event.preventDefault()}
-              onClick={copyTextEditorLatex} aria-label="Copy editor LaTeX" title="Copy the current editor contents as LaTeX">Copy LaTeX</button>
-            <span>Copies unsaved edits too · drag the grip below to resize</span>
+              onClick={copyTextEditorLatex} aria-label="Copy sentence LaTeX" title="Copy the current sentence as LaTeX">Copy sentence</button>
+            <button type="button" className="copy-latex copy-paragraph" onPointerDown={(event) => event.preventDefault()}
+              onClick={() => copyParagraphLatex(activeBlock)} aria-label="Copy paragraph LaTeX" title="Copy the complete paragraph as LaTeX">Copy paragraph</button>
+            <span>Live edits included · drag the grip below to resize</span>
           </div>
           <div ref={(node) => {
             editorRef.current = node;
@@ -883,9 +1074,10 @@ export function PaperEditor() {
             onKeyDown={(event) => {
               if (event.key === "Escape") { event.preventDefault(); closeTextEditor(); }
               if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") { event.preventDefault(); toggleBold(activeBlock); }
+              if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "i") { event.preventDefault(); toggleItalic(activeBlock); }
             }} />
           <EditorHeightHandle onPointerDown={startEditorHeightResize} onStep={resizeEditorBy} />
-          <div className="edit-note">Bold is saved as LaTeX textbf. Citations, formulas, references, and italic emphasis remain protected.</div>
+          <div className="edit-note">Bold is saved as LaTeX textbf; italics are saved as emph. Citations, formulas, and references remain protected.</div>
         </> : formulaEditing?.blockId === activeBlock.id ? <>
           <div className="editor-format-toolbar" role="toolbar" aria-label="Formula tools">
             <button type="button" className="copy-latex" onClick={() => void copyLatex(formulaEditing.value, "Copied the current formula as LaTeX.")}
