@@ -71,7 +71,7 @@ def build_harness_run(
     device: str = "cuda:0",
     batch_size: str = "auto",
     max_model_len: int = 4096,
-    gpu_memory_utilization: float = 0.95,
+    gpu_memory_utilization: float = 0.92,
     max_num_seqs: int = 512,
     max_num_batched_tokens: int = 32768,
     enable_prefix_caching: bool = True,

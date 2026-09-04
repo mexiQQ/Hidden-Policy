@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib.util
 import json
@@ -7,6 +8,8 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+
+from hidden_policy_eval.mcq import deterministic_permutations
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "generate_baseline_report.py"
@@ -43,6 +46,14 @@ def write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
         "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
         encoding="utf-8",
     )
+
+
+def read_jsonl(path: Path) -> list[dict[str, object]]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def make_config(root: Path) -> tuple[Path, Path, dict[str, object], dict[str, str]]:
@@ -84,7 +95,7 @@ def make_config(root: Path) -> tuple[Path, Path, dict[str, object], dict[str, st
             "dtype": "bfloat16",
             "batch_size": "auto",
             "max_model_len": 4096,
-            "gpu_memory_utilization": 0.95,
+            "gpu_memory_utilization": 0.92,
             "max_num_seqs": 512,
             "max_num_batched_tokens": 32768,
             "enable_prefix_caching": True,
@@ -139,6 +150,7 @@ def score_rows(
     role: str,
     *,
     change_first_prediction: bool = False,
+    change_all_predictions: bool = False,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     option_rows: list[dict[str, object]] = []
     strict_rows: list[dict[str, object]] = []
@@ -147,11 +159,23 @@ def score_rows(
     for dataset, specs in item_specs(scope).items():
         revision = f"{dataset}-revision"
         for item_id, subject in specs:
-            stable_id = digest(item_id)
+            stable_id = "mcq-" + digest(item_id)
             for permutation in range(3):
                 prediction = role_prediction
-                if first and change_first_prediction:
+                if change_all_predictions or (first and change_first_prediction):
                     prediction = (prediction + 1) % 4
+                display_to_semantic = list(
+                    deterministic_permutations(stable_id)[permutation]
+                )
+                token_counts = [1, 2, 3, 4]
+                normalized_scores = [-8.0, -7.0, -6.0, -5.0]
+                normalized_scores[prediction] = -0.5 * (prediction + 1)
+                raw_scores = [
+                    score * token_count
+                    for score, token_count in zip(
+                        normalized_scores, token_counts
+                    )
+                ]
                 option_rows.append(
                     {
                         "schema_version": "hidden-policy-option-score-v1",
@@ -163,10 +187,14 @@ def score_rows(
                         "source_split": "test",
                         "split": "CAL",
                         "permutation_id": permutation,
+                        "display_to_semantic": display_to_semantic,
+                        "raw_log_likelihood_by_semantic": raw_scores,
+                        "continuation_tokens_by_semantic": token_counts,
+                        "mean_log_likelihood_by_semantic": normalized_scores,
                         "predicted_semantic_index": prediction,
                         "gold_semantic_index": 0,
                         "correct": prediction == 0,
-                        "prompt_hash": digest("prompt-" + item_id),
+                        "prompt_hash": digest(f"prompt-{item_id}-{permutation}"),
                     }
                 )
                 first = False
@@ -185,6 +213,7 @@ def score_rows(
                     "gold_display_index": 0,
                     "correct": role_prediction == 0,
                     "response_sha256": digest("response-" + item_id),
+                    "prompt_hash": digest("strict-prompt-" + item_id),
                 }
             )
     return option_rows, strict_rows
@@ -283,6 +312,7 @@ def make_matrix(
     config_path: Path,
     checksums: dict[str, str],
     hf_prediction_difference: bool = False,
+    hf_all_prediction_difference: bool = False,
 ) -> Path:
     matrix_root = root / f"{scope}-{backend}"
     models: dict[str, object] = {}
@@ -291,6 +321,7 @@ def make_matrix(
             scope,
             role,
             change_first_prediction=hf_prediction_difference,
+            change_all_predictions=hf_all_prediction_difference,
         )
         summary = summary_from_rows(
             options,
@@ -355,6 +386,7 @@ def make_matrix(
                 "peak_utilization_percent": 90 + gpu,
                 "mean_utilization_percent": 80 + gpu,
                 "peak_power_watts": 250.0 + gpu,
+                "sample_count": 20 + gpu,
                 "harness_timing": harness_timing,
             },
             "postprocess": {
@@ -449,15 +481,46 @@ class BaselineReportTests(unittest.TestCase):
                 output_json=output_json,
                 output_html=output_html,
             )
-            self.assertEqual(result["validation_status"], "PASS")
+            self.assertEqual(
+                result["schema_version"], "hidden-policy-baseline-publication-v2"
+            )
+            self.assertNotIn("validation_status", result)
+            self.assertEqual(result["artifact_validation_status"], "PASS")
+            self.assertEqual(result["hf_comparison_status"], "descriptive")
+            self.assertEqual(
+                result["hf_vllm_pilot_agreement"]["status"], "descriptive"
+            )
             agreement = result["hf_vllm_pilot_agreement"]["all_views"]
             self.assertEqual(agreement["views"], 12)
             self.assertEqual(agreement["matching_predictions"], 11)
             self.assertAlmostEqual(agreement["prediction_agreement"], 11 / 12)
+            self.assertAlmostEqual(
+                agreement["accuracy"]["delta_vllm_minus_hf"], 1 / 12
+            )
+            self.assertEqual(
+                agreement["centered_per_option_normalized_ll_difference"][
+                    "values"
+                ],
+                48,
+            )
+            self.assertGreater(
+                agreement["centered_per_option_normalized_ll_difference"][
+                    "mean_absolute"
+                ],
+                0,
+            )
+            self.assertGreater(
+                agreement["top_margin_difference"]["mean_absolute"], 0
+            )
+            self.assertGreater(
+                result["full_cal"]["models"][ROLES[0]]["gpu"]["sample_count"],
+                0,
+            )
             serialized = output_json.read_text(encoding="utf-8")
             html = output_html.read_text(encoding="utf-8")
             self.assertIn("Qwen3.5 基础能力测试", html)
             self.assertIn("Full CAL subject 诊断", html)
+            self.assertIn("HF comparison: DESCRIPTIVE", html)
             self.assertIn("<style>", html)
             self.assertNotIn("<link", html)
             self.assertNotIn("/home/fake", serialized + html)
@@ -476,10 +539,180 @@ class BaselineReportTests(unittest.TestCase):
                 output_json=root / "result.json",
                 output_html=root / "result.html",
             )
+            self.assertEqual(result["artifact_validation_status"], "PASS")
+            self.assertEqual(result["hf_comparison_status"], "not_run")
             self.assertFalse(result["hf_vllm_pilot_agreement"]["available"])
+            self.assertEqual(
+                result["hf_vllm_pilot_agreement"]["status"], "not_run"
+            )
             self.assertTrue(
                 any("没有 HF-vLLM" in item for item in result["limitations"])
             )
+            html = (root / "result.html").read_text(encoding="utf-8")
+            self.assertIn("HF 对照 NOT RUN", html)
+            self.assertIn("HF comparison: NOT RUN", html)
+            self.assertNotIn("HF 对照 PASS", html)
+
+    def test_hf_zero_agreement_remains_explicitly_descriptive(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, _ = self.fixture(directory)
+            config_payload = json.loads(config.read_text(encoding="utf-8"))
+            checksums = json.loads(
+                (metadata.parent / "checksums.json").read_text(encoding="utf-8")
+            )
+            hf = make_matrix(
+                root,
+                scope="pilot",
+                backend="hf",
+                roles=(ROLES[0],),
+                config=config_payload,
+                config_path=config,
+                checksums=checksums,
+                hf_all_prediction_difference=True,
+            )
+            output_html = root / "zero-agreement.html"
+            result = reporter.generate_report(
+                pilot_matrix=pilot,
+                full_matrix=full,
+                hf_reference_matrix=hf,
+                config_path=config,
+                split_metadata_path=metadata,
+                output_json=root / "zero-agreement.json",
+                output_html=output_html,
+            )
+            self.assertEqual(result["artifact_validation_status"], "PASS")
+            self.assertEqual(result["hf_comparison_status"], "descriptive")
+            self.assertFalse(result["hf_vllm_pilot_agreement"]["gate_applied"])
+            self.assertEqual(
+                result["hf_vllm_pilot_agreement"]["all_views"][
+                    "prediction_agreement"
+                ],
+                0.0,
+            )
+            html = output_html.read_text(encoding="utf-8")
+            self.assertIn("Artifact 输入验证 PASS", html)
+            self.assertIn("HF 对照 DESCRIPTIVE", html)
+            self.assertNotIn("HF 对照 PASS", html)
+
+    def test_rejects_invalid_option_score_row_invariants(self) -> None:
+        base = score_rows("pilot", ROLES[0])[0][0]
+        cases: list[tuple[str, dict[str, object], str]] = []
+
+        missing = copy.deepcopy(base)
+        del missing["raw_log_likelihood_by_semantic"]
+        cases.append(("missing field", missing, "normalized schema"))
+
+        wrong_width = copy.deepcopy(base)
+        wrong_width["raw_log_likelihood_by_semantic"] = [-1.0] * 3
+        cases.append(("wrong width", wrong_width, "exactly four"))
+
+        zero_tokens = copy.deepcopy(base)
+        zero_tokens["continuation_tokens_by_semantic"][0] = 0
+        cases.append(("zero tokens", zero_tokens, "integer >= 1"))
+
+        bad_arithmetic = copy.deepcopy(base)
+        bad_arithmetic["mean_log_likelihood_by_semantic"][0] += 0.25
+        cases.append(("bad arithmetic", bad_arithmetic, "does not equal raw"))
+
+        wrong_argmax = copy.deepcopy(base)
+        wrong_argmax["predicted_semantic_index"] = 1
+        wrong_argmax["correct"] = False
+        cases.append(("wrong argmax", wrong_argmax, "not the normalized-score argmax"))
+
+        bad_gold = copy.deepcopy(base)
+        bad_gold["gold_semantic_index"] = 4
+        cases.append(("bad gold", bad_gold, "prediction and gold must be in 0..3"))
+
+        wrong_correct = copy.deepcopy(base)
+        wrong_correct["correct"] = False
+        cases.append(("wrong correct", wrong_correct, "correct disagrees"))
+
+        bad_mapping = copy.deepcopy(base)
+        bad_mapping["display_to_semantic"] = [0, 0, 2, 3]
+        cases.append(("bad mapping", bad_mapping, "permutation of 0..3"))
+
+        bad_stable_id = copy.deepcopy(base)
+        bad_stable_id["stable_id"] = digest("missing mcq prefix")
+        cases.append(("bad stable id", bad_stable_id, "mcq-"))
+
+        for name, row, message in cases:
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(reporter.PublicationError, message):
+                    reporter._validate_option_score_row(row, "option")
+
+    def test_rejects_invalid_strict_score_row_invariants(self) -> None:
+        base = score_rows("pilot", ROLES[0])[1][0]
+        for status in ("invalid", "refusal"):
+            non_valid = copy.deepcopy(base)
+            non_valid["status"] = status
+            non_valid["predicted_display_index"] = None
+            non_valid["correct"] = False
+            reporter._validate_strict_score_row(non_valid, f"strict-{status}")
+
+        cases: list[tuple[str, dict[str, object], str]] = []
+
+        missing = copy.deepcopy(base)
+        del missing["gold_display_index"]
+        cases.append(("missing field", missing, "normalized schema"))
+
+        missing_valid_prediction = copy.deepcopy(base)
+        missing_valid_prediction["predicted_display_index"] = None
+        cases.append(
+            ("valid without prediction", missing_valid_prediction, "must be an integer")
+        )
+
+        invalid_with_prediction = copy.deepcopy(base)
+        invalid_with_prediction["status"] = "invalid"
+        invalid_with_prediction["correct"] = False
+        cases.append(
+            ("invalid with prediction", invalid_with_prediction, "must be null")
+        )
+
+        bad_gold = copy.deepcopy(base)
+        bad_gold["gold_display_index"] = 4
+        cases.append(("bad gold", bad_gold, "must be in 0..3"))
+
+        wrong_correct = copy.deepcopy(base)
+        wrong_correct["correct"] = False
+        cases.append(("wrong correct", wrong_correct, "correct disagrees"))
+
+        bad_response_hash = copy.deepcopy(base)
+        bad_response_hash["response_sha256"] = "not-a-hash"
+        cases.append(("bad response hash", bad_response_hash, "SHA-256"))
+
+        for name, row, message in cases:
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(reporter.PublicationError, message):
+                    reporter._validate_strict_score_row(row, "strict")
+
+    def test_rejects_missing_or_empty_gpu_telemetry(self) -> None:
+        for sample_count in (None, 0):
+            with self.subTest(sample_count=sample_count):
+                with tempfile.TemporaryDirectory() as directory:
+                    root, config, metadata, pilot, full, _ = self.fixture(directory)
+                    manifest_path = pilot / "matrix_manifest.json"
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    evaluation = manifest["models"][ROLES[0]]["evaluation"]
+                    if sample_count is None:
+                        del evaluation["sample_count"]
+                    else:
+                        evaluation["sample_count"] = sample_count
+                    write_json(manifest_path, manifest)
+                    write_json(
+                        pilot / ROLES[0] / "run_manifest.json",
+                        manifest["models"][ROLES[0]],
+                    )
+                    with self.assertRaisesRegex(
+                        reporter.PublicationError, "sample_count"
+                    ):
+                        reporter.generate_report(
+                            pilot_matrix=pilot,
+                            full_matrix=full,
+                            config_path=config,
+                            split_metadata_path=metadata,
+                            output_json=root / "result.json",
+                            output_html=root / "result.html",
+                        )
 
     def test_rejects_matrix_backend_and_item_count_mismatches(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -516,6 +749,208 @@ class BaselineReportTests(unittest.TestCase):
                     output_json=root / "result.json",
                     output_html=root / "result.html",
                 )
+
+    def test_rejects_permutation_identity_and_canonical_strict_label_drift(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, _ = self.fixture(directory)
+            option_path = (
+                pilot / ROLES[0] / "normalized" / "option_scores.jsonl"
+            )
+            rows = read_jsonl(option_path)
+            rows[1]["content_hash"] = digest("content drift within one item")
+            write_jsonl(option_path, rows)
+            with self.assertRaisesRegex(
+                reporter.PublicationError,
+                "changes content_hash across permutations",
+            ):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    config_path=config,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, _ = self.fixture(directory)
+            option_path = (
+                pilot / ROLES[0] / "normalized" / "option_scores.jsonl"
+            )
+            rows = read_jsonl(option_path)
+            rows[0]["display_to_semantic"] = [1, 0, 2, 3]
+            write_jsonl(option_path, rows)
+            with self.assertRaisesRegex(
+                reporter.PublicationError,
+                "permutation 0.*display_to_semantic",
+            ):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    config_path=config,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, _ = self.fixture(directory)
+            strict_path = (
+                pilot / ROLES[0] / "normalized" / "strict_scores.jsonl"
+            )
+            rows = read_jsonl(strict_path)
+            rows[0]["gold_display_index"] = 1
+            rows[0]["correct"] = False
+            write_jsonl(strict_path, rows)
+            with self.assertRaisesRegex(
+                reporter.PublicationError,
+                "strict gold is inconsistent",
+            ):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    config_path=config,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+
+    def test_rejects_cross_model_prompt_and_label_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, _ = self.fixture(directory)
+            option_path = (
+                pilot / ROLES[1] / "normalized" / "option_scores.jsonl"
+            )
+            rows = read_jsonl(option_path)
+            rows[0]["prompt_hash"] = digest("different prompt")
+            write_jsonl(option_path, rows)
+            with self.assertRaisesRegex(reporter.PublicationError, "prompt_hash"):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    config_path=config,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, _ = self.fixture(directory)
+            option_path = (
+                pilot / ROLES[1] / "normalized" / "option_scores.jsonl"
+            )
+            strict_path = (
+                pilot / ROLES[1] / "normalized" / "strict_scores.jsonl"
+            )
+            options = read_jsonl(option_path)
+            strict = read_jsonl(strict_path)
+            item_id = options[0]["stable_id"]
+            for row in options:
+                if row["stable_id"] == item_id:
+                    row["gold_semantic_index"] = 2
+                    row["correct"] = False
+            strict[0]["gold_display_index"] = 2
+            strict[0]["correct"] = False
+            write_jsonl(option_path, options)
+            write_jsonl(strict_path, strict)
+            with self.assertRaisesRegex(
+                reporter.PublicationError,
+                "gold_semantic_index",
+            ):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    config_path=config,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+
+    def test_rejects_pilot_full_overlap_prompt_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, _ = self.fixture(directory)
+            replacement = digest("full-only prompt")
+            for role in ROLES:
+                option_path = (
+                    full / role / "normalized" / "option_scores.jsonl"
+                )
+                rows = read_jsonl(option_path)
+                rows[0]["prompt_hash"] = replacement
+                write_jsonl(option_path, rows)
+            with self.assertRaisesRegex(reporter.PublicationError, "prompt_hash"):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    config_path=config,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+
+    def test_rejects_hf_input_token_mapping_and_strict_prompt_drift(self) -> None:
+        for name, field in (
+            ("token count", "continuation_tokens_by_semantic"),
+            ("display mapping", "display_to_semantic"),
+            ("strict prompt", "strict input differs in prompt_hash"),
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root, config, metadata, pilot, full, hf = self.fixture(directory)
+                option_path = (
+                    hf / ROLES[0] / "normalized" / "option_scores.jsonl"
+                )
+                strict_path = (
+                    hf / ROLES[0] / "normalized" / "strict_scores.jsonl"
+                )
+                options = read_jsonl(option_path)
+                strict = read_jsonl(strict_path)
+                if name == "token count":
+                    options[0]["continuation_tokens_by_semantic"][0] = 2
+                    options[0]["raw_log_likelihood_by_semantic"][0] = (
+                        options[0]["mean_log_likelihood_by_semantic"][0] * 2
+                    )
+                elif name == "display mapping":
+                    options[1]["display_to_semantic"] = [3, 2, 1, 0]
+                else:
+                    strict[0]["prompt_hash"] = digest("different strict prompt")
+                write_jsonl(option_path, options)
+                write_jsonl(strict_path, strict)
+                with self.assertRaisesRegex(reporter.PublicationError, field):
+                    reporter.generate_report(
+                        pilot_matrix=pilot,
+                        full_matrix=full,
+                        hf_reference_matrix=hf,
+                        config_path=config,
+                        split_metadata_path=metadata,
+                        output_json=root / "result.json",
+                        output_html=root / "result.html",
+                    )
+
+    def test_cross_input_signature_explicitly_checks_mapping_and_strict_gold(
+        self,
+    ) -> None:
+        option_rows, strict_rows = score_rows("pilot", ROLES[0])
+        left = reporter.ModelArtifacts(
+            ROLES[0], {}, {}, tuple(option_rows), tuple(strict_rows)
+        )
+        for field in ("display_to_semantic", "gold_display_index"):
+            with self.subTest(field=field):
+                right_options = copy.deepcopy(option_rows)
+                right_strict = copy.deepcopy(strict_rows)
+                if field == "display_to_semantic":
+                    right_options[0][field] = [1, 0, 2, 3]
+                else:
+                    right_strict[0][field] = 1
+                right = reporter.ModelArtifacts(
+                    ROLES[0], {}, {}, tuple(right_options), tuple(right_strict)
+                )
+                with self.assertRaisesRegex(reporter.PublicationError, field):
+                    reporter._validate_matching_model_inputs(
+                        left,
+                        right,
+                        label="test comparison",
+                    )
 
     def test_rejects_provenance_drift_and_unpublished_content(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -21,6 +21,18 @@ from typing import Iterable, Mapping
 CODE_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = CODE_ROOT.parent
 OUTPUT = CODE_ROOT / "code-overview.html"
+PUBLISHED_REPORTS = (
+    (
+        "reports/baseline-results.html",
+        "阅读基础测试报告",
+        "自包含中文实验结果文件；概述页不读取或复验其内容。",
+    ),
+    (
+        "reports/baseline-results.json",
+        "下载机器可读结果",
+        "机器可读的结构化结果文件；概述页不读取或复验其内容。",
+    ),
+)
 
 CONFIG_FILE = "configs/experiment0.json"
 SAFE_METADATA_FILES = (
@@ -62,6 +74,7 @@ TEST_FILES = (
     "tests/test_mcq.py",
     "tests/test_prompts.py",
     "tests/test_report.py",
+    "tests/test_run_baseline_matrix.py",
     "tests/test_split_pipeline.py",
     "tests/test_strict.py",
     "tests/test_vendor.py",
@@ -113,6 +126,7 @@ TEST_DESCRIPTIONS = {
     "tests/test_mcq.py": "排列确定性、唯一性、语义映射与非法输入拒绝。",
     "tests/test_prompts.py": "完整选项文本 likelihood 与单字母 strict prompt。",
     "tests/test_report.py": "token boundary、语义评分、完整三视图和 gate。",
+    "tests/test_run_baseline_matrix.py": "GPU 遥测聚合、覆盖信息与缺失采样的 fail-closed 行为。",
     "tests/test_split_pipeline.py": "跨 split 去重、防 CAL 泄漏与标签冲突 fail-closed。",
     "tests/test_strict.py": "valid、invalid、refusal 的解析和计分。",
     "tests/test_vendor.py": "vendored harness 身份和 commit 不匹配拒绝。",
@@ -256,6 +270,28 @@ def file_card(path: str, description: str, interfaces: Iterable[str] = ()) -> st
       </article>"""
 
 
+def publication_card(path: str, label: str, description: str) -> str:
+    """Link one exact publication path without reading its contents."""
+
+    target = (CODE_ROOT / path).resolve()
+    if not target.is_relative_to(CODE_ROOT.resolve()):
+        raise ValueError(f"publication path escapes code directory: {path}")
+    if target.is_file():
+        heading = (
+            f'<a href="{escape(path, quote=True)}">{escape(label)}</a> '
+            '<span class="badge ok">文件存在</span>'
+        )
+        detail = f"{description} 点击链接可打开结果。"
+    else:
+        heading = f'{escape(label)} <span class="badge warn">等待实验完成</span>'
+        detail = f"{description} 预期路径：{path}"
+    return f"""
+      <article class="file-card">
+        <div class="file-top">{heading}</div>
+        <p>{escape(detail)}</p>
+      </article>"""
+
+
 def number(value: object) -> str:
     return f"{safe_integer(value, label='count'):,}"
 
@@ -304,6 +340,14 @@ def main() -> int:
     task_rows = parse_tasks()
     test_inventory = {path: test_methods(path) for path in TEST_FILES}
     test_count = sum(len(methods) for methods in test_inventory.values())
+    report_cards = "".join(
+        publication_card(path, label, description)
+        for path, label, description in PUBLISHED_REPORTS
+    )
+    published_report_count = sum(
+        (CODE_ROOT / path).resolve().is_file()
+        for path, _label, _description in PUBLISHED_REPORTS
+    )
 
     model_cards: list[str] = []
     for role in ("qwen3_5_2b", "qwen3_5_4b", "qwen3_5_9b"):
@@ -417,6 +461,22 @@ def main() -> int:
     pilot_mmlu = pilot_datasets.get("mmlu")
     if not isinstance(pilot_wmdp, list) or not isinstance(pilot_mmlu, list):
         raise TypeError("pilot dataset lists are malformed")
+    pilot_items = safe_integer(pilot["total_items"], label="pilot total items")
+    full_items = sum(
+        safe_integer(
+            metadata_datasets[name]["cal_rows"],
+            label=f"{name} CAL rows",
+        )
+        for name in ("wmdp", "mmlu")
+    )
+    permutation_count = safe_integer(
+        evaluation["permutation_count"], label="permutation count"
+    )
+    report_status = (
+        "HTML 与 JSON 文件均存在"
+        if published_report_count == len(PUBLISHED_REPORTS)
+        else "等待正式实验与发布"
+    )
 
     status_class = "ok" if harness_match and harness_clean else "warn"
     status_text = "身份匹配且 clean" if harness_match and harness_clean else "需要检查"
@@ -476,7 +536,8 @@ def main() -> int:
 <body>
 <div class="shell">
   <nav aria-label="页面目录"><div class="mark">HP</div><p class="eyebrow">Code map</p>
-    <a href="#overview">概览</a><a href="#models">模型与执行</a><a href="#flow">数据流</a>
+    <a href="#overview">概览</a><a href="#models">模型与执行</a><a href="#run-design">正式顺序</a>
+    <a href="#reports">实验报告</a><a href="#flow">数据流</a>
     <a href="#manifests">Manifests</a><a href="#tasks">任务协议</a><a href="#files">文件地图</a>
     <a href="#repro">可复现性</a><a href="#commands">常用命令</a>
   </nav>
@@ -517,6 +578,32 @@ def main() -> int:
           <tr><th>tensor / data parallel</th><td>{escape(str(evaluation['tensor_parallel_size']))} / {escape(str(evaluation['data_parallel_size']))}</td><th>trust remote code</th><td>{escape(str(evaluation['trust_remote_code'])).lower()}</td></tr>
         </tbody></table></div><p class="chips">{version_chips}</p>
       </div></details>
+    </section>
+
+    <section id="run-design">
+      <div class="section-head"><span class="eyebrow">Formal execution</span><h2>正式实验顺序与规模</h2><p class="muted">所有矩阵运行必须使用同一个已提交 commit；pilot 验证通过后才进入 full CAL。</p></div>
+      <div class="flow">
+        <div class="flow-node"><b>① vLLM pilot</b><span>2B / 4B / 9B · 三张卡</span></div><div class="arrow">→</div>
+        <div class="flow-node"><b>② HF reference</b><span>仅 2B pilot · backend 对照</span></div><div class="arrow">→</div>
+        <div class="flow-node"><b>③ vLLM full</b><span>2B / 4B / 9B · 全部 CAL</span></div><div class="arrow">→</div>
+        <div class="flow-node"><b>④ Publish</b><span>验证并生成 HTML / JSON</span></div><div class="arrow">→</div>
+        <div class="flow-node"><b>⑤ Refresh</b><span>刷新本概述页及结果链接</span></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>范围</th><th>每模型 items</th><th>Likelihood views</th><th>Strict generations</th></tr></thead><tbody>
+        <tr><th>Pilot</th><td>{pilot_items:,}</td><td>{pilot_items * permutation_count:,}</td><td>{pilot_items:,}</td></tr>
+        <tr><th>Full CAL</th><td>{full_items:,}</td><td>{full_items * permutation_count:,}</td><td>{full_items:,}</td></tr>
+      </tbody></table></div>
+      <div class="boundary-grid" style="margin-top:16px">
+        <article class="boundary-card"><h3>启动门槛</h3><p>仓库必须 clean；三张目标 GPU 的预存显存都必须低于 1 GiB。</p></article>
+        <article class="boundary-card"><h3>运行前检查</h3><p>依次完成 doctor、prepare、模型 prefetch 和每模型 prompt-length audit。</p></article>
+        <article class="boundary-card"><h3>执行与收尾</h3><p>一模型一卡并行；持续采集 GPU telemetry，随后逐模型 postprocess。</p></article>
+      </div>
+      <p class="callout"><strong>发布保护：</strong> 报告生成器要求 pilot、HF reference 与 full CAL 的模型、backend、item count 和 scientific provenance 一致，并验证它们来自同一 repository commit；任何漂移都 fail closed。</p>
+    </section>
+
+    <section id="reports">
+      <div class="section-head"><span class="eyebrow">Result files</span><h2>基础测试报告</h2><p class="muted">{report_status}。概述页只检查两个精确路径是否存在；它不读取且未复验报告。“文件存在”仅表示可以打开结果。</p></div>
+      <div class="file-grid">{report_cards}</div>
     </section>
 
     <section id="flow">
@@ -592,14 +679,31 @@ hidden-policy-eval doctor --backend {escape(backend)}</pre>
 hidden-policy-eval validate
 hidden-policy-eval prepare --scope pilot
 hidden-policy-eval command --model-role qwen3_5_2b --scope pilot</pre>
-      <h3>三模型并行 baseline</h3><pre>python code/scripts/run_baseline_matrix.py \\
+      <h3>① 三模型 vLLM pilot</h3><pre>python code/scripts/run_baseline_matrix.py \\
   --scope pilot \\
   --backend {escape(backend)} \\
   --models qwen3_5_2b qwen3_5_4b qwen3_5_9b \\
   --gpus 0,1,2 \\
   --run-id baseline-pilot-v1</pre>
-      <h3>本地单元测试与刷新本页</h3><pre>PYTHONPATH=code/src python3 -m unittest discover -s code/tests -v
+      <h3>② Qwen3.5-2B HF reference pilot</h3><pre>python code/scripts/run_baseline_matrix.py \\
+  --scope pilot \\
+  --backend hf \\
+  --models qwen3_5_2b \\
+  --gpus 0 \\
+  --run-id baseline-pilot-hf-2b-v1</pre>
+      <h3>③ 三模型 vLLM full CAL</h3><pre>python code/scripts/run_baseline_matrix.py \\
+  --scope full \\
+  --backend {escape(backend)} \\
+  --models qwen3_5_2b qwen3_5_4b qwen3_5_9b \\
+  --gpus 0,1,2 \\
+  --run-id baseline-full-v1</pre>
+      <h3>④ 发布结果，⑤ 刷新概述</h3><pre>python code/scripts/generate_baseline_report.py \\
+  --pilot-matrix code/results/experiment0/baseline/baseline-pilot-v1 \\
+  --full-matrix code/results/experiment0/baseline/baseline-full-v1 \\
+  --hf-reference-matrix code/results/experiment0/baseline/baseline-pilot-hf-2b-v1
+
 python3 code/scripts/generate_code_overview.py</pre>
+      <h3>本地单元测试</h3><pre>PYTHONPATH=code/src python3 -m unittest discover -s code/tests -v</pre>
     </section>
 
     <footer>此页面由 <code>scripts/generate_code_overview.py</code> 从固定安全白名单生成。它不会读取 <code>data/</code>、<code>runtime/</code>、<code>results/</code>、认证材料、远程连接配置或 vendored 源码内容。</footer>

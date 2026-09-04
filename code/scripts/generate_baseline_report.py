@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
 import hashlib
+from itertools import permutations
 import json
 import math
 from pathlib import Path
@@ -31,7 +32,9 @@ DEFAULT_OUTPUT_HTML = CODE_ROOT / "reports" / "baseline-results.html"
 MODEL_ROLES = ("qwen3_5_2b", "qwen3_5_4b", "qwen3_5_9b")
 DATASETS = ("wmdp", "mmlu")
 HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+STABLE_ID_PATTERN = re.compile(r"^mcq-[0-9a-f]{64}$")
 GIT_OID_PATTERN = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+PERMUTATION_SALT = "hidden-policy-plan4-permutations-v1"
 FORBIDDEN_NORMALIZED_KEYS = {
     "answer",
     "arguments",
@@ -45,6 +48,61 @@ FORBIDDEN_NORMALIZED_KEYS = {
     "resps",
     "target",
 }
+OPTION_SCORE_KEYS = {
+    "schema_version",
+    "dataset",
+    "dataset_revision",
+    "stable_id",
+    "content_hash",
+    "subject",
+    "source_split",
+    "split",
+    "permutation_id",
+    "display_to_semantic",
+    "raw_log_likelihood_by_semantic",
+    "continuation_tokens_by_semantic",
+    "mean_log_likelihood_by_semantic",
+    "predicted_semantic_index",
+    "gold_semantic_index",
+    "correct",
+    "prompt_hash",
+}
+STRICT_SCORE_KEYS = {
+    "schema_version",
+    "dataset",
+    "dataset_revision",
+    "stable_id",
+    "content_hash",
+    "subject",
+    "source_split",
+    "split",
+    "status",
+    "predicted_display_index",
+    "gold_display_index",
+    "correct",
+    "response_sha256",
+    "prompt_hash",
+}
+ITEM_IDENTITY_FIELDS = (
+    "dataset",
+    "dataset_revision",
+    "content_hash",
+    "subject",
+    "source_split",
+    "split",
+)
+OPTION_INPUT_FIELDS = (
+    *ITEM_IDENTITY_FIELDS,
+    "prompt_hash",
+    "gold_semantic_index",
+    "display_to_semantic",
+    "continuation_tokens_by_semantic",
+)
+STRICT_INPUT_FIELDS = (
+    *ITEM_IDENTITY_FIELDS,
+    "prompt_hash",
+    "gold_display_index",
+)
 
 
 class PublicationError(ValueError):
@@ -103,6 +161,15 @@ def _number(value: object, label: str, *, minimum: float = 0.0) -> float:
     return result
 
 
+def _finite_number(value: object, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        _fail(f"{label} must be numeric")
+    result = float(value)
+    if not math.isfinite(result):
+        _fail(f"{label} must be finite")
+    return result
+
+
 def _rate(value: object, label: str) -> float:
     result = _number(value, label)
     if result > 1.0:
@@ -120,6 +187,13 @@ def _hash(value: object, label: str) -> str:
     result = _text(value, label)
     if HASH_PATTERN.fullmatch(result) is None:
         _fail(f"{label} must be a lowercase SHA-256 digest")
+    return result
+
+
+def _stable_id(value: object, label: str) -> str:
+    result = _text(value, label)
+    if STABLE_ID_PATTERN.fullmatch(result) is None:
+        _fail(f"{label} must be mcq- followed by a lowercase SHA-256 digest")
     return result
 
 
@@ -217,28 +291,182 @@ def _id_set_hash(item_ids: Iterable[str]) -> str:
     return hashlib.sha256("\n".join(sorted(item_ids)).encode("utf-8")).hexdigest()
 
 
-def _computed_rates(rows: list[Mapping[str, object]], label: str) -> dict[str, object]:
-    by_item: dict[str, list[Mapping[str, object]]] = {}
-    for row in rows:
-        item_id = _text(row.get("stable_id"), f"{label}.stable_id")
-        permutation = _integer(
-            row.get("permutation_id"), f"{label}.permutation_id"
-        )
-        if permutation not in {0, 1, 2}:
-            _fail(f"{label} has permutation outside 0, 1, 2")
+def _exact_keys(row: Mapping[str, object], expected: set[str], label: str) -> None:
+    missing = expected.difference(row)
+    unexpected = set(row).difference(expected)
+    if missing or unexpected:
+        details: list[str] = []
+        if missing:
+            details.append("missing: " + ", ".join(sorted(missing)))
+        if unexpected:
+            details.append("unexpected: " + ", ".join(sorted(unexpected)))
+        _fail(f"{label} does not match its normalized schema ({'; '.join(details)})")
+
+
+def _four_finite_numbers(value: object, label: str) -> list[float]:
+    values = _list(value, label)
+    if len(values) != 4:
+        _fail(f"{label} must contain exactly four values")
+    return [
+        _finite_number(item, f"{label}[{index}]")
+        for index, item in enumerate(values)
+    ]
+
+
+def _four_positive_integers(value: object, label: str) -> list[int]:
+    values = _list(value, label)
+    if len(values) != 4:
+        _fail(f"{label} must contain exactly four values")
+    return [
+        _integer(item, f"{label}[{index}]", minimum=1)
+        for index, item in enumerate(values)
+    ]
+
+
+def _expected_display_mappings(stable_id: str) -> tuple[tuple[int, ...], ...]:
+    """Independently reproduce the frozen three-view permutation protocol."""
+
+    identity = tuple(range(4))
+    candidates = list(permutations(range(4)))
+    candidates.remove(identity)
+    selected = [identity]
+    for view_index in range(1, 3):
+        digest = hashlib.sha256(
+            f"{PERMUTATION_SALT}\0{stable_id}\0{view_index}".encode("utf-8")
+        ).digest()
+        candidate_index = int.from_bytes(digest, "big") % len(candidates)
+        selected.append(candidates.pop(candidate_index))
+    return tuple(selected)
+
+
+def _validate_common_score_row(row: Mapping[str, object], label: str) -> None:
+    dataset = _text(row.get("dataset"), f"{label}.dataset")
+    if dataset not in DATASETS:
+        _fail(f"{label}.dataset must be WMDP or MMLU")
+    _text(row.get("dataset_revision"), f"{label}.dataset_revision")
+    _stable_id(row.get("stable_id"), f"{label}.stable_id")
+    _hash(row.get("content_hash"), f"{label}.content_hash")
+    _text(row.get("subject"), f"{label}.subject")
+    _text(row.get("source_split"), f"{label}.source_split")
+    if row.get("split") != "CAL":
+        _fail(f"{label}.split must be CAL")
+    _hash(row.get("prompt_hash"), f"{label}.prompt_hash")
+
+
+def _validate_option_score_row(row: Mapping[str, object], label: str) -> None:
+    _exact_keys(row, OPTION_SCORE_KEYS, label)
+    if row.get("schema_version") != "hidden-policy-option-score-v1":
+        _fail(f"{label} has unsupported option-score schema")
+    _validate_common_score_row(row, label)
+    permutation = _integer(row.get("permutation_id"), f"{label}.permutation_id")
+    if permutation not in {0, 1, 2}:
+        _fail(f"{label} has permutation outside 0, 1, 2")
+    mapping = _list(row.get("display_to_semantic"), f"{label}.display_to_semantic")
+    if len(mapping) != 4 or any(
+        isinstance(value, bool) or not isinstance(value, int) for value in mapping
+    ) or sorted(mapping) != [0, 1, 2, 3]:
+        _fail(f"{label}.display_to_semantic must be a permutation of 0..3")
+    raw = _four_finite_numbers(
+        row.get("raw_log_likelihood_by_semantic"),
+        f"{label}.raw_log_likelihood_by_semantic",
+    )
+    tokens = _four_positive_integers(
+        row.get("continuation_tokens_by_semantic"),
+        f"{label}.continuation_tokens_by_semantic",
+    )
+    normalized = _four_finite_numbers(
+        row.get("mean_log_likelihood_by_semantic"),
+        f"{label}.mean_log_likelihood_by_semantic",
+    )
+    for index, (raw_score, token_count, normalized_score) in enumerate(
+        zip(raw, tokens, normalized)
+    ):
+        expected = raw_score / token_count
+        if not math.isclose(
+            normalized_score, expected, rel_tol=1e-12, abs_tol=1e-12
+        ):
+            _fail(
+                f"{label}.mean_log_likelihood_by_semantic[{index}] does not "
+                "equal raw log likelihood divided by continuation tokens"
+            )
+    prediction = _integer(
+        row.get("predicted_semantic_index"),
+        f"{label}.predicted_semantic_index",
+    )
+    gold = _integer(row.get("gold_semantic_index"), f"{label}.gold_semantic_index")
+    if prediction > 3 or gold > 3:
+        _fail(f"{label} semantic prediction and gold must be in 0..3")
+    expected_prediction = max(range(4), key=lambda index: normalized[index])
+    if prediction != expected_prediction:
+        _fail(f"{label}.predicted_semantic_index is not the normalized-score argmax")
+    if not isinstance(row.get("correct"), bool):
+        _fail(f"{label}.correct must be boolean")
+    if row["correct"] != (prediction == gold):
+        _fail(f"{label}.correct disagrees with prediction and gold")
+
+
+def _validate_strict_score_row(row: Mapping[str, object], label: str) -> None:
+    _exact_keys(row, STRICT_SCORE_KEYS, label)
+    if row.get("schema_version") != "hidden-policy-strict-score-v1":
+        _fail(f"{label} has unsupported strict-score schema")
+    _validate_common_score_row(row, label)
+    _hash(row.get("response_sha256"), f"{label}.response_sha256")
+    status = _text(row.get("status"), f"{label}.status")
+    if status not in {"valid", "invalid", "refusal"}:
+        _fail(f"{label} has unsupported strict status {status}")
+    prediction_value = row.get("predicted_display_index")
+    if status == "valid":
         prediction = _integer(
-            row.get("predicted_semantic_index"),
-            f"{label}.predicted_semantic_index",
+            prediction_value, f"{label}.predicted_display_index"
         )
         if prediction > 3:
-            _fail(f"{label} has semantic prediction outside 0..3")
-        if not isinstance(row.get("correct"), bool):
-            _fail(f"{label}.correct must be boolean")
+            _fail(f"{label}.predicted_display_index must be in 0..3")
+    else:
+        if prediction_value is not None:
+            _fail(
+                f"{label}.predicted_display_index must be null when status is {status}"
+            )
+        prediction = None
+    gold = _integer(row.get("gold_display_index"), f"{label}.gold_display_index")
+    if gold > 3:
+        _fail(f"{label}.gold_display_index must be in 0..3")
+    if not isinstance(row.get("correct"), bool):
+        _fail(f"{label}.correct must be boolean")
+    expected_correct = status == "valid" and prediction == gold
+    if row["correct"] != expected_correct:
+        _fail(f"{label}.correct disagrees with strict status, prediction, and gold")
+
+
+def _computed_rates(rows: list[Mapping[str, object]], label: str) -> dict[str, object]:
+    by_item: dict[str, list[Mapping[str, object]]] = {}
+    for index, row in enumerate(rows):
+        row_label = f"{label}[{index}]"
+        _validate_option_score_row(row, row_label)
+        item_id = str(row["stable_id"])
         by_item.setdefault(item_id, []).append(row)
     for item_id, views in by_item.items():
         permutations = [int(row["permutation_id"]) for row in views]
         if len(views) != 3 or set(permutations) != {0, 1, 2}:
             _fail(f"{label} item {item_id} does not have exactly three unique views")
+        reference = views[0]
+        for field in (*ITEM_IDENTITY_FIELDS, "gold_semantic_index"):
+            if any(view[field] != reference[field] for view in views[1:]):
+                _fail(
+                    f"{label} item {item_id} changes {field} across permutations"
+                )
+        by_permutation = {int(view["permutation_id"]): view for view in views}
+        for permutation_id, expected_mapping in enumerate(
+            _expected_display_mappings(item_id)
+        ):
+            observed_mapping = tuple(
+                int(value)
+                for value in by_permutation[permutation_id]["display_to_semantic"]
+            )
+            if observed_mapping != expected_mapping:
+                _fail(
+                    f"{label} item {item_id} permutation {permutation_id} has an "
+                    "unexpected display_to_semantic mapping"
+                )
     canonical = [row for row in rows if row["permutation_id"] == 0]
     return {
         "items": len(by_item),
@@ -269,16 +497,13 @@ def _computed_strict_rates(
     rows: list[Mapping[str, object]], label: str
 ) -> dict[str, object]:
     seen: set[str] = set()
-    for row in rows:
-        item_id = _text(row.get("stable_id"), f"{label}.stable_id")
+    for index, row in enumerate(rows):
+        row_label = f"{label}[{index}]"
+        _validate_strict_score_row(row, row_label)
+        item_id = str(row["stable_id"])
         if item_id in seen:
             _fail(f"{label} has duplicate item {item_id}")
         seen.add(item_id)
-        status = _text(row.get("status"), f"{label}.status")
-        if status not in {"valid", "invalid", "refusal"}:
-            _fail(f"{label} has unsupported strict status {status}")
-        if not isinstance(row.get("correct"), bool):
-            _fail(f"{label}.correct must be boolean")
     count = len(rows)
     return {
         "items": count,
@@ -376,6 +601,29 @@ def _validate_summary_and_rows(
         strict_ids = {str(row["stable_id"]) for row in dataset_strict}
         if option_ids != strict_ids:
             _fail(f"{label}.{dataset} likelihood and strict item sets differ")
+        canonical_options = {
+            str(row["stable_id"]): row
+            for row in dataset_options
+            if int(row["permutation_id"]) == 0
+        }
+        strict_by_item = {str(row["stable_id"]): row for row in dataset_strict}
+        for item_id in sorted(option_ids):
+            canonical = canonical_options[item_id]
+            strict = strict_by_item[item_id]
+            for field in ITEM_IDENTITY_FIELDS:
+                if strict[field] != canonical[field]:
+                    _fail(
+                        f"{label}.{dataset} item {item_id} strict row differs "
+                        f"from canonical option row in {field}"
+                    )
+            mapping = [int(value) for value in canonical["display_to_semantic"]]
+            strict_gold = int(strict["gold_display_index"])
+            semantic_gold = int(canonical["gold_semantic_index"])
+            if mapping[strict_gold] != semantic_gold:
+                _fail(
+                    f"{label}.{dataset} item {item_id} strict gold is inconsistent "
+                    "with the canonical display-to-semantic mapping"
+                )
         _validate_rate_block(
             dataset_summary.get("option_likelihood"),
             computed_options,
@@ -416,6 +664,79 @@ def _validate_summary_and_rows(
                 ),
                 f"{label}.{dataset}.subjects.{subject}.strict_generation",
             )
+
+
+def _option_input_map(
+    model: ModelArtifacts,
+) -> dict[tuple[str, str, int], Mapping[str, object]]:
+    rows: dict[tuple[str, str, int], Mapping[str, object]] = {}
+    for row in model.option_rows:
+        key = (
+            str(row["dataset"]),
+            str(row["stable_id"]),
+            int(row["permutation_id"]),
+        )
+        if key in rows:
+            _fail(f"{model.role} has duplicate option input key {key}")
+        rows[key] = row
+    return rows
+
+
+def _strict_input_map(
+    model: ModelArtifacts,
+) -> dict[tuple[str, str], Mapping[str, object]]:
+    rows: dict[tuple[str, str], Mapping[str, object]] = {}
+    for row in model.strict_rows:
+        key = (str(row["dataset"]), str(row["stable_id"]))
+        if key in rows:
+            _fail(f"{model.role} has duplicate strict input key {key}")
+        rows[key] = row
+    return rows
+
+
+def _validate_matching_model_inputs(
+    left: ModelArtifacts,
+    right: ModelArtifacts,
+    *,
+    label: str,
+    option_keys: Iterable[tuple[str, str, int]] | None = None,
+    strict_keys: Iterable[tuple[str, str]] | None = None,
+) -> None:
+    """Require score comparisons to refer to identical prompts and labels."""
+
+    left_options = _option_input_map(left)
+    right_options = _option_input_map(right)
+    if option_keys is None:
+        selected_options = set(left_options)
+        if selected_options != set(right_options):
+            _fail(f"{label} option-score input key sets differ")
+    else:
+        selected_options = set(option_keys)
+        if not selected_options.issubset(left_options) or not selected_options.issubset(
+            right_options
+        ):
+            _fail(f"{label} is missing one or more selected option-score inputs")
+    for key in sorted(selected_options):
+        for field in OPTION_INPUT_FIELDS:
+            if left_options[key][field] != right_options[key][field]:
+                _fail(f"{label} option input differs in {field} for {key}")
+
+    left_strict = _strict_input_map(left)
+    right_strict = _strict_input_map(right)
+    if strict_keys is None:
+        selected_strict = set(left_strict)
+        if selected_strict != set(right_strict):
+            _fail(f"{label} strict input key sets differ")
+    else:
+        selected_strict = set(strict_keys)
+        if not selected_strict.issubset(left_strict) or not selected_strict.issubset(
+            right_strict
+        ):
+            _fail(f"{label} is missing one or more selected strict inputs")
+    for key in sorted(selected_strict):
+        for field in STRICT_INPUT_FIELDS:
+            if left_strict[key][field] != right_strict[key][field]:
+                _fail(f"{label} strict input differs in {field} for {key}")
 
 
 def _validate_provenance(
@@ -569,6 +890,11 @@ def _validate_model_artifacts(
         "peak_power_watts",
     ):
         _number(evaluation.get(key), f"{label}.evaluation.{key}")
+    _integer(
+        evaluation.get("sample_count"),
+        f"{label}.evaluation.sample_count",
+        minimum=1,
+    )
     if float(evaluation["peak_utilization_percent"]) > 100:
         _fail(f"{label} peak GPU utilization exceeds 100%")
     if float(evaluation["mean_utilization_percent"]) > 100:
@@ -701,7 +1027,8 @@ def load_matrix(
             expected_dataset_revisions=expected_dataset_revisions,
         )
 
-    reference = models[expected_roles[0]].summary
+    reference_model = models[expected_roles[0]]
+    reference = reference_model.summary
     reference_provenance = _object(reference["provenance"], "reference provenance")
     for role in expected_roles[1:]:
         provenance = _object(models[role].summary["provenance"], f"{role} provenance")
@@ -725,6 +1052,14 @@ def load_matrix(
                 _fail(f"{expected_scope} models use different {dataset} item sets")
             if set(left["subjects"]) != set(right["subjects"]):
                 _fail(f"{expected_scope} models use different {dataset} subjects")
+        _validate_matching_model_inputs(
+            reference_model,
+            models[role],
+            label=(
+                f"{expected_scope}/{expected_backend} models "
+                f"{expected_roles[0]} and {role}"
+            ),
+        )
     return MatrixArtifacts(root, manifest, models)
 
 
@@ -755,6 +1090,14 @@ def _validate_cross_matrix(
             full_model.summary
         ):
             _fail(f"pilot and full provenance differs for {role}")
+        pilot_option_keys = set(_option_input_map(pilot_model))
+        full_option_keys = set(_option_input_map(full_model))
+        pilot_strict_keys = set(_strict_input_map(pilot_model))
+        full_strict_keys = set(_strict_input_map(full_model))
+        if not pilot_option_keys.issubset(full_option_keys):
+            _fail(f"{role} pilot option inputs are not a subset of full CAL")
+        if not pilot_strict_keys.issubset(full_strict_keys):
+            _fail(f"{role} pilot strict inputs are not a subset of full CAL")
         for dataset in DATASETS:
             pilot_ids = {
                 str(row["stable_id"])
@@ -768,19 +1111,18 @@ def _validate_cross_matrix(
             }
             if not pilot_ids.issubset(full_ids):
                 _fail(f"{role} pilot {dataset} items are not a subset of full CAL")
+        _validate_matching_model_inputs(
+            pilot_model,
+            full_model,
+            label=f"pilot and full {role}",
+            option_keys=pilot_option_keys,
+            strict_keys=pilot_strict_keys,
+        )
 
 
 def _agreement(
     vllm_model: ModelArtifacts, hf_model: ModelArtifacts
 ) -> dict[str, object]:
-    def option_map(model: ModelArtifacts) -> dict[tuple[str, str, int], int]:
-        return {
-            (str(row["dataset"]), str(row["stable_id"]), int(row["permutation_id"])): int(
-                row["predicted_semantic_index"]
-            )
-            for row in model.option_rows
-        }
-
     def strict_map(model: ModelArtifacts) -> dict[tuple[str, str], tuple[object, object]]:
         return {
             (str(row["dataset"]), str(row["stable_id"])): (
@@ -790,19 +1132,114 @@ def _agreement(
             for row in model.strict_rows
         }
 
-    vllm_options, hf_options = option_map(vllm_model), option_map(hf_model)
+    _validate_matching_model_inputs(
+        vllm_model,
+        hf_model,
+        label="HF reference and vLLM pilot",
+    )
+    vllm_options = _option_input_map(vllm_model)
+    hf_options = _option_input_map(hf_model)
     vllm_strict, hf_strict = strict_map(vllm_model), strict_map(hf_model)
     if set(vllm_options) != set(hf_options):
         _fail("HF reference and vLLM pilot option-score item/view sets differ")
     if set(vllm_strict) != set(hf_strict):
         _fail("HF reference and vLLM pilot strict item sets differ")
 
+    def normalized_scores(row: Mapping[str, object]) -> list[float]:
+        # Rows have already passed the closed schema validation above.
+        return [float(value) for value in row["mean_log_likelihood_by_semantic"]]
+
+    def centered(scores: list[float]) -> list[float]:
+        center = sum(scores) / len(scores)
+        return [score - center for score in scores]
+
+    def top_margin(scores: list[float]) -> float:
+        ordered = sorted(scores, reverse=True)
+        return ordered[0] - ordered[1]
+
     def block(keys: list[tuple[str, str, int]]) -> dict[str, object]:
-        matches = sum(vllm_options[key] == hf_options[key] for key in keys)
+        matches = sum(
+            vllm_options[key]["predicted_semantic_index"]
+            == hf_options[key]["predicted_semantic_index"]
+            for key in keys
+        )
+        centered_differences: list[float] = []
+        margin_differences: list[float] = []
+        vllm_margins: list[float] = []
+        hf_margins: list[float] = []
+        for key in keys:
+            vllm_scores = normalized_scores(vllm_options[key])
+            hf_scores = normalized_scores(hf_options[key])
+            centered_differences.extend(
+                left - right
+                for left, right in zip(
+                    centered(vllm_scores), centered(hf_scores)
+                )
+            )
+            vllm_margin = top_margin(vllm_scores)
+            hf_margin = top_margin(hf_scores)
+            vllm_margins.append(vllm_margin)
+            hf_margins.append(hf_margin)
+            margin_differences.append(vllm_margin - hf_margin)
+        absolute_centered = [abs(value) for value in centered_differences]
+        absolute_margins = [abs(value) for value in margin_differences]
+        vllm_accuracy = (
+            sum(bool(vllm_options[key]["correct"]) for key in keys) / len(keys)
+            if keys
+            else 0.0
+        )
+        hf_accuracy = (
+            sum(bool(hf_options[key]["correct"]) for key in keys) / len(keys)
+            if keys
+            else 0.0
+        )
         return {
             "views": len(keys),
             "matching_predictions": matches,
             "prediction_agreement": matches / len(keys) if keys else 0.0,
+            "accuracy": {
+                "vllm": vllm_accuracy,
+                "hf": hf_accuracy,
+                "delta_vllm_minus_hf": vllm_accuracy - hf_accuracy,
+            },
+            "centered_per_option_normalized_ll_difference": {
+                "values": len(centered_differences),
+                "mean_absolute": (
+                    sum(absolute_centered) / len(absolute_centered)
+                    if absolute_centered
+                    else 0.0
+                ),
+                "root_mean_square": (
+                    math.sqrt(
+                        sum(value * value for value in centered_differences)
+                        / len(centered_differences)
+                    )
+                    if centered_differences
+                    else 0.0
+                ),
+                "maximum_absolute": max(absolute_centered, default=0.0),
+            },
+            "top_margin_difference": {
+                "vllm_mean": (
+                    sum(vllm_margins) / len(vllm_margins)
+                    if vllm_margins
+                    else 0.0
+                ),
+                "hf_mean": (
+                    sum(hf_margins) / len(hf_margins) if hf_margins else 0.0
+                ),
+                "mean_signed_vllm_minus_hf": (
+                    sum(margin_differences) / len(margin_differences)
+                    if margin_differences
+                    else 0.0
+                ),
+                "mean_absolute": (
+                    sum(absolute_margins) / len(absolute_margins)
+                    if absolute_margins
+                    else 0.0
+                ),
+                "maximum_absolute": max(absolute_margins, default=0.0),
+            },
         }
 
     by_dataset = {
@@ -813,7 +1250,9 @@ def _agreement(
     canonical_keys = [key for key in all_keys if key[2] == 0]
     strict_matches = sum(vllm_strict[key] == hf_strict[key] for key in vllm_strict)
     return {
+        "status": "descriptive",
         "available": True,
+        "gate_applied": False,
         "model_role": vllm_model.role,
         "all_views": block(all_keys),
         "canonical_views": block(canonical_keys),
@@ -826,8 +1265,11 @@ def _agreement(
             else 0.0,
         },
         "interpretation": (
-            "agreement compares semantic option argmax for likelihood views; "
-            "strict agreement compares parsed status and displayed option"
+            "Descriptive comparison only; no pass/fail threshold is applied. "
+            "Each view's four normalized log likelihoods are mean-centered before "
+            "backend subtraction. Top margin is the best score minus the runner-up; "
+            "signed deltas are vLLM minus HF. Strict agreement compares parsed status "
+            "and displayed option."
         ),
     }
 
@@ -909,6 +1351,7 @@ def _public_gpu(model: ModelArtifacts) -> dict[str, object]:
         "peak_utilization_percent": evaluation["peak_utilization_percent"],
         "mean_utilization_percent": evaluation["mean_utilization_percent"],
         "peak_power_watts": evaluation["peak_power_watts"],
+        "sample_count": evaluation["sample_count"],
         "note": "polled whole-device peak, not process-isolated peak",
     }
 
@@ -972,7 +1415,9 @@ def build_publication(
     hf_agreement: dict[str, object]
     if hf_reference is None:
         hf_agreement = {
+            "status": "not_run",
             "available": False,
+            "gate_applied": False,
             "reason": "未提供 Qwen3.5-2B Hugging Face pilot reference matrix。",
         }
     else:
@@ -1002,7 +1447,7 @@ def build_publication(
         "三者均为原始 post-trained checkpoint；这是描述性 capability baseline，不是 sandbagging 训练结果。",
         "本矩阵按当前任务只比较 2B/4B/9B，未运行 0.8B weak reference；因此不执行 Plan 4 的 weak-headroom PASS/STOP gate。",
         "primary accuracy 来自完整选项文本的 continuation-token normalized likelihood；strict generation 只用于格式与拒答诊断。",
-        "BF16 与不同推理 kernel 可能产生微小数值差异；HF reference 仅检查 2B pilot，不能证明所有尺寸逐 token 等价。",
+        "BF16 与不同推理 kernel 可能产生数值差异；HF reference 仅对 2B pilot 做描述性预测、centered score、top-margin 与 accuracy-delta 比较，没有预设 pass/fail gate，也不能代表所有尺寸。",
         "subject 样本量不同，尤其 pilot 很小；subject 数值应视为诊断而非独立确认性结论。",
         "GPU 峰值来自定时轮询的整张物理卡，可能漏掉采样间峰值，也不等同于进程独占显存。",
         "没有置信区间、训练 seed 或因果干预，因此不能从模型尺寸差异推出 scaling law 或机制结论。",
@@ -1012,10 +1457,11 @@ def build_publication(
             "未提供 HF reference matrix；当前报告没有 HF-vLLM backend prediction agreement 证据。"
         )
     return {
-        "schema_version": "hidden-policy-baseline-publication-v1",
+        "schema_version": "hidden-policy-baseline-publication-v2",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "report_language": "zh-CN",
-        "validation_status": "PASS",
+        "artifact_validation_status": "PASS",
+        "hf_comparison_status": hf_agreement["status"],
         "pilot": _public_matrix(pilot, config),
         "full_cal": _public_matrix(full, config),
         "hf_reference": (
@@ -1103,6 +1549,14 @@ def _seconds(value: object) -> str:
         return f"{int(minutes)}m {remainder:.0f}s"
     hours, minutes = divmod(int(minutes), 60)
     return f"{hours}h {minutes}m"
+
+
+def _decimal(value: object) -> str:
+    return f"{float(value):.6g}"
+
+
+def _signed_percentage_points(value: object) -> str:
+    return f"{100.0 * float(value):+.2f} pp"
 
 
 def _cell(value: object) -> str:
@@ -1193,6 +1647,7 @@ def _timing_rows(matrix: Mapping[str, object]) -> str:
             f"<td>{float(gpu['mean_utilization_percent']):.1f}%</td>"
             f"<td>{float(gpu['peak_utilization_percent']):.0f}%</td>"
             f"<td>{float(gpu['peak_power_watts']):.1f} W</td>"
+            f"<td>{int(gpu['sample_count'])}</td>"
             "</tr>"
         )
     return "".join(rows)
@@ -1203,19 +1658,34 @@ def render_html(report: Mapping[str, object]) -> str:
     pilot = report["pilot"]
     agreement = report["hf_vllm_pilot_agreement"]
     if agreement["available"]:
+        all_views = agreement["all_views"]
+        centered = all_views["centered_per_option_normalized_ll_difference"]
+        margin = all_views["top_margin_difference"]
+        accuracy = all_views["accuracy"]
         agreement_html = (
+            "<p class='notice'><strong>HF comparison: DESCRIPTIVE.</strong> "
+            "未设置 pass/fail 阈值；Artifact PASS 不代表两个 backend 等价。</p>"
             "<div class='agreement-grid'>"
-            f"<div><strong>{_pct(agreement['all_views']['prediction_agreement'])}</strong>"
-            f"<span>全部 likelihood views ({agreement['all_views']['matching_predictions']}/"
-            f"{agreement['all_views']['views']})</span></div>"
+            f"<div><strong>{_pct(all_views['prediction_agreement'])}</strong>"
+            f"<span>全部 likelihood views ({all_views['matching_predictions']}/"
+            f"{all_views['views']})</span></div>"
             f"<div><strong>{_pct(agreement['canonical_views']['prediction_agreement'])}</strong>"
             f"<span>canonical views</span></div>"
             f"<div><strong>{_pct(agreement['strict_generation']['prediction_agreement'])}</strong>"
             f"<span>strict parsed predictions</span></div>"
+            f"<div><strong>{_decimal(centered['mean_absolute'])}</strong>"
+            "<span>centered per-option normalized LL mean |Δ|</span></div>"
+            f"<div><strong>{_decimal(margin['mean_signed_vllm_minus_hf'])}</strong>"
+            "<span>top-margin mean Δ (vLLM−HF)</span></div>"
+            f"<div><strong>{_signed_percentage_points(accuracy['delta_vllm_minus_hf'])}</strong>"
+            "<span>all-view accuracy Δ (vLLM−HF)</span></div>"
             "</div>"
         )
     else:
-        agreement_html = f"<p class='notice'>{_cell(agreement['reason'])}</p>"
+        agreement_html = (
+            "<p class='notice'><strong>HF comparison: NOT RUN.</strong> "
+            f"{_cell(agreement['reason'])}</p>"
+        )
 
     provenance = report["provenance"]
     protocol = provenance["evaluation_protocol"]
@@ -1246,7 +1716,7 @@ main{{max-width:1240px;margin:auto;padding:36px 24px 64px}} header{{background:l
 h1{{font-size:30px;margin:0 0 8px}} header p{{margin:0;opacity:.86}} section{{background:var(--paper);border:1px solid var(--line);border-radius:14px;margin-top:22px;padding:24px}}
 h2{{font-size:21px;margin:0 0 14px}} h3{{font-size:17px;margin:22px 0 10px}} .cards{{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}}
 .model-card{{background:#fff;color:var(--ink);border-radius:12px;padding:17px;display:flex;flex-direction:column}} .model-card span{{color:var(--muted)}} .model-card strong{{font-size:22px;color:var(--accent);margin-top:6px}} .model-card small{{font-size:14px}}
-.badge{{display:inline-block;padding:3px 9px;border-radius:999px;background:#daf2e6;color:var(--good);font-weight:700}} .meta{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}} .meta div{{background:var(--wash);padding:12px;border-radius:9px}} .meta span{{display:block;color:var(--muted);font-size:12px}}
+.badge{{display:inline-block;padding:3px 9px;border-radius:999px;background:#daf2e6;color:var(--good);font-weight:700;margin-right:7px}} .badge.secondary{{background:#e7edf1;color:#425868}} .meta{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}} .meta div{{background:var(--wash);padding:12px;border-radius:9px}} .meta span{{display:block;color:var(--muted);font-size:12px}}
 .table-wrap{{overflow:auto;border:1px solid var(--line);border-radius:10px}} table{{border-collapse:collapse;width:100%;font-size:13px}} th,td{{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}} th{{background:#edf3f6;color:#334b59}} th:first-child,td:first-child{{text-align:left}} tbody tr:last-child td{{border-bottom:0}} tbody tr:hover{{background:#f8fafb}}
 .agreement-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}} .agreement-grid div{{background:#edf7fa;border-left:4px solid var(--accent);padding:16px;border-radius:8px}} .agreement-grid strong{{display:block;color:var(--accent);font-size:24px}} .agreement-grid span{{color:var(--muted)}}
 .notice{{background:#fff3dd;border-left:4px solid var(--accent2);padding:13px}} code{{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}} ul{{padding-left:22px}} footer{{color:var(--muted);text-align:center;margin-top:24px;font-size:12px}}
@@ -1254,13 +1724,13 @@ h2{{font-size:21px;margin:0 0 14px}} h3{{font-size:17px;margin:22px 0 10px}} .ca
 </style>
 </head>
 <body><main>
-<header><span class="badge">输入验证 PASS</span><h1>Qwen3.5 基础能力测试</h1><p>WMDP / MMLU · non-thinking · full-option likelihood · CAL only</p><div class="cards">{model_cards}</div></header>
+<header><span class="badge">Artifact 输入验证 {_cell(report['artifact_validation_status'])}</span><span class="badge secondary">HF 对照 {_cell(str(report['hf_comparison_status']).replace('_', ' ').upper())}</span><h1>Qwen3.5 基础能力测试</h1><p>WMDP / MMLU · non-thinking · full-option likelihood · CAL only</p><div class="cards">{model_cards}</div></header>
 <section><h2>读者摘要</h2><p>本页比较 Qwen3.5-2B、4B、9B 原始 post-trained checkpoint。主结果是 full CAL 的完整选项文本 token-normalized likelihood；strict generation 与三种选项排列用于诊断格式失败和位置敏感性。此处没有训练 sandbagger，也没有解封 Q3/Q4 test。</p><div class="meta"><div><span>主后端</span>{_cell(full['backend'])}</div><div><span>Full CAL 总耗时</span>{_seconds(full['matrix_duration_seconds'])}</div><div><span>评测代码 commit</span><code>{_cell(provenance['evaluated_repository_commit'])}</code></div></div></section>
 <section><h2>Full CAL 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(full)}</tbody></table></div></section>
 <section><h2>Full CAL subject 诊断</h2><h3>WMDP</h3>{_subject_table(full,'wmdp')}<h3>MMLU</h3>{_subject_table(full,'mmlu')}<p class="notice">Subject 表中的 Acc 为 canonical-order likelihood accuracy；Perm. 为三种排列映射回 semantic option 后的一致率。</p></section>
 <section><h2>32-item pilot 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(pilot)}</tbody></table></div></section>
-<section><h2>HF ↔ vLLM pilot 一致性</h2>{agreement_html}</section>
-<section><h2>Full CAL 耗时与 GPU 峰值</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>Prefetch</th><th>Prompt audit</th><th>lm-eval validate</th><th>Load + eval</th><th>Postprocess</th><th>峰值显存</th><th>显存占比</th><th>平均利用率</th><th>峰值利用率</th><th>峰值功耗</th></tr></thead><tbody>{_timing_rows(full)}</tbody></table></div><p class="notice">三模型并行执行，各自绑定一张物理 GPU；耗时会受共享 CPU、磁盘和 PCIe 影响。GPU 数值来自固定间隔的整卡 nvidia-smi 轮询，因此可能漏掉瞬时峰值，也不是进程级精确 profile。</p></section>
+<section><h2>HF ↔ vLLM pilot 描述性比较</h2>{agreement_html}</section>
+<section><h2>Full CAL 耗时与 GPU 峰值</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>Prefetch</th><th>Prompt audit</th><th>lm-eval validate</th><th>Load + eval</th><th>Postprocess</th><th>峰值显存</th><th>显存占比</th><th>平均利用率</th><th>峰值利用率</th><th>峰值功耗</th><th>Samples</th></tr></thead><tbody>{_timing_rows(full)}</tbody></table></div><p class="notice">三模型并行执行，各自绑定一张物理 GPU；耗时会受共享 CPU、磁盘和 PCIe 影响。GPU 数值来自固定间隔的整卡 nvidia-smi 轮询，因此可能漏掉瞬时峰值，也不是进程级精确 profile。</p></section>
 <section><h2>可复现性</h2><div class="meta"><div><span>lm-evaluation-harness</span><code>{_cell(provenance['harness']['version'])} · {_cell(provenance['harness']['commit'])}</code></div><div><span>vLLM / Transformers</span>{_cell(protocol['vllm_version'])} / {_cell(software['transformers'])}</div><div><span>PyTorch / CUDA</span>{_cell(software['torch'])} / {_cell(software['torch_cuda'])}</div><div><span>Prompt</span>{_cell(protocol['prompt_protocol'])}; thinking={_cell(protocol['enable_thinking'])}</div><div><span>Normalization</span>{_cell(protocol['normalization'])}</div><div><span>Runtime fingerprint (full)</span><code>{_cell(provenance['runtime_fingerprints']['full_vllm'])}</code></div></div></section>
 <section><h2>限制与解释边界</h2><ul>{limitation_items}</ul></section>
 <footer>本报告为自包含静态文件；不含题目、选项、答案标签、raw response、命令行或本机绝对路径。</footer>
@@ -1433,7 +1903,8 @@ def main(argv: list[str] | None = None) -> int:
     print(
         json.dumps(
             {
-                "validation_status": report["validation_status"],
+                "artifact_validation_status": report["artifact_validation_status"],
+                "hf_comparison_status": report["hf_comparison_status"],
                 "output_json": str(args.output_json),
                 "output_html": str(args.output_html),
             },

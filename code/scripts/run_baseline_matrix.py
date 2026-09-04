@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import signal
@@ -258,6 +259,164 @@ def gpu_snapshot(gpu_ids: set[str]) -> list[dict[str, float | int | str]]:
     return rows
 
 
+def aggregate_gpu_samples(
+    rows: list[dict[str, float | int | str]],
+    *,
+    process_duration_seconds: float,
+    configured_poll_seconds: float,
+) -> dict[str, Any]:
+    """Summarize already role-windowed, whole-device GPU samples.
+
+    The caller is responsible for passing only samples for one physical GPU
+    that were requested while its evaluation process was observed alive.  The
+    explicit coverage fields make gaps and short-run telemetry visible instead
+    of presenting a peak/mean without its sampling context.
+    """
+
+    if process_duration_seconds < 0:
+        raise ValueError("process duration must be non-negative")
+    if configured_poll_seconds <= 0:
+        raise ValueError("configured poll interval must be positive")
+
+    sampling_note = (
+        "Whole-device nvidia-smi snapshots requested only while the evaluation "
+        "process was observed alive. observed_coverage_seconds is the span "
+        "from first to last sample; mean_sample_interval_seconds is the mean "
+        "between adjacent samples. A sample can still race with process exit."
+    )
+    if not rows:
+        return {
+            "telemetry_status": "missing",
+            "sample_count": 0,
+            "first_sample_at_utc": None,
+            "last_sample_at_utc": None,
+            "observed_coverage_seconds": 0.0,
+            "observed_coverage_fraction": 0.0,
+            "configured_poll_seconds": configured_poll_seconds,
+            "mean_sample_interval_seconds": None,
+            "peak_memory_used_mib": None,
+            "peak_memory_fraction": None,
+            "peak_utilization_percent": None,
+            "mean_utilization_percent": None,
+            "peak_power_watts": None,
+            "sampling_note": sampling_note,
+        }
+
+    parsed: list[tuple[datetime, dict[str, float | int | str]]] = []
+    for row in rows:
+        captured = datetime.fromisoformat(str(row["captured_at_utc"]))
+        if captured.tzinfo is None:
+            raise ValueError("GPU sample timestamp must include a UTC offset")
+        memory_total = int(row["memory_total_mib"])
+        if memory_total <= 0:
+            raise ValueError("GPU sample memory_total_mib must be positive")
+        utilization = int(row["utilization_percent"])
+        if not 0 <= utilization <= 100:
+            raise ValueError("GPU utilization must be between 0 and 100")
+        parsed.append((captured.astimezone(timezone.utc), row))
+    parsed.sort(key=lambda item: item[0])
+
+    times = [item[0] for item in parsed]
+    ordered_rows = [item[1] for item in parsed]
+    coverage_seconds = max(0.0, (times[-1] - times[0]).total_seconds())
+    intervals = [
+        (later - earlier).total_seconds()
+        for earlier, later in zip(times, times[1:])
+    ]
+    if any(interval < 0 for interval in intervals):
+        raise ValueError("GPU sample timestamps are not monotonic")
+    mean_interval = sum(intervals) / len(intervals) if intervals else None
+    coverage_fraction = (
+        min(1.0, coverage_seconds / process_duration_seconds)
+        if process_duration_seconds > 0
+        else 0.0
+    )
+    return {
+        "telemetry_status": "observed",
+        "sample_count": len(ordered_rows),
+        "first_sample_at_utc": times[0].isoformat(),
+        "last_sample_at_utc": times[-1].isoformat(),
+        "observed_coverage_seconds": coverage_seconds,
+        "observed_coverage_fraction": coverage_fraction,
+        "configured_poll_seconds": configured_poll_seconds,
+        "mean_sample_interval_seconds": mean_interval,
+        "peak_memory_used_mib": max(
+            int(row["memory_used_mib"]) for row in ordered_rows
+        ),
+        "peak_memory_fraction": max(
+            float(row["memory_used_mib"]) / float(row["memory_total_mib"])
+            for row in ordered_rows
+        ),
+        "peak_utilization_percent": max(
+            int(row["utilization_percent"]) for row in ordered_rows
+        ),
+        "mean_utilization_percent": sum(
+            int(row["utilization_percent"]) for row in ordered_rows
+        )
+        / len(ordered_rows),
+        "peak_power_watts": max(
+            float(row["power_watts"]) for row in ordered_rows
+        ),
+        "sampling_note": sampling_note,
+    }
+
+
+def read_completed_harness_timing(
+    path: Path, *, expected_backend: str
+) -> dict[str, object]:
+    """Read and minimally validate the timing contract emitted by lm-eval."""
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError("hidden_policy_timing.json is missing") from exc
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot read valid hidden_policy_timing.json: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("hidden_policy_timing.json must contain a JSON object")
+    if payload.get("schema_version") != "hidden-policy-run-timing-v1":
+        raise ValueError("hidden_policy_timing.json has an unsupported schema")
+    if payload.get("status") != "completed":
+        raise ValueError("hidden_policy_timing.json is not completed")
+    if payload.get("backend") != expected_backend:
+        raise ValueError("hidden_policy_timing.json backend does not match the run")
+    stages = payload.get("stages")
+    if not isinstance(stages, list):
+        raise ValueError("hidden_policy_timing.json stages must be an array")
+    expected_stages = {"lm_eval_validate", "model_load_and_evaluation"}
+    observed_stages: set[str] = set()
+    for index, stage in enumerate(stages):
+        if not isinstance(stage, dict):
+            raise ValueError(f"harness timing stage {index} must be an object")
+        name = stage.get("stage")
+        if not isinstance(name, str) or not name:
+            raise ValueError(f"harness timing stage {index} has no name")
+        if name in observed_stages:
+            raise ValueError(f"duplicate harness timing stage: {name}")
+        observed_stages.add(name)
+        duration = stage.get("duration_seconds")
+        if (
+            isinstance(duration, bool)
+            or not isinstance(duration, (int, float))
+            or not math.isfinite(float(duration))
+            or float(duration) < 0
+        ):
+            raise ValueError(f"harness timing stage {name} has invalid duration")
+        exit_code = stage.get("exit_code")
+        if (
+            isinstance(exit_code, bool)
+            or not isinstance(exit_code, int)
+            or exit_code != 0
+        ):
+            raise ValueError(f"harness timing stage {name} did not succeed")
+    if observed_stages != expected_stages:
+        raise ValueError(
+            "hidden_policy_timing.json must contain exactly lm_eval_validate "
+            "and model_load_and_evaluation"
+        )
+    return payload
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -366,8 +525,13 @@ def main(argv: list[str] | None = None) -> int:
 
     gpu_check_started = utc_now()
     gpu_check_clock = time.perf_counter()
-    initial_gpu_state = gpu_snapshot(set(gpu_list))
-    gpu_check_ok = (
+    gpu_check_error: Exception | None = None
+    try:
+        initial_gpu_state = gpu_snapshot(set(gpu_list))
+    except Exception as exc:
+        initial_gpu_state = []
+        gpu_check_error = exc
+    gpu_check_ok = gpu_check_error is None and (
         len(initial_gpu_state) == len(gpu_list)
         and all(int(row["memory_used_mib"]) < 1024 for row in initial_gpu_state)
     )
@@ -380,6 +544,13 @@ def main(argv: list[str] | None = None) -> int:
         "maximum_allowed_preexisting_memory_mib": 1023,
         "devices": initial_gpu_state,
     }
+    if gpu_check_error is not None:
+        gpu_check.update(
+            {
+                "error_type": type(gpu_check_error).__name__,
+                "error": str(gpu_check_error),
+            }
+        )
     manifest["common_stages"].append(gpu_check)
     if not gpu_check_ok:
         manifest["status"] = "failed"
@@ -512,8 +683,21 @@ def main(argv: list[str] | None = None) -> int:
 
         with sample_path.open("w", encoding="utf-8") as sample_file:
             while len(completions) < len(processes):
+                # Poll before sampling so a faster model is not repeatedly
+                # represented by idle-GPU rows while another model finishes.
+                for role, (process, *_rest) in processes.items():
+                    if role not in completions and process.poll() is not None:
+                        completions[role] = (utc_now(), time.perf_counter())
+                active_roles = [
+                    role for role in processes if role not in completions
+                ]
+                if not active_roles:
+                    break
+                active_gpus = {
+                    str(manifest["models"][role]["gpu"]) for role in active_roles
+                }
                 try:
-                    current_samples = gpu_snapshot(set(gpu_list))
+                    current_samples = gpu_snapshot(active_gpus)
                 except Exception as exc:
                     telemetry_errors.append(
                         {
@@ -527,6 +711,8 @@ def main(argv: list[str] | None = None) -> int:
                     samples.append(sample)
                     sample_file.write(json.dumps(sample, sort_keys=True) + "\n")
                 sample_file.flush()
+                # Poll again after nvidia-smi so completion detection remains
+                # prompt even if the snapshot command itself is slow.
                 for role, (process, *_rest) in processes.items():
                     if role not in completions and process.poll() is not None:
                         completions[role] = (utc_now(), time.perf_counter())
@@ -572,6 +758,11 @@ def main(argv: list[str] | None = None) -> int:
             if row["gpu"] == gpu
             and role_started <= str(row["captured_at_utc"]) <= role_ended
         ]
+        telemetry = aggregate_gpu_samples(
+            gpu_rows,
+            process_duration_seconds=end_clock - clock,
+            configured_poll_seconds=args.gpu_poll_seconds,
+        )
         evaluation_stage = {
             "stage": "evaluation_process",
             "started_at_utc": role_started,
@@ -579,36 +770,35 @@ def main(argv: list[str] | None = None) -> int:
             "duration_seconds": end_clock - clock,
             "exit_code": exit_code,
             "console_sha256": sha256_file(console_path),
-            "peak_memory_used_mib": max(
-                (int(row["memory_used_mib"]) for row in gpu_rows), default=None
-            ),
-            "peak_memory_fraction": max(
-                (
-                    float(row["memory_used_mib"]) / float(row["memory_total_mib"])
-                    for row in gpu_rows
-                ),
-                default=None,
-            ),
-            "peak_utilization_percent": max(
-                (int(row["utilization_percent"]) for row in gpu_rows), default=None
-            ),
-            "mean_utilization_percent": (
-                sum(int(row["utilization_percent"]) for row in gpu_rows)
-                / len(gpu_rows)
-                if gpu_rows
-                else None
-            ),
-            "peak_power_watts": max(
-                (float(row["power_watts"]) for row in gpu_rows), default=None
-            ),
+            **telemetry,
         }
+        timing_error: Exception | None = None
         timing_path = lm_eval_root / "hidden_policy_timing.json"
-        if timing_path.is_file():
-            evaluation_stage["harness_timing"] = json.loads(
-                timing_path.read_text(encoding="utf-8")
+        try:
+            evaluation_stage["harness_timing"] = read_completed_harness_timing(
+                timing_path, expected_backend=backend
             )
+            evaluation_stage["harness_timing_validation"] = "valid"
+        except Exception as exc:
+            timing_error = exc
+            evaluation_stage["harness_timing_validation"] = "invalid"
+            evaluation_stage["harness_timing_error"] = {
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
         manifest["models"][role]["evaluation"] = evaluation_stage
-        if exit_code != 0:
+        if telemetry["sample_count"] == 0:
+            failed = True
+            telemetry_errors.append(
+                {
+                    "captured_at_utc": utc_now(),
+                    "error_type": "MissingGpuTelemetry",
+                    "error": (
+                        f"no valid GPU samples captured for {role} on physical GPU {gpu}"
+                    ),
+                }
+            )
+        if exit_code != 0 or timing_error is not None:
             failed = True
             write_json(
                 matrix_root / role / "run_manifest.json", manifest["models"][role]
