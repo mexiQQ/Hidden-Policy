@@ -1051,6 +1051,7 @@ def build_publication(
                 for key in (
                     "backend",
                     "vllm_version",
+                    "hf_xet_high_performance",
                     "prompt_protocol",
                     "enable_thinking",
                     "candidate",

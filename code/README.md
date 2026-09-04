@@ -126,6 +126,10 @@ runner 隔离，因此每个进程里的 `cuda:0` 都对应它被分配的物理
 `max_model_len=4096` 前会用各模型 tokenizer 审计所有实际请求；超过上限直接停止，
 而不是截断后悄悄继续。
 
+首次拉取三个 checkpoint 时启用 `HF_XET_HIGH_PERFORMANCE=1`，让 Xet 尽量使用远端
+CPU、内存、磁盘和网络并发；该开关同时写入冻结 config 与 matrix manifest。模型已经
+缓存时，`--skip-prefetch` 不再产生网络请求。
+
 为确认 backend 不改变 pilot 结论，再对 2B 跑一次 Transformers 参考：
 
 ```bash

@@ -280,6 +280,11 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError("--gpu-poll-seconds must be positive")
     config = json.loads(args.config.read_text(encoding="utf-8"))
     backend = args.backend or str(config["evaluation"]["backend"])
+    hf_xet_high_performance = bool(
+        config["evaluation"].get("hf_xet_high_performance", False)
+    )
+    if hf_xet_high_performance:
+        os.environ["HF_XET_HIGH_PERFORMANCE"] = "1"
     gpu_list = [value.strip() for value in args.gpus.split(",") if value.strip()]
     if len(gpu_list) != len(args.models) or len(set(gpu_list)) != len(gpu_list):
         raise ValueError("provide one distinct physical GPU id per model")
@@ -325,6 +330,7 @@ def main(argv: list[str] | None = None) -> int:
             "physical_gpus": gpu_list,
             "one_model_per_gpu": True,
             "skip_prefetch": bool(args.skip_prefetch),
+            "hf_xet_high_performance": hf_xet_high_performance,
             "gpu_poll_seconds": args.gpu_poll_seconds,
             "vllm_memory_and_batching": {
                 key: config["evaluation"][key]

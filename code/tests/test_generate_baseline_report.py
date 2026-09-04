@@ -67,6 +67,7 @@ def make_config(root: Path) -> tuple[Path, Path, dict[str, object], dict[str, st
         "evaluation": {
             "backend": "vllm",
             "vllm_version": "0.28.0",
+            "hf_xet_high_performance": True,
             "harness_repository": "https://example.invalid/lm-eval.git",
             "harness_version": "0.4.13",
             "harness_commit": "4" * 40,

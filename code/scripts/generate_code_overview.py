@@ -513,6 +513,7 @@ def main() -> int:
           <tr><th>max model length</th><td>{escape(str(evaluation['max_model_len']))}</td><th>GPU memory utilization</th><td>{escape(str(evaluation['gpu_memory_utilization']))}</td></tr>
           <tr><th>max sequences</th><td>{escape(str(evaluation['max_num_seqs']))}</td><th>max batched tokens</th><td>{escape(str(evaluation['max_num_batched_tokens']))}</td></tr>
           <tr><th>prefix caching</th><td>{prefix_cache}</td><th>seed</th><td>{escape(str(evaluation['seed']))}</td></tr>
+          <tr><th>HF Xet high performance</th><td>{escape(str(evaluation['hf_xet_high_performance'])).lower()}</td><th>CUDA wheel</th><td>{escape(str(evaluation['cuda_wheel']))}</td></tr>
           <tr><th>tensor / data parallel</th><td>{escape(str(evaluation['tensor_parallel_size']))} / {escape(str(evaluation['data_parallel_size']))}</td><th>trust remote code</th><td>{escape(str(evaluation['trust_remote_code'])).lower()}</td></tr>
         </tbody></table></div><p class="chips">{version_chips}</p>
       </div></details>
