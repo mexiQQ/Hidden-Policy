@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import ctypes
 from datetime import datetime, timezone
+import errno
 import hashlib
 import json
 import math
@@ -25,6 +27,7 @@ DEFAULT_CONFIG = CODE_ROOT / "configs" / "experiment0.json"
 DEFAULT_RESULTS = CODE_ROOT / "results" / "experiment0" / "baseline"
 DEFAULT_MODELS = ("qwen3_5_2b", "qwen3_5_4b", "qwen3_5_9b")
 OWNER_ENV = "HP_MATRIX_OWNER"
+LINUX_PIDFD_OPEN_SYSCALL = 434
 
 
 class MatrixInterrupted(BaseException):
@@ -90,6 +93,36 @@ def owned_process_ids(
     return matches
 
 
+def open_process_pidfd(pid: int, flags: int = 0) -> int:
+    """Open a Linux pidfd even when Python was built without os.pidfd_open.
+
+    The A6000 host runs a pidfd-capable 6.8 kernel, but its Python 3.10 build
+    does not expose ``os.pidfd_open``.  Linux assigns pidfd_open syscall 434
+    on the target's x86_64 ABI and on the asm-generic 64-bit ABIs below.
+    """
+
+    native = getattr(os, "pidfd_open", None)
+    if callable(native):
+        return int(native(pid, flags))
+    machine = os.uname().machine if sys.platform.startswith("linux") else ""
+    if machine not in {"x86_64", "aarch64", "riscv64"}:
+        raise OSError(errno.ENOSYS, "pidfd_open is unavailable on this platform")
+    libc = ctypes.CDLL(None, use_errno=True)
+    syscall = libc.syscall
+    syscall.restype = ctypes.c_long
+    file_descriptor = int(
+        syscall(
+            ctypes.c_long(LINUX_PIDFD_OPEN_SYSCALL),
+            ctypes.c_int(pid),
+            ctypes.c_uint(flags),
+        )
+    )
+    if file_descriptor < 0:
+        error_number = ctypes.get_errno()
+        raise OSError(error_number, os.strerror(error_number))
+    return file_descriptor
+
+
 def signal_owned_process_ids(
     pids: set[int],
     owner_token: str,
@@ -102,16 +135,15 @@ def signal_owned_process_ids(
     marker = f"{OWNER_ENV}={owner_token}".encode("utf-8")
     signaled: set[int] = set()
     errors: list[dict[str, object]] = []
-    pidfd_open = getattr(os, "pidfd_open", None)
     pidfd_send_signal = getattr(signal, "pidfd_send_signal", None)
-    if pidfd_open is None or pidfd_send_signal is None:
+    if not callable(pidfd_send_signal):
         return signaled, [
             {"operation": "pidfd_unavailable", "error_type": "UnsupportedPlatform"}
         ]
     for pid in sorted(pids):
         file_descriptor: int | None = None
         try:
-            file_descriptor = pidfd_open(pid, 0)
+            file_descriptor = open_process_pidfd(pid, 0)
             # Opening the pidfd pins process identity.  Re-read the marker only
             # after that point so PID reuse cannot redirect the signal.
             environment = (proc_root / str(pid) / "environ").read_bytes().split(b"\0")

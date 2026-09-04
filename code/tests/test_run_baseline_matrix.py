@@ -194,6 +194,26 @@ class GpuTelemetryAggregationTests(unittest.TestCase):
 
 
 class OwnedProcessCleanupTests(unittest.TestCase):
+    def test_pidfd_open_uses_linux_syscall_when_python_lacks_wrapper(self) -> None:
+        class FakeSyscall:
+            restype = None
+
+            def __call__(self, *_args: object) -> int:
+                return 91
+
+        fake_syscall = FakeSyscall()
+        fake_libc = SimpleNamespace(syscall=fake_syscall)
+        with (
+            mock.patch.object(runner.os, "pidfd_open", None, create=True),
+            mock.patch.object(runner.sys, "platform", "linux"),
+            mock.patch.object(
+                runner.os, "uname", return_value=SimpleNamespace(machine="x86_64")
+            ),
+            mock.patch.object(runner.ctypes, "CDLL", return_value=fake_libc),
+        ):
+            self.assertEqual(runner.open_process_pidfd(123, 0), 91)
+        self.assertEqual(fake_syscall.restype, runner.ctypes.c_long)
+
     def test_proc_scan_matches_only_exact_owner_marker(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             proc = Path(directory)
