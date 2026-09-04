@@ -63,7 +63,7 @@ def write_config(path: Path) -> None:
                 "evaluation": {
                     "backend": "vllm",
                     "hf_xet_high_performance": False,
-                    "gpu_memory_utilization": 0.92,
+                    "gpu_memory_utilization": 0.88,
                     "max_num_seqs": 16,
                     "max_num_batched_tokens": 4096,
                     "enable_prefix_caching": True,

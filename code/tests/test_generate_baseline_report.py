@@ -95,7 +95,7 @@ def make_config(root: Path) -> tuple[Path, Path, dict[str, object], dict[str, st
             "dtype": "bfloat16",
             "batch_size": "auto",
             "max_model_len": 4096,
-            "gpu_memory_utilization": 0.92,
+            "gpu_memory_utilization": 0.88,
             "max_num_seqs": 512,
             "max_num_batched_tokens": 32768,
             "enable_prefix_caching": True,

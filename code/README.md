@@ -120,15 +120,17 @@ python code/scripts/run_baseline_matrix.py \
 ```
 
 默认配置让三个独立 vLLM engine 各自使用一张 A6000：
-`gpu_memory_utilization=0.92`、`max_num_seqs=512`、
+`gpu_memory_utilization=0.88`、`max_num_seqs=512`、
 `max_num_batched_tokens=32768`、prefix caching 开启。`CUDA_VISIBLE_DEVICES` 由矩阵
 runner 隔离，因此每个进程里的 `cuda:0` 都对应它被分配的物理卡。固定
 `max_model_len=4096` 前会用各模型 tokenizer 审计所有实际请求；超过上限直接停止，
 而不是截断后悄悄继续。
 
-`0.92` 是在 RTX A6000 上针对 Qwen3.5 hybrid/linear-attention 实测后的高水位：
-`0.95` 会把显存占满并使首批请求缺少 128–256 MiB 运行时 scratch。保留这部分余量
-的同时，512 sequences / 32,768 batched tokens 仍用于提高吞吐。
+`0.88` 是在 RTX A6000 上针对完整 CAL 的高吞吐安全水位：`0.95` 会使 pilot 首批
+请求缺少 128–256 MiB scratch；`0.92` 虽通过 pilot，但 full likelihood 批次仍需额外
+1.48–2.01 GiB 用于全词表 log-softmax。保留这部分余量的同时，512 sequences /
+32,768 batched tokens 仍用于提高吞吐；整卡实际峰值（模型、cache、scratch 合计）会
+高于这个 vLLM KV-cache 配置比例。
 
 首次拉取三个 checkpoint 时启用 `HF_XET_HIGH_PERFORMANCE=1`，让 Xet 尽量使用远端
 CPU、内存、磁盘和网络并发；该开关同时写入冻结 config 与 matrix manifest。模型已经
