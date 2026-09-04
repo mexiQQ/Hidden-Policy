@@ -79,6 +79,8 @@
     "transformers_version": "5.16.1",
     "torch_version": "2.13.0",
     "cuda_wheel": "cu130",
+    "pytorch_alloc_conf": "expandable_segments:True",
+    "pytorch_allocator_backend": "native",
     "prompt_protocol": "chat",
     "enable_thinking": false,
     "candidate": "full_option_text",

@@ -87,6 +87,8 @@ def make_config(root: Path) -> tuple[Path, Path, dict[str, object], dict[str, st
             "transformers_version": "5.16.1",
             "torch_version": "2.13.0",
             "cuda_wheel": "cu129",
+            "pytorch_alloc_conf": "expandable_segments:True",
+            "pytorch_allocator_backend": "native",
             "prompt_protocol": "chat",
             "enable_thinking": False,
             "candidate": "full_option_text",
@@ -292,6 +294,10 @@ def summary_from_rows(
                 "transformers": "5.16.1",
                 "torch": "2.13.0+cu129",
                 "torch_cuda": "12.9",
+                "pytorch_alloc_conf": "expandable_segments:True",
+                "pytorch_cuda_alloc_conf_legacy": None,
+                "pytorch_alloc_conf_at_snapshot": "expandable_segments:True",
+                "pytorch_allocator_backend": "native",
                 "cuda_available": True,
                 "cuda_device_count": 1,
                 "cuda_devices": ["NVIDIA RTX A6000"],
@@ -315,6 +321,8 @@ def make_matrix(
     hf_all_prediction_difference: bool = False,
 ) -> Path:
     matrix_root = root / f"{scope}-{backend}"
+    matrix_root.mkdir(parents=True, exist_ok=True)
+    (matrix_root / "frozen_config.json").write_bytes(config_path.read_bytes())
     models: dict[str, object] = {}
     for gpu, role in enumerate(roles):
         options, strict = score_rows(
@@ -338,6 +346,9 @@ def make_matrix(
             "backend": backend,
             "status": "completed",
             "cuda_visible_devices": str(gpu),
+            "runtime_environment": {
+                "PYTORCH_ALLOC_CONF": config["evaluation"]["pytorch_alloc_conf"]
+            },
             # Deliberately contains a home path; the publisher must not copy it.
             "command": ["/home/fake/venv/python", "-m", "lm_eval"],
             "stages": [
@@ -394,6 +405,15 @@ def make_matrix(
                 "duration_seconds": 3.0,
                 "exit_code": 0,
             },
+            "process_cleanup": {
+                "stage": "owned_process_cleanup",
+                "duration_seconds": 0.01,
+                "status": "already_clean",
+                "term_process_count": 0,
+                "kill_process_count": 0,
+                "remaining_process_count": 0,
+                "errors": [],
+            },
         }
         models[role] = model_manifest
         role_root = matrix_root / role
@@ -403,14 +423,43 @@ def make_matrix(
         write_jsonl(role_root / "normalized" / "strict_scores.jsonl", strict)
     manifest = {
         "schema_version": "hidden-policy-baseline-matrix-v1",
-        "run_id": f"fixture-{scope}-{backend}",
+        "run_id": matrix_root.name,
         "scope": scope,
         "backend": backend,
         "repository_commit": "a" * 40,
         "config_sha256": reporter._sha256_file(config_path),
         "status": "completed",
         "duration_seconds": 30.0,
+        "execution": {
+            "models": list(roles),
+            "physical_gpus": [str(index) for index, _role in enumerate(roles)],
+            "one_model_per_gpu": True,
+            "skip_prefetch": True,
+            "hf_xet_high_performance": config["evaluation"][
+                "hf_xet_high_performance"
+            ],
+            "pytorch_alloc_conf": config["evaluation"]["pytorch_alloc_conf"],
+            "legacy_pytorch_cuda_alloc_conf_removed": False,
+            "gpu_poll_seconds": 2.0,
+            "vllm_memory_and_batching": {
+                key: config["evaluation"][key]
+                for key in (
+                    "gpu_memory_utilization",
+                    "max_num_seqs",
+                    "max_num_batched_tokens",
+                    "enable_prefix_caching",
+                    "max_model_len",
+                    "tensor_parallel_size",
+                    "data_parallel_size",
+                )
+            },
+        },
         "common_stages": [
+            {
+                "stage": "repository_clean_check",
+                "duration_seconds": 0.05,
+                "exit_code": 0,
+            },
             {
                 "stage": "runtime_doctor",
                 "duration_seconds": 1.0,
@@ -482,7 +531,7 @@ class BaselineReportTests(unittest.TestCase):
                 output_html=output_html,
             )
             self.assertEqual(
-                result["schema_version"], "hidden-policy-baseline-publication-v2"
+                result["schema_version"], "hidden-policy-baseline-publication-v3"
             )
             self.assertNotIn("validation_status", result)
             self.assertEqual(result["artifact_validation_status"], "PASS")
@@ -516,17 +565,132 @@ class BaselineReportTests(unittest.TestCase):
                 result["full_cal"]["models"][ROLES[0]]["gpu"]["sample_count"],
                 0,
             )
+            self.assertEqual(len(result["execution_ledger"]["entries"]), 3)
+            self.assertEqual(
+                {
+                    entry["selected_as"]
+                    for entry in result["execution_ledger"]["entries"]
+                },
+                {"pilot_vllm", "full_vllm", "pilot_hf_reference"},
+            )
             serialized = output_json.read_text(encoding="utf-8")
             html = output_html.read_text(encoding="utf-8")
             self.assertIn("Qwen3.5 基础能力测试", html)
             self.assertIn("Full CAL subject 诊断", html)
             self.assertIn("HF comparison: DESCRIPTIVE", html)
+            self.assertIn("执行与调参记录", html)
+            self.assertIn("expandable_segments:True", html)
             self.assertIn("<style>", html)
             self.assertNotIn("<link", html)
             self.assertNotIn("/home/fake", serialized + html)
             self.assertNotIn("lm_eval_source", serialized)
             self.assertNotIn('"question"', serialized)
             self.assertNotIn('"raw_response"', serialized)
+
+    def test_execution_ledger_keeps_failed_and_incomplete_timing_content_free(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = base / "ledger"
+            root.mkdir()
+            failed = root / "failed-run"
+            incomplete = root / "incomplete-run"
+            write_json(
+                failed / "matrix_manifest.json",
+                {
+                    "schema_version": "hidden-policy-baseline-matrix-v1",
+                    "run_id": "failed-run",
+                    "scope": "full",
+                    "backend": "vllm",
+                    "status": "failed",
+                    "duration_seconds": 12.5,
+                    "error": "/home/private/raw benchmark text",
+                    "common_stages": [
+                        {
+                            "stage": "runtime_doctor",
+                            "duration_seconds": 1.0,
+                            "exit_code": 0,
+                        }
+                    ],
+                    "models": {
+                        ROLES[0]: {
+                            "evaluation": {
+                                "stage": "evaluation_process",
+                                "duration_seconds": 10.0,
+                                "exit_code": 1,
+                                "peak_memory_used_mib": 48000,
+                                "peak_memory_fraction": 0.97,
+                            }
+                        }
+                    },
+                },
+            )
+            write_json(
+                incomplete / "matrix_manifest.json",
+                {
+                    "schema_version": "hidden-policy-baseline-matrix-v1",
+                    "run_id": "incomplete-run",
+                    "scope": "pilot",
+                    "backend": "hf",
+                },
+            )
+
+            ledger = reporter.build_execution_ledger(root, selected={})
+            self.assertEqual(
+                [entry["status"] for entry in ledger["entries"]],
+                ["failed", "incomplete"],
+            )
+            serialized = json.dumps(ledger)
+            self.assertNotIn("/home/private", serialized)
+            self.assertNotIn('"error"', serialized)
+            failed_stages = ledger["entries"][0]["stages"]
+            self.assertEqual(failed_stages[-1]["status"], "failed")
+            self.assertEqual(failed_stages[-1]["duration_seconds"], 10.0)
+
+    def test_execution_ledger_sanitizes_fields_and_refuses_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = base / "ledger"
+            root.mkdir()
+            canary = "SECRET-CANARY-QUESTION-TEXT"
+            run = root / canary
+            write_json(
+                run / "matrix_manifest.json",
+                {
+                    "schema_version": "hidden-policy-baseline-matrix-v1",
+                    "run_id": canary,
+                    "scope": "full",
+                    "backend": "vllm",
+                    "status": "failed",
+                    "started_at_utc": canary,
+                    "execution": {
+                        "pytorch_alloc_conf": canary,
+                        "vllm_memory_and_batching": {
+                            "gpu_memory_utilization": canary,
+                            "max_num_seqs": canary,
+                            "max_num_batched_tokens": canary,
+                        },
+                    },
+                },
+            )
+            ledger = reporter.build_execution_ledger(root, selected={})
+            self.assertNotIn(canary, json.dumps(ledger))
+            self.assertEqual(ledger["entries"][0]["run_id"], "attempt_001")
+
+            outside = base / "outside"
+            outside.mkdir()
+            write_json(
+                outside / "matrix_manifest.json",
+                {
+                    "schema_version": "hidden-policy-baseline-matrix-v1",
+                    "run_id": "linked-run",
+                    "scope": "pilot",
+                    "backend": "hf",
+                },
+            )
+            link = root / "linked-run"
+            link.symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(reporter.PublicationError, "symlink"):
+                reporter.build_execution_ledger(root, selected={})
 
     def test_optional_hf_reference_is_reported_as_missing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -590,7 +754,7 @@ class BaselineReportTests(unittest.TestCase):
                 0.0,
             )
             html = output_html.read_text(encoding="utf-8")
-            self.assertIn("Artifact 输入验证 PASS", html)
+            self.assertIn("Selected artifacts 验证 PASS", html)
             self.assertIn("HF 对照 DESCRIPTIVE", html)
             self.assertNotIn("HF 对照 PASS", html)
 

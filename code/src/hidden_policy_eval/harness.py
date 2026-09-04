@@ -70,6 +70,7 @@ def build_harness_run(
     dtype: str = "bfloat16",
     device: str = "cuda:0",
     batch_size: str = "auto",
+    pytorch_alloc_conf: str = "expandable_segments:True",
     max_model_len: int = 4096,
     gpu_memory_utilization: float = 0.88,
     max_num_seqs: int = 512,
@@ -143,6 +144,7 @@ def build_harness_run(
         command=tuple(command),
         environment={
             "HP_EVAL_DATA_DIR": str(Path(data_dir).resolve()),
+            "PYTORCH_ALLOC_CONF": pytorch_alloc_conf,
             "PYTHONPATH": prepend_pythonpath(harness_root),
         },
         output_dir=Path(output_dir).resolve(),
@@ -178,6 +180,9 @@ def execute_harness(run: HarnessRun) -> int:
             "prompt_protocol": run.prompt_protocol,
             "enable_thinking": False,
             "seed": run.seed,
+            "runtime_environment": {
+                "PYTORCH_ALLOC_CONF": run.environment["PYTORCH_ALLOC_CONF"]
+            },
             "command": list(run.command),
         },
     )
@@ -188,6 +193,9 @@ def execute_harness(run: HarnessRun) -> int:
         "status": "running",
         "started_at_utc": _timestamp(),
         "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+        "runtime_environment": {
+            "PYTORCH_ALLOC_CONF": run.environment["PYTORCH_ALLOC_CONF"]
+        },
         "command": list(run.command),
         "stages": [],
     }

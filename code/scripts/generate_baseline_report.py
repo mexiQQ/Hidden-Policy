@@ -807,6 +807,17 @@ def _validate_provenance(
     torch_version = str(software["torch"])
     if f"+{evaluation.get('cuda_wheel')}" not in torch_version:
         _fail(f"{label} did not use the frozen CUDA PyTorch wheel")
+    expected_allocator = evaluation.get("pytorch_alloc_conf")
+    if software.get("pytorch_alloc_conf") != expected_allocator:
+        _fail(f"{label} did not export the frozen PyTorch allocator configuration")
+    if software.get("pytorch_cuda_alloc_conf_legacy") is not None:
+        _fail(f"{label} retained the legacy PyTorch allocator alias")
+    if software.get("pytorch_alloc_conf_at_snapshot") != expected_allocator:
+        _fail(f"{label} postprocess snapshot did not parse the frozen allocator setting")
+    if software.get("pytorch_allocator_backend") != evaluation.get(
+        "pytorch_allocator_backend"
+    ):
+        _fail(f"{label} used an unexpected PyTorch allocator backend")
     if backend == "vllm":
         observed_vllm = _text(software.get("vllm"), f"{label}.software.vllm")
         if observed_vllm.split("+", 1)[0] != str(evaluation.get("vllm_version")):
@@ -910,6 +921,10 @@ def _validate_model_artifacts(
         "backend"
     ) != matrix_backend:
         _fail(f"{label} harness timing did not complete on {matrix_backend}")
+    if harness_timing.get("runtime_environment") != {
+        "PYTORCH_ALLOC_CONF": config["evaluation"]["pytorch_alloc_conf"]
+    }:
+        _fail(f"{label} harness timing has an unexpected allocator setting")
     if str(harness_timing.get("cuda_visible_devices")) != str(model_manifest.get("gpu")):
         _fail(f"{label} GPU assignment differs from CUDA_VISIBLE_DEVICES")
     harness_stages = _list(harness_timing.get("stages"), f"{label}.harness_stages")
@@ -926,6 +941,19 @@ def _validate_model_artifacts(
         model_manifest.get("postprocess"),
         f"{label}.postprocess",
         expected_name="postprocess",
+    )
+    cleanup = _object(model_manifest.get("process_cleanup"), f"{label}.process_cleanup")
+    if cleanup.get("stage") != "owned_process_cleanup":
+        _fail(f"{label} has an unexpected cleanup stage")
+    if cleanup.get("status") != "already_clean":
+        _fail(f"{label} did not leave a clean owned process tree")
+    if _integer(
+        cleanup.get("remaining_process_count"),
+        f"{label}.process_cleanup.remaining_process_count",
+    ) != 0:
+        _fail(f"{label} left one or more owned processes running")
+    _number(
+        cleanup.get("duration_seconds"), f"{label}.process_cleanup.duration_seconds"
     )
 
     role_root = matrix_root / role
@@ -986,9 +1014,57 @@ def load_matrix(
         _fail(f"{expected_scope} matrix backend must be {expected_backend}")
     if manifest.get("config_sha256") != config_sha256:
         _fail(f"{expected_scope} matrix config hash does not match current config")
+    frozen_config = root / "frozen_config.json"
+    if _sha256_file(frozen_config) != config_sha256:
+        _fail(f"{expected_scope} matrix frozen config differs from current config")
     _text(manifest.get("run_id"), f"{expected_scope} matrix run_id")
     _git_oid(manifest.get("repository_commit"), f"{expected_scope} repository_commit")
     _number(manifest.get("duration_seconds"), f"{expected_scope} matrix duration")
+
+    execution = _object(manifest.get("execution"), f"{expected_scope}.execution")
+    if execution.get("models") != list(expected_roles):
+        _fail(f"{expected_scope} execution model order differs from the selected matrix")
+    physical_gpus = _list(
+        execution.get("physical_gpus"), f"{expected_scope}.execution.physical_gpus"
+    )
+    if len(physical_gpus) != len(expected_roles) or len(set(physical_gpus)) != len(
+        physical_gpus
+    ):
+        _fail(f"{expected_scope} execution did not assign one distinct GPU per model")
+    if execution.get("one_model_per_gpu") is not True:
+        _fail(f"{expected_scope} execution was not one model per GPU")
+    if execution.get("hf_xet_high_performance") != config["evaluation"].get(
+        "hf_xet_high_performance"
+    ):
+        _fail(f"{expected_scope} execution changed the frozen Xet setting")
+    if execution.get("pytorch_alloc_conf") != config["evaluation"].get(
+        "pytorch_alloc_conf"
+    ):
+        _fail(f"{expected_scope} execution changed the frozen allocator setting")
+    if not isinstance(execution.get("legacy_pytorch_cuda_alloc_conf_removed"), bool):
+        _fail(f"{expected_scope} execution did not record legacy allocator handling")
+    _number(
+        execution.get("gpu_poll_seconds"),
+        f"{expected_scope}.execution.gpu_poll_seconds",
+    )
+    memory = _object(
+        execution.get("vllm_memory_and_batching"),
+        f"{expected_scope}.execution.vllm_memory_and_batching",
+    )
+    expected_memory = {
+        key: config["evaluation"][key]
+        for key in (
+            "gpu_memory_utilization",
+            "max_num_seqs",
+            "max_num_batched_tokens",
+            "enable_prefix_caching",
+            "max_model_len",
+            "tensor_parallel_size",
+            "data_parallel_size",
+        )
+    }
+    if memory != expected_memory:
+        _fail(f"{expected_scope} execution changed frozen vLLM memory settings")
 
     common = _list(manifest.get("common_stages"), f"{expected_scope}.common_stages")
     common_by_name: dict[str, Mapping[str, object]] = {}
@@ -999,6 +1075,7 @@ def load_matrix(
             _fail(f"{expected_scope} matrix has duplicate common stage {name}")
         common_by_name[name] = stage
     if set(common_by_name) != {
+        "repository_clean_check",
         "runtime_doctor",
         "gpu_availability",
         "prepare_runtime",
@@ -1336,6 +1413,7 @@ def _public_timing(model: ModelArtifacts) -> dict[str, object]:
             "model_load_and_evaluation"
         ],
         "postprocess_seconds": source["postprocess"]["duration_seconds"],
+        "process_cleanup_seconds": source["process_cleanup"]["duration_seconds"],
     }
 
 
@@ -1356,13 +1434,21 @@ def _public_gpu(model: ModelArtifacts) -> dict[str, object]:
     }
 
 
-def _public_matrix(matrix: MatrixArtifacts, config: Mapping[str, object]) -> dict[str, object]:
+def _public_matrix(
+    matrix: MatrixArtifacts,
+    config: Mapping[str, object],
+    *,
+    public_run_id: str,
+) -> dict[str, object]:
     common = {
         stage["stage"]: stage["duration_seconds"]
         for stage in matrix.manifest["common_stages"]
     }
     return {
-        "run_id": matrix.manifest["run_id"],
+        # The source run id is an operator-controlled directory name.  Keep it
+        # in the validation boundary, but publish only a fixed semantic id so
+        # arbitrary local text cannot become an output side channel.
+        "run_id": public_run_id,
         "scope": matrix.manifest["scope"],
         "backend": matrix.manifest["backend"],
         "status": "validated",
@@ -1394,11 +1480,346 @@ def _software_allowlist(summary: Mapping[str, object]) -> dict[str, object]:
         "transformers",
         "torch",
         "torch_cuda",
+        "pytorch_alloc_conf",
+        "pytorch_cuda_alloc_conf_legacy",
+        "pytorch_alloc_conf_at_snapshot",
+        "pytorch_allocator_backend",
         "vllm",
         "cuda_device_count",
         "cuda_devices",
     )
     return {key: software.get(key) for key in keys}
+
+
+LEDGER_STAGE_KEYS = (
+    ("prefetch", "model_prefetch"),
+    ("prompt_length_audit", "prompt_length_audit"),
+    ("evaluation", "evaluation_process"),
+    ("postprocess", "postprocess"),
+    ("process_cleanup", "owned_process_cleanup"),
+)
+
+
+def _optional_duration(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    parsed = float(value)
+    return parsed if math.isfinite(parsed) and parsed >= 0 else None
+
+
+def _ledger_timestamp(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
+def _ledger_positive_integer(value: object) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        return None
+    return value
+
+
+def _ledger_memory_config(memory: Mapping[str, object]) -> dict[str, object]:
+    utilization = _optional_duration(memory.get("gpu_memory_utilization"))
+    if utilization is not None and not 0 < utilization <= 1:
+        utilization = None
+    return {
+        "gpu_memory_utilization": utilization,
+        "max_num_seqs": _ledger_positive_integer(memory.get("max_num_seqs")),
+        "max_num_batched_tokens": _ledger_positive_integer(
+            memory.get("max_num_batched_tokens")
+        ),
+        "enable_prefix_caching": memory.get("enable_prefix_caching")
+        if isinstance(memory.get("enable_prefix_caching"), bool)
+        else None,
+        "max_model_len": _ledger_positive_integer(memory.get("max_model_len")),
+        "tensor_parallel_size": _ledger_positive_integer(
+            memory.get("tensor_parallel_size")
+        ),
+        "data_parallel_size": _ledger_positive_integer(
+            memory.get("data_parallel_size")
+        ),
+    }
+
+
+def _ledger_stage(
+    value: object, *, expected_name: str, model_role: str | None
+) -> dict[str, object] | None:
+    if not isinstance(value, Mapping):
+        return None
+    observed_name = value.get("stage")
+    if observed_name is not None and observed_name != expected_name:
+        _fail(f"execution ledger stage expected {expected_name}, got {observed_name}")
+    exit_code = value.get("exit_code")
+    if isinstance(exit_code, bool) or not isinstance(exit_code, int):
+        exit_code = None
+    raw_status = value.get("status")
+    if exit_code is not None:
+        status = "completed" if exit_code == 0 else "failed"
+    elif expected_name == "owned_process_cleanup" and raw_status in {
+        "already_clean",
+        "best_effort",
+    }:
+        status = "completed"
+    elif raw_status in {
+        "failed",
+        "remaining_processes",
+        "cleanup_with_errors",
+        "best_effort_with_errors",
+        "terminated_lingering_processes",
+    }:
+        status = "failed"
+    else:
+        status = "incomplete"
+    stage: dict[str, object] = {
+        "stage": expected_name,
+        "model_role": model_role,
+        "status": status,
+        "exit_code": exit_code,
+        "duration_seconds": _optional_duration(value.get("duration_seconds")),
+    }
+    if expected_name == "evaluation_process":
+        stage["peak_memory_used_mib"] = _optional_duration(
+            value.get("peak_memory_used_mib")
+        )
+        stage["peak_memory_fraction"] = _optional_duration(
+            value.get("peak_memory_fraction")
+        )
+    return stage
+
+
+def build_execution_ledger(
+    ledger_root: Path,
+    *,
+    selected: Mapping[Path, object],
+) -> dict[str, object]:
+    """Build a content-free timing ledger from immediate matrix manifests only."""
+
+    root = ledger_root.resolve()
+    if not root.is_dir():
+        _fail("execution ledger root is not a directory")
+    selected_resolved = {path.resolve(): spec for path, spec in selected.items()}
+    entries: list[dict[str, object]] = []
+    discovered: set[Path] = set()
+    seen_run_ids: set[str] = set()
+    manifest_paths: list[Path] = []
+    for child in sorted(root.iterdir()):
+        if child.is_symlink():
+            _fail(f"execution ledger refuses symlink child: {child.name}")
+        if not child.is_dir():
+            continue
+        manifest_path = child / "matrix_manifest.json"
+        if not manifest_path.exists():
+            continue
+        if manifest_path.is_symlink():
+            _fail(f"execution ledger refuses symlink manifest: {child.name}")
+        resolved_manifest = manifest_path.resolve()
+        if not resolved_manifest.is_relative_to(root) or resolved_manifest.parent != child.resolve():
+            _fail(f"execution ledger manifest escapes its run directory: {child.name}")
+        manifest_paths.append(manifest_path)
+    for manifest_path in manifest_paths:
+        matrix_root = manifest_path.parent.resolve()
+        manifest = _read_json(manifest_path, f"execution ledger {matrix_root.name}")
+        if manifest.get("schema_version") != "hidden-policy-baseline-matrix-v1":
+            _fail(f"execution ledger {matrix_root.name} has an unsupported schema")
+        run_id = manifest.get("run_id")
+        if not isinstance(run_id, str) or not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._-]*", run_id
+        ):
+            _fail(f"execution ledger {matrix_root.name} has an invalid run id")
+        if run_id != matrix_root.name:
+            _fail(f"execution ledger run id differs from its directory name: {run_id}")
+        if run_id in seen_run_ids:
+            _fail(f"execution ledger contains duplicate run id: {run_id}")
+        seen_run_ids.add(run_id)
+        selected_spec = selected_resolved.get(matrix_root)
+        selected_label: str | None = None
+        if isinstance(selected_spec, Mapping):
+            selected_label_value = selected_spec.get("label")
+            selected_label = (
+                selected_label_value if isinstance(selected_label_value, str) else None
+            )
+            if _sha256_file(manifest_path) != selected_spec.get("manifest_sha256"):
+                _fail(f"selected execution ledger manifest changed: {run_id}")
+            for identity_key in (
+                "run_id",
+                "scope",
+                "backend",
+                "repository_commit",
+                "config_sha256",
+            ):
+                if manifest.get(identity_key) != selected_spec.get(identity_key):
+                    _fail(f"selected execution ledger identity changed: {run_id}")
+        elif selected_spec is not None:
+            _fail("selected execution ledger specifications must be bound mappings")
+        if selected_label not in {None, "pilot_vllm", "full_vllm", "pilot_hf_reference"}:
+            _fail(f"selected execution ledger label is invalid: {selected_label}")
+        status_value = manifest.get("status")
+        status = (
+            "interrupted"
+            if isinstance(status_value, str) and status_value.startswith("aborted")
+            else status_value
+            if status_value in {"completed", "failed", "interrupted"}
+            else "incomplete"
+        )
+        if status == "completed" and selected_label is None:
+            status = "completed_unverified"
+        scope = manifest.get("scope")
+        backend = manifest.get("backend")
+        if scope not in {"pilot", "full"} or backend not in {"vllm", "hf"}:
+            _fail(f"execution ledger {run_id} has an invalid scope or backend")
+        commit = manifest.get("repository_commit")
+        if not isinstance(commit, str) or GIT_OID_PATTERN.fullmatch(commit) is None:
+            commit = None
+        config_sha256 = manifest.get("config_sha256")
+        if not isinstance(config_sha256, str) or HASH_PATTERN.fullmatch(config_sha256) is None:
+            config_sha256 = None
+
+        execution = manifest.get("execution")
+        execution = execution if isinstance(execution, Mapping) else {}
+        memory = execution.get("vllm_memory_and_batching")
+        memory = memory if isinstance(memory, Mapping) else {}
+        public_memory = _ledger_memory_config(memory)
+        models = execution.get("models")
+        public_models = (
+            [role for role in models if role in MODEL_ROLES]
+            if isinstance(models, list)
+            else []
+        )
+        stages: list[dict[str, object]] = []
+        common = manifest.get("common_stages")
+        if isinstance(common, list):
+            for value in common:
+                if not isinstance(value, Mapping):
+                    continue
+                name = value.get("stage")
+                if name not in {
+                    "repository_clean_check",
+                    "runtime_doctor",
+                    "gpu_availability",
+                    "prepare_runtime",
+                }:
+                    _fail(f"execution ledger {run_id} has an unexpected common stage")
+                stage = _ledger_stage(value, expected_name=str(name), model_role=None)
+                if stage is not None:
+                    stages.append(stage)
+        raw_models = manifest.get("models")
+        if isinstance(raw_models, Mapping):
+            for role in MODEL_ROLES:
+                model = raw_models.get(role)
+                if not isinstance(model, Mapping):
+                    continue
+                for key, expected_name in LEDGER_STAGE_KEYS:
+                    stage = _ledger_stage(
+                        model.get(key), expected_name=expected_name, model_role=role
+                    )
+                    if stage is not None:
+                        stages.append(stage)
+                evaluation = model.get("evaluation")
+                if isinstance(evaluation, Mapping):
+                    harness = evaluation.get("harness_timing")
+                    if isinstance(harness, Mapping) and isinstance(
+                        harness.get("stages"), list
+                    ):
+                        for raw_stage in harness["stages"]:
+                            if not isinstance(raw_stage, Mapping):
+                                continue
+                            name = raw_stage.get("stage")
+                            if name not in {
+                                "lm_eval_validate",
+                                "model_load_and_evaluation",
+                            }:
+                                continue
+                            stage = _ledger_stage(
+                                raw_stage, expected_name=str(name), model_role=role
+                            )
+                            if stage is not None:
+                                stages.append(stage)
+        interruption_cleanup = manifest.get("interruption_cleanup")
+        if isinstance(interruption_cleanup, Mapping):
+            for role in MODEL_ROLES:
+                stage = _ledger_stage(
+                    interruption_cleanup.get(role),
+                    expected_name="owned_process_cleanup",
+                    model_role=role,
+                )
+                if stage is not None:
+                    stages.append(stage)
+        if manifest.get("error_stage") == "prompt_audit_dependency_load":
+            stages.append(
+                {
+                    "stage": "prompt_audit_dependency_load",
+                    "model_role": None,
+                    "status": "failed",
+                    "exit_code": None,
+                    "duration_seconds": None,
+                }
+            )
+
+        allocator = execution.get("pytorch_alloc_conf")
+        if allocator != "expandable_segments:True":
+            allocator = None
+
+        entries.append(
+            {
+                # Replaced with a deterministic public attempt id after
+                # chronological sorting below.  Never publish the raw,
+                # operator-controlled run/directory name.
+                "run_id": None,
+                "selected_as": selected_label,
+                "scope": scope,
+                "backend": backend,
+                "status": status,
+                "repository_commit": commit,
+                "config": {
+                    "sha256": config_sha256,
+                    "models": public_models,
+                    "skip_prefetch": execution.get("skip_prefetch")
+                    if isinstance(execution.get("skip_prefetch"), bool)
+                    else None,
+                    "hf_xet_high_performance": execution.get(
+                        "hf_xet_high_performance"
+                    )
+                    if isinstance(execution.get("hf_xet_high_performance"), bool)
+                    else None,
+                    "pytorch_alloc_conf": allocator,
+                    "gpu_poll_seconds": _optional_duration(
+                        execution.get("gpu_poll_seconds")
+                    ),
+                    "vllm": public_memory,
+                },
+                "started_at_utc": _ledger_timestamp(manifest.get("started_at_utc")),
+                "ended_at_utc": _ledger_timestamp(manifest.get("ended_at_utc")),
+                "total_duration_seconds": _optional_duration(
+                    manifest.get("duration_seconds")
+                ),
+                "stages": stages,
+            }
+        )
+        discovered.add(matrix_root)
+    missing_selected = set(selected_resolved).difference(discovered)
+    if missing_selected:
+        _fail("execution ledger root does not contain every selected matrix")
+    # ``manifest_paths`` is already sorted by its private run-directory name,
+    # which provides a deterministic tie breaker without exposing that name.
+    entries.sort(key=lambda entry: str(entry["started_at_utc"] or ""))
+    for index, entry in enumerate(entries, start=1):
+        entry["run_id"] = f"attempt_{index:03d}"
+    return {
+        "schema_version": "hidden-policy-execution-ledger-v1",
+        "entries": entries,
+        "timing_note": (
+            "Total duration is wall-clock time. Model stages can run concurrently, "
+            "so stage durations must not be summed. A completed ledger status is a "
+            "runner outcome; only selected matrices receive full artifact validation."
+        ),
+    }
 
 
 def build_publication(
@@ -1450,6 +1871,7 @@ def build_publication(
         "BF16 与不同推理 kernel 可能产生数值差异；HF reference 仅对 2B pilot 做描述性预测、centered score、top-margin 与 accuracy-delta 比较，没有预设 pass/fail gate，也不能代表所有尺寸。",
         "subject 样本量不同，尤其 pilot 很小；subject 数值应视为诊断而非独立确认性结论。",
         "GPU 峰值来自定时轮询的整张物理卡，可能漏掉采样间峰值，也不等同于进程独占显存。",
+        "allocator 字段记录冻结请求、评测前 runtime verification 与 postprocess 启动时快照；PyTorch 不提供完整内部 flag getter，因此它不是 evaluation 全程 allocator 状态的直接 trace。",
         "没有置信区间、训练 seed 或因果干预，因此不能从模型尺寸差异推出 scaling law 或机制结论。",
     ]
     if hf_reference is None:
@@ -1457,15 +1879,21 @@ def build_publication(
             "未提供 HF reference matrix；当前报告没有 HF-vLLM backend prediction agreement 证据。"
         )
     return {
-        "schema_version": "hidden-policy-baseline-publication-v2",
+        "schema_version": "hidden-policy-baseline-publication-v3",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "report_language": "zh-CN",
         "artifact_validation_status": "PASS",
         "hf_comparison_status": hf_agreement["status"],
-        "pilot": _public_matrix(pilot, config),
-        "full_cal": _public_matrix(full, config),
+        "pilot": _public_matrix(pilot, config, public_run_id="pilot_vllm"),
+        "full_cal": _public_matrix(full, config, public_run_id="full_vllm"),
         "hf_reference": (
-            _public_matrix(hf_reference, config) if hf_reference is not None else None
+            _public_matrix(
+                hf_reference,
+                config,
+                public_run_id="pilot_hf_reference",
+            )
+            if hf_reference is not None
+            else None
         ),
         "hf_vllm_pilot_agreement": hf_agreement,
         "provenance": {
@@ -1498,6 +1926,8 @@ def build_publication(
                     "backend",
                     "vllm_version",
                     "hf_xet_high_performance",
+                    "pytorch_alloc_conf",
+                    "pytorch_allocator_backend",
                     "prompt_protocol",
                     "enable_thinking",
                     "candidate",
@@ -1642,6 +2072,7 @@ def _timing_rows(matrix: Mapping[str, object]) -> str:
             f"<td>{_seconds(timing['lm_eval_validate_seconds'])}</td>"
             f"<td>{_seconds(timing['model_load_and_evaluation_seconds'])}</td>"
             f"<td>{_seconds(timing['postprocess_seconds'])}</td>"
+            f"<td>{_seconds(timing['process_cleanup_seconds'])}</td>"
             f"<td>{float(gpu['peak_memory_used_mib']) / 1024:.2f} GiB</td>"
             f"<td>{float(gpu['peak_memory_fraction']) * 100:.1f}%</td>"
             f"<td>{float(gpu['mean_utilization_percent']):.1f}%</td>"
@@ -1651,6 +2082,52 @@ def _timing_rows(matrix: Mapping[str, object]) -> str:
             "</tr>"
         )
     return "".join(rows)
+
+
+def _execution_ledger_html(ledger: Mapping[str, object]) -> str:
+    blocks: list[str] = []
+    for entry in ledger["entries"]:
+        config = entry["config"]
+        vllm = config["vllm"]
+        config_summary = (
+            f"util={vllm.get('gpu_memory_utilization')} · "
+            f"seq={vllm.get('max_num_seqs')} · "
+            f"tokens={vllm.get('max_num_batched_tokens')} · "
+            f"alloc={config.get('pytorch_alloc_conf') or 'not recorded'}"
+        )
+        stage_rows = "".join(
+            "<tr>"
+            f"<td>{_cell(stage['model_role'] or 'shared')}</td>"
+            f"<td>{_cell(stage['stage'])}</td>"
+            f"<td>{_cell(stage['status'])}</td>"
+            f"<td>{_cell(stage['exit_code'] if stage['exit_code'] is not None else '—')}</td>"
+            f"<td>{_seconds(stage['duration_seconds'])}</td>"
+            f"<td>{_cell(stage.get('peak_memory_used_mib') or '—')}</td>"
+            "</tr>"
+            for stage in entry["stages"]
+        )
+        commit = entry["repository_commit"]
+        config_hash = config["sha256"]
+        blocks.append(
+            "<details class='ledger-run'>"
+            "<summary>"
+            f"<span class='run-status {_cell(entry['status'])}'>{_cell(entry['status'])}</span> "
+            f"<strong>{_cell(entry['run_id'])}</strong> · "
+            f"{_cell(entry['scope'])}/{_cell(entry['backend'])} · "
+            f"{_seconds(entry['total_duration_seconds'])}"
+            "</summary>"
+            "<div class='ledger-meta'>"
+            f"Selected: {_cell(entry['selected_as'] or 'no')} · "
+            f"Commit: <code>{_cell(commit[:12] if commit else 'not recorded')}</code> · "
+            f"Config: <code>{_cell(config_hash[:12] if config_hash else 'not recorded')}</code> · "
+            f"Start: {_cell(entry['started_at_utc'] or 'not recorded')}<br>"
+            f"{_cell(config_summary)}"
+            "</div>"
+            "<div class='table-wrap'><table><thead><tr><th>Model</th><th>Stage</th>"
+            "<th>Status</th><th>Exit</th><th>Duration</th><th>Peak MiB</th>"
+            f"</tr></thead><tbody>{stage_rows}</tbody></table></div></details>"
+        )
+    return "".join(blocks)
 
 
 def render_html(report: Mapping[str, object]) -> str:
@@ -1720,18 +2197,20 @@ h2{{font-size:21px;margin:0 0 14px}} h3{{font-size:17px;margin:22px 0 10px}} .ca
 .table-wrap{{overflow:auto;border:1px solid var(--line);border-radius:10px}} table{{border-collapse:collapse;width:100%;font-size:13px}} th,td{{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}} th{{background:#edf3f6;color:#334b59}} th:first-child,td:first-child{{text-align:left}} tbody tr:last-child td{{border-bottom:0}} tbody tr:hover{{background:#f8fafb}}
 .agreement-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}} .agreement-grid div{{background:#edf7fa;border-left:4px solid var(--accent);padding:16px;border-radius:8px}} .agreement-grid strong{{display:block;color:var(--accent);font-size:24px}} .agreement-grid span{{color:var(--muted)}}
 .notice{{background:#fff3dd;border-left:4px solid var(--accent2);padding:13px}} code{{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}} ul{{padding-left:22px}} footer{{color:var(--muted);text-align:center;margin-top:24px;font-size:12px}}
+.ledger-run{{border:1px solid var(--line);border-radius:9px;margin:10px 0;padding:12px}} .ledger-run summary{{cursor:pointer}} .ledger-meta{{color:var(--muted);font-size:13px;margin:10px 0}} .run-status{{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;background:#e7edf1}} .run-status.completed{{background:#daf2e6;color:#217a52}} .run-status.failed{{background:#fde3e0;color:#9c2f27}} .run-status.interrupted,.run-status.incomplete{{background:#fff0d2;color:#8a5a08}}
 @media(max-width:760px){{.cards,.meta,.agreement-grid{{grid-template-columns:1fr}} main{{padding:18px 10px 40px}} section,header{{padding:18px}}}}
 </style>
 </head>
 <body><main>
-<header><span class="badge">Artifact 输入验证 {_cell(report['artifact_validation_status'])}</span><span class="badge secondary">HF 对照 {_cell(str(report['hf_comparison_status']).replace('_', ' ').upper())}</span><h1>Qwen3.5 基础能力测试</h1><p>WMDP / MMLU · non-thinking · full-option likelihood · CAL only</p><div class="cards">{model_cards}</div></header>
+<header><span class="badge">Selected artifacts 验证 {_cell(report['artifact_validation_status'])}</span><span class="badge secondary">HF 对照 {_cell(str(report['hf_comparison_status']).replace('_', ' ').upper())}</span><h1>Qwen3.5 基础能力测试</h1><p>WMDP / MMLU · non-thinking · full-option likelihood · CAL only</p><div class="cards">{model_cards}</div></header>
 <section><h2>读者摘要</h2><p>本页比较 Qwen3.5-2B、4B、9B 原始 post-trained checkpoint。主结果是 full CAL 的完整选项文本 token-normalized likelihood；strict generation 与三种选项排列用于诊断格式失败和位置敏感性。此处没有训练 sandbagger，也没有解封 Q3/Q4 test。</p><div class="meta"><div><span>主后端</span>{_cell(full['backend'])}</div><div><span>Full CAL 总耗时</span>{_seconds(full['matrix_duration_seconds'])}</div><div><span>评测代码 commit</span><code>{_cell(provenance['evaluated_repository_commit'])}</code></div></div></section>
 <section><h2>Full CAL 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(full)}</tbody></table></div></section>
 <section><h2>Full CAL subject 诊断</h2><h3>WMDP</h3>{_subject_table(full,'wmdp')}<h3>MMLU</h3>{_subject_table(full,'mmlu')}<p class="notice">Subject 表中的 Acc 为 canonical-order likelihood accuracy；Perm. 为三种排列映射回 semantic option 后的一致率。</p></section>
 <section><h2>32-item pilot 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(pilot)}</tbody></table></div></section>
 <section><h2>HF ↔ vLLM pilot 描述性比较</h2>{agreement_html}</section>
-<section><h2>Full CAL 耗时与 GPU 峰值</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>Prefetch</th><th>Prompt audit</th><th>lm-eval validate</th><th>Load + eval</th><th>Postprocess</th><th>峰值显存</th><th>显存占比</th><th>平均利用率</th><th>峰值利用率</th><th>峰值功耗</th><th>Samples</th></tr></thead><tbody>{_timing_rows(full)}</tbody></table></div><p class="notice">三模型并行执行，各自绑定一张物理 GPU；耗时会受共享 CPU、磁盘和 PCIe 影响。GPU 数值来自固定间隔的整卡 nvidia-smi 轮询，因此可能漏掉瞬时峰值，也不是进程级精确 profile。</p></section>
-<section><h2>可复现性</h2><div class="meta"><div><span>lm-evaluation-harness</span><code>{_cell(provenance['harness']['version'])} · {_cell(provenance['harness']['commit'])}</code></div><div><span>vLLM / Transformers</span>{_cell(protocol['vllm_version'])} / {_cell(software['transformers'])}</div><div><span>PyTorch / CUDA</span>{_cell(software['torch'])} / {_cell(software['torch_cuda'])}</div><div><span>Prompt</span>{_cell(protocol['prompt_protocol'])}; thinking={_cell(protocol['enable_thinking'])}</div><div><span>Normalization</span>{_cell(protocol['normalization'])}</div><div><span>Runtime fingerprint (full)</span><code>{_cell(provenance['runtime_fingerprints']['full_vllm'])}</code></div></div></section>
+<section><h2>Full CAL 耗时与 GPU 峰值</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>Prefetch</th><th>Prompt audit</th><th>lm-eval validate</th><th>Load + eval</th><th>Postprocess</th><th>Cleanup</th><th>峰值显存</th><th>显存占比</th><th>平均利用率</th><th>峰值利用率</th><th>峰值功耗</th><th>Samples</th></tr></thead><tbody>{_timing_rows(full)}</tbody></table></div><p class="notice">三模型并行执行，各自绑定一张物理 GPU；耗时会受共享 CPU、磁盘和 PCIe 影响。GPU 数值来自固定间隔的整卡 nvidia-smi 轮询，因此可能漏掉瞬时峰值，也不是进程级精确 profile。</p></section>
+<section><h2>执行与调参记录</h2><p class="notice">总耗时是 wall-clock；三个模型并行时，各阶段耗时不可直接相加。ledger 中 completed 只表示 runner 正常结束；只有标记为 selected 的正式矩阵通过了本报告的完整 artifact 校验。</p>{_execution_ledger_html(report['execution_ledger'])}</section>
+<section><h2>可复现性</h2><div class="meta"><div><span>lm-evaluation-harness</span><code>{_cell(provenance['harness']['version'])} · {_cell(provenance['harness']['commit'])}</code></div><div><span>vLLM / Transformers</span>{_cell(protocol['vllm_version'])} / {_cell(software['transformers'])}</div><div><span>PyTorch / CUDA</span>{_cell(software['torch'])} / {_cell(software['torch_cuda'])}</div><div><span>CUDA allocator（postprocess snapshot）</span><code>{_cell(software['pytorch_allocator_backend'])} · {_cell(software['pytorch_alloc_conf_at_snapshot'])}</code></div><div><span>Prompt</span>{_cell(protocol['prompt_protocol'])}; thinking={_cell(protocol['enable_thinking'])}</div><div><span>Normalization</span>{_cell(protocol['normalization'])}</div><div><span>Runtime fingerprint (full)</span><code>{_cell(provenance['runtime_fingerprints']['full_vllm'])}</code></div></div></section>
 <section><h2>限制与解释边界</h2><ul>{limitation_items}</ul></section>
 <footer>本报告为自包含静态文件；不含题目、选项、答案标签、raw response、命令行或本机绝对路径。</footer>
 </main></body></html>"""
@@ -1762,6 +2241,7 @@ def generate_report(
     config_path: Path = DEFAULT_CONFIG,
     split_metadata_path: Path = DEFAULT_SPLIT_METADATA,
     hf_reference_matrix: Path | None = None,
+    execution_ledger_root: Path | None = None,
     output_json: Path = DEFAULT_OUTPUT_JSON,
     output_html: Path = DEFAULT_OUTPUT_HTML,
 ) -> dict[str, object]:
@@ -1816,6 +2296,15 @@ def generate_report(
         if dataset_meta.get("revision") != expected_revisions[dataset]:
             _fail(f"split metadata {dataset} revision differs from config")
 
+    selected_manifest_hashes = {
+        pilot_matrix.resolve(): _sha256_file(pilot_matrix / "matrix_manifest.json"),
+        full_matrix.resolve(): _sha256_file(full_matrix / "matrix_manifest.json"),
+    }
+    if hf_reference_matrix is not None:
+        selected_manifest_hashes[hf_reference_matrix.resolve()] = _sha256_file(
+            hf_reference_matrix / "matrix_manifest.json"
+        )
+
     pilot = load_matrix(
         pilot_matrix,
         expected_backend="vllm",
@@ -1853,6 +2342,9 @@ def generate_report(
         if hf_reference_matrix is not None
         else None
     )
+    for selected_path, expected_hash in selected_manifest_hashes.items():
+        if _sha256_file(selected_path / "matrix_manifest.json") != expected_hash:
+            _fail("a selected matrix manifest changed while it was being validated")
     report = build_publication(
         pilot,
         full,
@@ -1860,6 +2352,37 @@ def generate_report(
         config_sha256=config_sha256,
         manifest_checksums=manifest_checksums,
         hf_reference=hf_reference,
+    )
+    def selected_spec(
+        matrix_path: Path, matrix: MatrixArtifacts, label: str
+    ) -> dict[str, object]:
+        return {
+            "label": label,
+            "manifest_sha256": selected_manifest_hashes[matrix_path.resolve()],
+            **{
+                key: matrix.manifest.get(key)
+                for key in (
+                    "run_id",
+                    "scope",
+                    "backend",
+                    "repository_commit",
+                    "config_sha256",
+                )
+            },
+        }
+
+    selected_matrices: dict[Path, object] = {
+        pilot_matrix: selected_spec(pilot_matrix, pilot, "pilot_vllm"),
+        full_matrix: selected_spec(full_matrix, full, "full_vllm"),
+    }
+    if hf_reference_matrix is not None:
+        assert hf_reference is not None
+        selected_matrices[hf_reference_matrix] = selected_spec(
+            hf_reference_matrix, hf_reference, "pilot_hf_reference"
+        )
+    report["execution_ledger"] = build_execution_ledger(
+        execution_ledger_root or pilot_matrix.parent,
+        selected=selected_matrices,
     )
     _assert_publication_safe(report)
     json_bytes = (
@@ -1880,6 +2403,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pilot-matrix", type=Path, required=True)
     parser.add_argument("--full-matrix", type=Path, required=True)
     parser.add_argument("--hf-reference-matrix", type=Path)
+    parser.add_argument(
+        "--execution-ledger-root",
+        type=Path,
+        help=(
+            "directory whose immediate child matrix manifests form the "
+            "content-free execution/tuning ledger"
+        ),
+    )
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--split-metadata", type=Path, default=DEFAULT_SPLIT_METADATA
@@ -1895,6 +2426,7 @@ def main(argv: list[str] | None = None) -> int:
         pilot_matrix=args.pilot_matrix,
         full_matrix=args.full_matrix,
         hf_reference_matrix=args.hf_reference_matrix,
+        execution_ledger_root=args.execution_ledger_root,
         config_path=args.config,
         split_metadata_path=args.split_metadata,
         output_json=args.output_json,

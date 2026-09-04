@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import sys
@@ -8,7 +9,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from hidden_policy_eval.environment import _editable_lm_eval_source, runtime_snapshot
+from hidden_policy_eval.environment import (
+    _editable_lm_eval_source,
+    configure_runtime_environment,
+    runtime_snapshot,
+)
 
 
 class FakeDistribution:
@@ -21,6 +26,28 @@ class FakeDistribution:
 
 
 class EditableHarnessTests(unittest.TestCase):
+    def test_configures_frozen_pytorch_allocator_and_clears_legacy_alias(self) -> None:
+        config = {
+            "evaluation": {"pytorch_alloc_conf": "expandable_segments:True"}
+        }
+        with patch.dict(
+            os.environ,
+            {"PYTORCH_CUDA_ALLOC_CONF": "max_split_size_mb:128"},
+            clear=True,
+        ):
+            applied = configure_runtime_environment(config)
+            self.assertEqual(
+                applied,
+                {
+                    "PYTORCH_ALLOC_CONF": "expandable_segments:True",
+                    "legacy_pytorch_cuda_alloc_conf_removed": True,
+                },
+            )
+            self.assertEqual(
+                os.environ["PYTORCH_ALLOC_CONF"], "expandable_segments:True"
+            )
+            self.assertNotIn("PYTORCH_CUDA_ALLOC_CONF", os.environ)
+
     def test_runtime_resolves_editable_metadata_before_importing_source(self) -> None:
         events: list[str] = []
         fake_torch = SimpleNamespace(

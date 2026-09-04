@@ -65,7 +65,7 @@
         <div class="metric"><strong>vllm</strong><span>lm-eval backend</span></div>
         <div class="metric"><strong>hidden-policy</strong><span>Conda environment</span></div>
         <div class="metric"><strong>v0.4.13</strong><span>vendored harness</span></div>
-        <div class="metric"><strong>58</strong><span>声明的 unit tests</span></div>
+        <div class="metric"><strong>67</strong><span>声明的 unit tests</span></div>
       </div>
     </section>
 
@@ -99,6 +99,7 @@
           <tr><th>max sequences</th><td>512</td><th>max batched tokens</th><td>32768</td></tr>
           <tr><th>prefix caching</th><td>开启</td><th>seed</th><td>1234</td></tr>
           <tr><th>HF Xet high performance</th><td>true</td><th>CUDA wheel</th><td>cu130</td></tr>
+          <tr><th>PyTorch allocator</th><td><code>expandable_segments:True</code></td><th>allocator backend</th><td>native</td></tr>
           <tr><th>tensor / data parallel</th><td>1 / 1</td><th>trust remote code</th><td>false</td></tr>
         </tbody></table></div><p class="chips"><span class="chip">datasets 4.5.0</span><span class="chip">lm-eval 0.4.13</span><span class="chip">torch 2.13.0</span><span class="chip">torchaudio 2.11.0</span><span class="chip">torchvision 0.28.0</span><span class="chip">transformers 5.16.1</span><span class="chip">vllm 0.28.0</span></p>
       </div></details>
@@ -234,12 +235,12 @@
       <article class="file-card">
         <div class="file-top"><a href="scripts/run_baseline_matrix.py"><code>scripts/run_baseline_matrix.py</code></a></div>
         <p>将 2B/4B/9B 分配到三张 GPU，并行评测、采样 GPU 指标和后处理。</p>
-        <div class="chips"><span class="chip">utc_now</span><span class="chip">write_json</span><span class="chip">sha256_file</span><span class="chip">run_stage</span><span class="chip">prefetch_model</span><span class="chip">inspect_prompt_lengths</span><span class="chip">preload_prompt_audit_dependencies</span><span class="chip">gpu_snapshot</span><span class="chip">aggregate_gpu_samples</span><span class="chip">read_completed_harness_timing</span><span class="chip">build_parser</span><span class="chip">main</span></div>
+        <div class="chips"><span class="chip">MatrixInterrupted</span><span class="chip">utc_now</span><span class="chip">write_json</span><span class="chip">write_bytes</span><span class="chip">sha256_file</span><span class="chip">owned_process_ids</span><span class="chip">signal_owned_process_ids</span><span class="chip">terminate_owned_processes</span><span class="chip">run_stage</span><span class="chip">run_interruptible_stage</span><span class="chip">prefetch_model</span><span class="chip">inspect_prompt_lengths</span><span class="chip">preload_prompt_audit_dependencies</span><span class="chip">gpu_snapshot</span><span class="chip">aggregate_gpu_samples</span><span class="chip">read_completed_harness_timing</span><span class="chip">build_parser</span><span class="chip">main</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="scripts/generate_baseline_report.py"><code>scripts/generate_baseline_report.py</code></a></div>
         <p>严格复核 pilot/full 产物，并生成无 benchmark 内容的 JSON/HTML 报告。</p>
-        <div class="chips"><span class="chip">PublicationError</span><span class="chip">ModelArtifacts</span><span class="chip">MatrixArtifacts</span><span class="chip">load_matrix</span><span class="chip">build_publication</span><span class="chip">render_html</span><span class="chip">generate_report</span><span class="chip">build_parser</span><span class="chip">main</span></div>
+        <div class="chips"><span class="chip">PublicationError</span><span class="chip">ModelArtifacts</span><span class="chip">MatrixArtifacts</span><span class="chip">load_matrix</span><span class="chip">build_execution_ledger</span><span class="chip">build_publication</span><span class="chip">render_html</span><span class="chip">generate_report</span><span class="chip">build_parser</span><span class="chip">main</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="scripts/generate_code_overview.py"><code>scripts/generate_code_overview.py</code></a></div>
@@ -270,7 +271,7 @@
       <article class="file-card">
         <div class="file-top"><a href="src/hidden_policy_eval/environment.py"><code>src/hidden_policy_eval/environment.py</code></a></div>
         <p>核对 Python 包、CUDA、GPU 和 vendored editable install。</p>
-        <div class="chips"><span class="chip">runtime_snapshot</span><span class="chip">verify_runtime</span></div>
+        <div class="chips"><span class="chip">configure_runtime_environment</span><span class="chip">runtime_snapshot</span><span class="chip">verify_runtime</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="src/hidden_policy_eval/harness.py"><code>src/hidden_policy_eval/harness.py</code></a></div>
@@ -353,16 +354,16 @@
         <p>MMLU 单字母 strict generation 任务。</p>
         <div class="chips"><span class="muted">无公开接口</span></div>
       </article></div></div></details>
-      <details><summary>单元测试（11 个文件 / 58 个 test case）</summary><div class="inside"><div class="file-grid">
+      <details><summary>单元测试（11 个文件 / 67 个 test case）</summary><div class="inside"><div class="file-grid">
       <article class="file-card">
         <div class="file-top"><a href="tests/test_environment.py"><code>tests/test_environment.py</code></a></div>
         <p>editable 安装必须精确指向仓库内 harness。</p>
-        <div class="chips"><span class="chip">test_runtime_resolves_editable_metadata_before_importing_source</span><span class="chip">test_accepts_editable_install_from_exact_vendor_directory</span><span class="chip">test_rejects_same_package_from_another_directory</span></div>
+        <div class="chips"><span class="chip">test_configures_frozen_pytorch_allocator_and_clears_legacy_alias</span><span class="chip">test_runtime_resolves_editable_metadata_before_importing_source</span><span class="chip">test_accepts_editable_install_from_exact_vendor_directory</span><span class="chip">test_rejects_same_package_from_another_directory</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_generate_baseline_report.py"><code>tests/test_generate_baseline_report.py</code></a></div>
         <p>结果发布器的 provenance、计数、backend、一致性与隐私边界。</p>
-        <div class="chips"><span class="chip">test_generates_content_free_json_and_self_contained_chinese_html</span><span class="chip">test_optional_hf_reference_is_reported_as_missing</span><span class="chip">test_hf_zero_agreement_remains_explicitly_descriptive</span><span class="chip">test_rejects_invalid_option_score_row_invariants</span><span class="chip">test_rejects_invalid_strict_score_row_invariants</span><span class="chip">test_rejects_missing_or_empty_gpu_telemetry</span><span class="chip">test_rejects_matrix_backend_and_item_count_mismatches</span><span class="chip">test_rejects_permutation_identity_and_canonical_strict_label_drift</span><span class="chip">test_rejects_cross_model_prompt_and_label_drift</span><span class="chip">test_rejects_pilot_full_overlap_prompt_drift</span><span class="chip">test_rejects_hf_input_token_mapping_and_strict_prompt_drift</span><span class="chip">test_cross_input_signature_explicitly_checks_mapping_and_strict_gold</span><span class="chip">test_rejects_provenance_drift_and_unpublished_content</span></div>
+        <div class="chips"><span class="chip">test_generates_content_free_json_and_self_contained_chinese_html</span><span class="chip">test_execution_ledger_keeps_failed_and_incomplete_timing_content_free</span><span class="chip">test_execution_ledger_sanitizes_fields_and_refuses_symlinks</span><span class="chip">test_optional_hf_reference_is_reported_as_missing</span><span class="chip">test_hf_zero_agreement_remains_explicitly_descriptive</span><span class="chip">test_rejects_invalid_option_score_row_invariants</span><span class="chip">test_rejects_invalid_strict_score_row_invariants</span><span class="chip">test_rejects_missing_or_empty_gpu_telemetry</span><span class="chip">test_rejects_matrix_backend_and_item_count_mismatches</span><span class="chip">test_rejects_permutation_identity_and_canonical_strict_label_drift</span><span class="chip">test_rejects_cross_model_prompt_and_label_drift</span><span class="chip">test_rejects_pilot_full_overlap_prompt_drift</span><span class="chip">test_rejects_hf_input_token_mapping_and_strict_prompt_drift</span><span class="chip">test_cross_input_signature_explicitly_checks_mapping_and_strict_gold</span><span class="chip">test_rejects_provenance_drift_and_unpublished_content</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_harness.py"><code>tests/test_harness.py</code></a></div>
@@ -392,7 +393,7 @@
       <article class="file-card">
         <div class="file-top"><a href="tests/test_run_baseline_matrix.py"><code>tests/test_run_baseline_matrix.py</code></a></div>
         <p>GPU 遥测聚合、覆盖信息与缺失采样的 fail-closed 行为。</p>
-        <div class="chips"><span class="chip">test_aggregates_metrics_and_exposes_sampling_coverage</span><span class="chip">test_empty_samples_are_explicitly_invalid</span><span class="chip">test_rejects_invalid_sampling_metadata</span><span class="chip">test_accepts_completed_two_stage_timing</span><span class="chip">test_rejects_missing_corrupt_and_incomplete_timing</span><span class="chip">test_lazy_import_failure_becomes_a_failed_stage</span><span class="chip">test_initial_gpu_snapshot_error_writes_terminal_failed_manifest</span><span class="chip">test_invalid_harness_timing_fails_role_and_matrix_without_postprocess</span></div>
+        <div class="chips"><span class="chip">test_aggregates_metrics_and_exposes_sampling_coverage</span><span class="chip">test_empty_samples_are_explicitly_invalid</span><span class="chip">test_rejects_invalid_sampling_metadata</span><span class="chip">test_proc_scan_matches_only_exact_owner_marker</span><span class="chip">test_pidfd_signal_rechecks_owner_after_identity_is_pinned</span><span class="chip">test_cleanup_terms_then_kills_only_owned_processes</span><span class="chip">test_hanging_interruptible_stage_cleans_exact_owner_on_signal</span><span class="chip">test_accepts_completed_two_stage_timing</span><span class="chip">test_rejects_missing_corrupt_and_incomplete_timing</span><span class="chip">test_lazy_import_failure_becomes_a_failed_stage</span><span class="chip">test_sigterm_writes_interrupted_manifest_and_restores_handler</span><span class="chip">test_dirty_repository_writes_a_terminal_timed_manifest</span><span class="chip">test_initial_gpu_snapshot_error_writes_terminal_failed_manifest</span><span class="chip">test_invalid_harness_timing_fails_role_and_matrix_without_postprocess</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_split_pipeline.py"><code>tests/test_split_pipeline.py</code></a></div>

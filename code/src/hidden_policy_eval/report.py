@@ -330,6 +330,7 @@ def verify_invocation(
     revision: str,
     backend: str,
     prompt_protocol: str,
+    pytorch_alloc_conf: str,
 ) -> dict[str, object]:
     """Bind sample logs to the exact model/backend invocation that produced them."""
 
@@ -356,6 +357,11 @@ def verify_invocation(
             "evaluation invocation does not match requested postprocessing: "
             + ", ".join(sorted(mismatches))
         )
+    runtime_environment = invocation.get("runtime_environment")
+    if runtime_environment != {"PYTORCH_ALLOC_CONF": pytorch_alloc_conf}:
+        raise ValueError(
+            "evaluation invocation did not use the requested PyTorch allocator setting"
+        )
     return invocation
 
 
@@ -370,6 +376,7 @@ def postprocess_run(
     harness_root: str | Path,
     harness_provenance: Mapping[str, str],
     backend: str,
+    pytorch_alloc_conf: str,
 ) -> dict[str, object]:
     """Load tokenizer once, normalize all samples, and write content-free results."""
 
@@ -383,6 +390,7 @@ def postprocess_run(
         revision=revision,
         backend=backend,
         prompt_protocol=prompt_protocol,
+        pytorch_alloc_conf=pytorch_alloc_conf,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model, revision=revision, trust_remote_code=False

@@ -31,6 +31,9 @@ class HarnessTests(unittest.TestCase):
             self.assertIn("language_model_only=true", " ".join(run.command))
             self.assertIn("tokenizer_revision=abc123", " ".join(run.command))
             self.assertIn("gpu_memory_utilization=0.88", " ".join(run.command))
+            self.assertEqual(
+                run.environment["PYTORCH_ALLOC_CONF"], "expandable_segments:True"
+            )
             self.assertIn("--apply_chat_template", run.command)
             self.assertEqual(run.command[run.command.index("--model") + 1], "vllm")
             self.assertNotIn("--device", run.command)
@@ -69,6 +72,14 @@ class HarnessTests(unittest.TestCase):
             )
             self.assertEqual(invocation["model_revision"], "abc123")
             self.assertEqual(invocation["tokenizer_revision"], "abc123")
+            self.assertEqual(
+                invocation["runtime_environment"],
+                {"PYTORCH_ALLOC_CONF": "expandable_segments:True"},
+            )
+            self.assertEqual(
+                timing["runtime_environment"],
+                {"PYTORCH_ALLOC_CONF": "expandable_segments:True"},
+            )
             self.assertEqual(
                 [stage["stage"] for stage in timing["stages"]],
                 ["lm_eval_validate", "model_load_and_evaluation"],

@@ -62,6 +62,9 @@ class ReportTests(unittest.TestCase):
             "prompt_protocol": "chat",
             "enable_thinking": False,
             "seed": 1234,
+            "runtime_environment": {
+                "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+            },
         }
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "hidden_policy_invocation.json"
@@ -72,6 +75,7 @@ class ReportTests(unittest.TestCase):
                 revision="abc123",
                 backend="vllm",
                 prompt_protocol="chat",
+                pytorch_alloc_conf="expandable_segments:True",
             )
             self.assertEqual(observed["seed"], 1234)
             with self.assertRaisesRegex(ValueError, "backend"):
@@ -81,6 +85,7 @@ class ReportTests(unittest.TestCase):
                     revision="abc123",
                     backend="hf",
                     prompt_protocol="chat",
+                    pytorch_alloc_conf="expandable_segments:True",
                 )
 
     def test_token_count_follows_context_boundary(self) -> None:

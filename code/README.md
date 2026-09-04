@@ -126,11 +126,11 @@ runner 隔离，因此每个进程里的 `cuda:0` 都对应它被分配的物理
 `max_model_len=4096` 前会用各模型 tokenizer 审计所有实际请求；超过上限直接停止，
 而不是截断后悄悄继续。
 
-`0.88` 是在 RTX A6000 上针对完整 CAL 的高吞吐安全水位：`0.95` 会使 pilot 首批
-请求缺少 128–256 MiB scratch；`0.92` 虽通过 pilot，但 full likelihood 批次仍需额外
-1.48–2.01 GiB 用于全词表 log-softmax。保留这部分余量的同时，512 sequences /
-32,768 batched tokens 仍用于提高吞吐；整卡实际峰值（模型、cache、scratch 合计）会
-高于这个 vLLM KV-cache 配置比例。
+`0.88` 给 full likelihood 的全词表 log-softmax 留出约 1.5–2.0 GiB 临时空间；
+`PYTORCH_ALLOC_CONF=expandable_segments:True` 则减少 reserved-but-unallocated 显存
+碎片。两者配合后仍保留 512 sequences / 32,768 batched tokens 以优先提高吞吐。
+整卡实际峰值（模型、cache、scratch 合计）会高于 vLLM 的 KV-cache 配置比例；最终
+是否稳定以及真实峰值以 A6000 full run 的阶段计时和 GPU telemetry 为准。
 
 首次拉取三个 checkpoint 时启用 `HF_XET_HIGH_PERFORMANCE=1`，让 Xet 尽量使用远端
 CPU、内存、磁盘和网络并发；该开关同时写入冻结 config 与 matrix manifest。模型已经
@@ -218,10 +218,14 @@ gate 使用 Plan 4 的 10 percentage points、95%、1% 三个阈值。32-item sc
 python code/scripts/generate_baseline_report.py \
   --pilot-matrix code/results/experiment0/baseline/<pilot-vllm-run-id> \
   --hf-reference-matrix code/results/experiment0/baseline/<pilot-hf-run-id> \
-  --full-matrix code/results/experiment0/baseline/<full-vllm-run-id>
+  --full-matrix code/results/experiment0/baseline/<full-vllm-run-id> \
+  --execution-ledger-root code/results/experiment0/baseline
 ```
 
 它会重新计算 normalized rows 的 aggregate/subject 指标，交叉核对 backend、模型与
 tokenizer revision、样本数、runtime/harness provenance 和阶段状态，然后生成可提交的
 `reports/baseline-results.json` 与自包含 `reports/baseline-results.html`。发布器采用字段
-白名单，不复制题目、候选答案、gold label、原始模型响应、命令行或本机路径。
+白名单，不复制题目、候选答案、gold label、原始模型响应、命令行或本机路径。ledger
+只读取每个 run 的顶层 manifest，将成功、失败和中断尝试的 wall-clock/阶段耗时纳入
+报告；原始目录名会替换为 `attempt_###`，避免 operator-controlled run ID 成为内容
+旁路。三模型并行阶段不能直接相加。

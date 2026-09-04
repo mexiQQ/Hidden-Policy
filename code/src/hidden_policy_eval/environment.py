@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 from importlib.metadata import PackageNotFoundError, distribution, version
 import json
+import os
 from pathlib import Path
 import platform
 import subprocess
@@ -13,6 +14,35 @@ from typing import Mapping
 from urllib.parse import unquote, urlparse
 
 from .vendor import verify_harness_checkout
+
+
+PYTORCH_ALLOC_CONF_ENV = "PYTORCH_ALLOC_CONF"
+LEGACY_PYTORCH_ALLOC_CONF_ENV = "PYTORCH_CUDA_ALLOC_CONF"
+
+
+def configure_runtime_environment(config: Mapping[str, object]) -> dict[str, object]:
+    """Apply allocator settings before anything can initialize CUDA.
+
+    PyTorch 2.13 prefers ``PYTORCH_ALLOC_CONF``.  The frozen value is copied
+    into every runner child, so command-line entry points and matrix runs use
+    the same allocator behavior without relying on shell startup files.
+    """
+
+    evaluation = config.get("evaluation")
+    if not isinstance(evaluation, Mapping):
+        raise TypeError("config.evaluation must be an object")
+    value = evaluation.get("pytorch_alloc_conf")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("evaluation.pytorch_alloc_conf must be a non-empty string")
+    if value != value.strip():
+        raise ValueError("evaluation.pytorch_alloc_conf must not contain edge whitespace")
+    normalized = value.strip()
+    legacy_removed = os.environ.pop(LEGACY_PYTORCH_ALLOC_CONF_ENV, None) is not None
+    os.environ[PYTORCH_ALLOC_CONF_ENV] = normalized
+    return {
+        PYTORCH_ALLOC_CONF_ENV: normalized,
+        "legacy_pytorch_cuda_alloc_conf_removed": legacy_removed,
+    }
 
 
 def _package_version(distribution: str) -> str:
@@ -75,6 +105,17 @@ def runtime_snapshot(harness_root: str | Path) -> dict[str, object]:
     lm_eval = _load_vendored_lm_eval(harness_root)
     import torch
 
+    allocator_getter = getattr(
+        getattr(torch, "_C", None), "_accelerator_getAllocatorSettings", None
+    )
+    allocator_at_snapshot = allocator_getter() if allocator_getter is not None else None
+    backend_getter = getattr(
+        getattr(getattr(torch, "cuda", None), "memory", None),
+        "get_allocator_backend",
+        None,
+    )
+    allocator_backend = backend_getter() if backend_getter is not None else None
+
     snapshot: dict[str, object] = {
         "python": platform.python_version(),
         "datasets": _package_version("datasets"),
@@ -87,6 +128,15 @@ def runtime_snapshot(harness_root: str | Path) -> dict[str, object]:
         # version is the authoritative value needed for the runtime check.
         "torch": str(torch.__version__),
         "torch_cuda": torch.version.cuda,
+        "pytorch_alloc_conf": os.environ.get(PYTORCH_ALLOC_CONF_ENV),
+        "pytorch_cuda_alloc_conf_legacy": os.environ.get(
+            LEGACY_PYTORCH_ALLOC_CONF_ENV
+        ),
+        # PyTorch exposes the most recently parsed allocator string, not a
+        # complete getter for every internal allocator flag.  Name this by the
+        # observation point so it is not misread as an end-to-end state proof.
+        "pytorch_alloc_conf_at_snapshot": allocator_at_snapshot,
+        "pytorch_allocator_backend": allocator_backend,
         "cuda_available": bool(torch.cuda.is_available()),
         "cuda_device_count": int(torch.cuda.device_count()),
         "cuda_devices": [
@@ -114,6 +164,25 @@ def verify_runtime(
     if selected_backend not in {"hf", "vllm"}:
         raise RuntimeError(f"unsupported evaluation backend: {selected_backend}")
     snapshot = runtime_snapshot(harness_root)
+    expected_allocator = str(evaluation["pytorch_alloc_conf"])
+    if snapshot.get("pytorch_alloc_conf") != expected_allocator:
+        raise RuntimeError(
+            "PyTorch allocator configuration mismatch: expected "
+            f"{expected_allocator}, got {snapshot.get('pytorch_alloc_conf')}"
+        )
+    if snapshot.get("pytorch_cuda_alloc_conf_legacy") is not None:
+        raise RuntimeError("legacy PYTORCH_CUDA_ALLOC_CONF must be unset")
+    if snapshot.get("pytorch_alloc_conf_at_snapshot") != expected_allocator:
+        raise RuntimeError(
+            "PyTorch allocator configuration at runtime verification mismatch: expected "
+            f"{expected_allocator}, got {snapshot.get('pytorch_alloc_conf_at_snapshot')}"
+        )
+    expected_allocator_backend = str(evaluation["pytorch_allocator_backend"])
+    if snapshot.get("pytorch_allocator_backend") != expected_allocator_backend:
+        raise RuntimeError(
+            "PyTorch allocator backend mismatch: expected "
+            f"{expected_allocator_backend}, got {snapshot.get('pytorch_allocator_backend')}"
+        )
     expected = {
         "datasets": str(evaluation["datasets_version"]),
         "lm_eval": str(evaluation["harness_version"]),

@@ -3,7 +3,9 @@ from __future__ import annotations
 import builtins
 import importlib.util
 import json
+import os
 from pathlib import Path
+import signal
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -41,6 +43,9 @@ def valid_harness_timing(backend: str = "vllm") -> dict[str, object]:
         "schema_version": "hidden-policy-run-timing-v1",
         "backend": backend,
         "status": "completed",
+        "runtime_environment": {
+            "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+        },
         "stages": [
             {
                 "stage": "lm_eval_validate",
@@ -63,6 +68,7 @@ def write_config(path: Path) -> None:
                 "evaluation": {
                     "backend": "vllm",
                     "hf_xet_high_performance": False,
+                    "pytorch_alloc_conf": "expandable_segments:True",
                     "gpu_memory_utilization": 0.88,
                     "max_num_seqs": 16,
                     "max_num_batched_tokens": 4096,
@@ -187,13 +193,125 @@ class GpuTelemetryAggregationTests(unittest.TestCase):
             )
 
 
+class OwnedProcessCleanupTests(unittest.TestCase):
+    def test_proc_scan_matches_only_exact_owner_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            proc = Path(directory)
+            for pid, environment in (
+                ("101", b"A=1\0HP_MATRIX_OWNER=token:role\0"),
+                ("102", b"HP_MATRIX_OWNER=other\0"),
+                ("not-a-pid", b"HP_MATRIX_OWNER=token:role\0"),
+            ):
+                entry = proc / pid
+                entry.mkdir()
+                (entry / "environ").write_bytes(environment)
+
+            self.assertEqual(
+                runner.owned_process_ids("token:role", proc_root=proc), {101}
+            )
+
+    def test_pidfd_signal_rechecks_owner_after_identity_is_pinned(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            proc = Path(directory)
+            entry = proc / "101"
+            entry.mkdir()
+            (entry / "environ").write_bytes(
+                b"HP_MATRIX_OWNER=token:role\0"
+            )
+            with (
+                mock.patch.object(runner.os, "pidfd_open", return_value=7, create=True),
+                mock.patch.object(
+                    runner.signal, "pidfd_send_signal", create=True
+                ) as send_signal,
+                mock.patch.object(runner.os, "close") as close,
+            ):
+                signaled, errors = runner.signal_owned_process_ids(
+                    {101}, "token:role", signal.SIGTERM, proc_root=proc
+                )
+
+            self.assertEqual(signaled, {101})
+            self.assertEqual(errors, [])
+            send_signal.assert_called_once_with(7, signal.SIGTERM, None, 0)
+            close.assert_called_once_with(7)
+
+    def test_cleanup_terms_then_kills_only_owned_processes(self) -> None:
+        process = SimpleNamespace(pid=10, poll=lambda: None, wait=lambda timeout=None: 0)
+        scans = iter(({10, 11}, {11}, set()))
+        signals = iter((({10, 11}, []), ({11}, [])))
+        with (
+            mock.patch.object(
+                runner, "owned_process_ids", side_effect=lambda _token: next(scans)
+            ),
+            mock.patch.object(
+                runner,
+                "signal_owned_process_ids",
+                side_effect=lambda *_args: next(signals),
+            ) as send_signal,
+        ):
+            result = runner.terminate_owned_processes(
+                process,
+                "token:role",
+                term_grace_seconds=0,
+                kill_grace_seconds=0,
+                poll_seconds=0,
+            )
+
+        self.assertEqual(result["status"], "terminated_lingering_processes")
+        self.assertEqual(result["term_process_count"], 2)
+        self.assertEqual(result["kill_process_count"], 1)
+        self.assertEqual(send_signal.call_count, 2)
+        self.assertEqual(send_signal.call_args_list[0].args[0], {10, 11})
+        self.assertEqual(send_signal.call_args_list[0].args[2], signal.SIGTERM)
+        self.assertEqual(send_signal.call_args_list[1].args[0], {11})
+        self.assertEqual(send_signal.call_args_list[1].args[2], signal.SIGKILL)
+
+    def test_hanging_interruptible_stage_cleans_exact_owner_on_signal(self) -> None:
+        poll = mock.Mock(return_value=None)
+        process = SimpleNamespace(pid=10, poll=poll)
+        checks = 0
+
+        def check_interrupted() -> None:
+            nonlocal checks
+            checks += 1
+            if checks >= 3:
+                raise runner.MatrixInterrupted(int(signal.SIGHUP))
+
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.object(
+                    runner.subprocess, "Popen", return_value=process
+                ) as popen,
+                mock.patch.object(runner.time, "sleep") as sleep,
+                mock.patch.object(runner, "terminate_owned_processes") as cleanup,
+            ):
+                with self.assertRaises(runner.MatrixInterrupted) as raised:
+                    runner.run_interruptible_stage(
+                        "postprocess",
+                        ["python", "-m", "hidden_policy_eval.cli", "postprocess"],
+                        log_path=Path(directory) / "postprocess.log",
+                        environment={runner.OWNER_ENV: "token:role"},
+                        owner_token="token:role",
+                        check_interrupted=check_interrupted,
+                        poll_seconds=0.01,
+                    )
+
+        self.assertEqual(raised.exception.signum, int(signal.SIGHUP))
+        popen.assert_called_once()
+        self.assertTrue(popen.call_args.kwargs["start_new_session"])
+        poll.assert_called_once_with()
+        sleep.assert_called_once_with(0.01)
+        cleanup.assert_called_once_with(process, "token:role")
+
+
 class HarnessTimingValidationTests(unittest.TestCase):
     def test_accepts_completed_two_stage_timing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "hidden_policy_timing.json"
             path.write_text(json.dumps(valid_harness_timing()), encoding="utf-8")
             result = runner.read_completed_harness_timing(
-                path, expected_backend="vllm"
+                path,
+                expected_backend="vllm",
+                expected_pytorch_alloc_conf="expandable_segments:True",
             )
             self.assertEqual(result["status"], "completed")
 
@@ -221,7 +339,9 @@ class HarnessTimingValidationTests(unittest.TestCase):
                         path.write_text(contents, encoding="utf-8")
                     with self.assertRaisesRegex(ValueError, message):
                         runner.read_completed_harness_timing(
-                            path, expected_backend="vllm"
+                            path,
+                            expected_backend="vllm",
+                            expected_pytorch_alloc_conf="expandable_segments:True",
                         )
 
 
@@ -249,6 +369,149 @@ class PromptAuditDependencyTests(unittest.TestCase):
 
 
 class RunnerFailClosedTests(unittest.TestCase):
+    def test_sigterm_writes_interrupted_manifest_and_restores_handler(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "config.json"
+            results = root / "results"
+            write_config(config)
+
+            class RunningProcess:
+                pid = 12345
+
+                def __init__(self, *_args: object, **_kwargs: object) -> None:
+                    pass
+
+                def poll(self) -> None:
+                    return None
+
+                def wait(self, timeout: float | None = None) -> int:
+                    return -int(signal.SIGTERM)
+
+            def prompt_audit(*_: object, **__: object) -> dict[str, object]:
+                return {
+                    "stage": "prompt_length_audit",
+                    "model_role": "qwen3_5_2b",
+                    "duration_seconds": 0.01,
+                    "configured_max_model_len": 4096,
+                    "observed_max_request_tokens": 100,
+                    "exit_code": 0,
+                }
+
+            snapshot_calls = 0
+
+            def snapshot(_: set[str]) -> list[dict[str, object]]:
+                nonlocal snapshot_calls
+                snapshot_calls += 1
+                result = [
+                    sample(
+                        runner.utc_now(),
+                        memory_used=10 if snapshot_calls == 1 else 1000,
+                        utilization=0 if snapshot_calls == 1 else 80,
+                        power=20.0 if snapshot_calls == 1 else 200.0,
+                    )
+                ]
+                if snapshot_calls == 2:
+                    os.kill(os.getpid(), signal.SIGTERM)
+                return result
+
+            clean = {
+                "stage": "owned_process_cleanup",
+                "status": "already_clean",
+                "duration_seconds": 0.01,
+                "term_process_count": 1,
+                "kill_process_count": 0,
+                "remaining_process_count": 0,
+                "errors": [],
+            }
+            previous_handler = signal.getsignal(signal.SIGTERM)
+            with (
+                mock.patch.object(runner.subprocess, "run", side_effect=fake_git_run),
+                mock.patch.object(runner.subprocess, "Popen", RunningProcess),
+                mock.patch.object(runner, "run_stage", side_effect=successful_stage),
+                mock.patch.object(runner, "inspect_prompt_lengths", side_effect=prompt_audit),
+                mock.patch.object(runner, "preload_prompt_audit_dependencies"),
+                mock.patch.object(runner, "gpu_snapshot", side_effect=snapshot),
+                mock.patch.object(
+                    runner, "terminate_owned_processes", return_value=clean
+                ),
+            ):
+                exit_code = runner.main(
+                    [
+                        "--config",
+                        str(config),
+                        "--scope",
+                        "pilot",
+                        "--backend",
+                        "vllm",
+                        "--models",
+                        "qwen3_5_2b",
+                        "--gpus",
+                        "0",
+                        "--run-id",
+                        "signal",
+                        "--results-root",
+                        str(results),
+                        "--skip-prefetch",
+                    ]
+                )
+
+            manifest = json.loads(
+                (results / "signal" / "matrix_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(exit_code, 128 + int(signal.SIGTERM))
+            self.assertEqual(manifest["status"], "interrupted")
+            self.assertEqual(manifest["interrupt_signal"], int(signal.SIGTERM))
+            self.assertEqual(signal.getsignal(signal.SIGTERM), previous_handler)
+
+    def test_dirty_repository_writes_a_terminal_timed_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "config.json"
+            results = root / "results"
+            write_config(config)
+
+            def dirty_git(command: tuple[str, ...], **_: object) -> SimpleNamespace:
+                if tuple(command[-2:]) == ("rev-parse", "HEAD"):
+                    return SimpleNamespace(stdout="a" * 40 + "\n", returncode=0)
+                return SimpleNamespace(stdout=" M main.tex\n", returncode=0)
+
+            with mock.patch.object(runner.subprocess, "run", side_effect=dirty_git):
+                exit_code = runner.main(
+                    [
+                        "--config",
+                        str(config),
+                        "--scope",
+                        "pilot",
+                        "--backend",
+                        "vllm",
+                        "--models",
+                        "qwen3_5_2b",
+                        "--gpus",
+                        "0",
+                        "--run-id",
+                        "dirty",
+                        "--results-root",
+                        str(results),
+                        "--skip-prefetch",
+                    ]
+                )
+
+            manifest = json.loads(
+                (results / "dirty" / "matrix_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(manifest["status"], "failed")
+            self.assertEqual(
+                manifest["common_stages"][0]["stage"], "repository_clean_check"
+            )
+            self.assertEqual(manifest["common_stages"][0]["exit_code"], 1)
+            self.assertGreaterEqual(manifest["duration_seconds"], 0)
+
     def test_initial_gpu_snapshot_error_writes_terminal_failed_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -378,7 +641,6 @@ class RunnerFailClosedTests(unittest.TestCase):
                         )
                     ]
 
-                real_zip = builtins.zip
                 with (
                     mock.patch.object(
                         runner.subprocess, "run", side_effect=fake_git_run
@@ -394,12 +656,6 @@ class RunnerFailClosedTests(unittest.TestCase):
                         runner, "preload_prompt_audit_dependencies"
                     ),
                     mock.patch.object(runner, "gpu_snapshot", side_effect=snapshot),
-                    mock.patch.object(
-                        runner,
-                        "zip",
-                        new=lambda *values, strict=False: real_zip(*values),
-                        create=True,
-                    ),
                 ):
                     exit_code = runner.main(
                         [

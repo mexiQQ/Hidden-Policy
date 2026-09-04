@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from .harness import build_harness_run, execute_harness, model_from_config
-from .environment import verify_runtime
+from .environment import configure_runtime_environment, verify_runtime
 from .io import read_json, write_json
 from .prepare import prepare_harness_data
 from .report import compare_models, postprocess_run
@@ -78,6 +78,7 @@ def _harness_run(args: argparse.Namespace):
         dtype=str(evaluation["dtype"]),
         device=args.device or str(evaluation["device"]),
         batch_size=str(evaluation["batch_size"]),
+        pytorch_alloc_conf=str(evaluation["pytorch_alloc_conf"]),
         max_model_len=int(evaluation["max_model_len"]),
         gpu_memory_utilization=float(evaluation["gpu_memory_utilization"]),
         max_num_seqs=int(evaluation["max_num_seqs"]),
@@ -160,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "doctor":
         config = load_config(args.config)
+        configure_runtime_environment(config)
         backend = args.backend or str(config["evaluation"]["backend"])
         _print(verify_runtime(config, DEFAULT_HARNESS, backend=backend))
         return 0
@@ -186,6 +188,8 @@ def main(argv: list[str] | None = None) -> int:
         _print(_prepare(args))
         return 0
     if args.command in {"command", "run"}:
+        config = load_config(args.config)
+        configure_runtime_environment(config)
         if not args.skip_prepare:
             _print(_prepare(args))
         else:
@@ -198,12 +202,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "command":
             print(run.shell_preview())
             return 0
-        config = load_config(args.config)
         backend = args.backend or str(config["evaluation"]["backend"])
         verify_runtime(config, DEFAULT_HARNESS, backend=backend)
         return execute_harness(run)
     if args.command == "postprocess":
         config = load_config(args.config)
+        configure_runtime_environment(config)
         harness = verify_harness_checkout(config, DEFAULT_HARNESS)
         backend = args.backend or str(config["evaluation"]["backend"])
         model, revision = model_from_config(config, args.model_role)
@@ -217,6 +221,7 @@ def main(argv: list[str] | None = None) -> int:
             harness_root=DEFAULT_HARNESS,
             harness_provenance=harness,
             backend=backend,
+            pytorch_alloc_conf=str(config["evaluation"]["pytorch_alloc_conf"]),
         )
         _print(summary)
         return 0

@@ -11,11 +11,12 @@ import json
 import math
 import os
 from pathlib import Path
+import secrets
 import signal
 import subprocess
 import sys
 import time
-from typing import Any
+from typing import Any, Callable
 
 
 CODE_ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +24,15 @@ REPOSITORY_ROOT = CODE_ROOT.parent
 DEFAULT_CONFIG = CODE_ROOT / "configs" / "experiment0.json"
 DEFAULT_RESULTS = CODE_ROOT / "results" / "experiment0" / "baseline"
 DEFAULT_MODELS = ("qwen3_5_2b", "qwen3_5_4b", "qwen3_5_9b")
+OWNER_ENV = "HP_MATRIX_OWNER"
+
+
+class MatrixInterrupted(BaseException):
+    """Signal converted to a catchable exception so manifests can be closed."""
+
+    def __init__(self, signum: int) -> None:
+        self.signum = signum
+        super().__init__(f"matrix interrupted by signal {signum}")
 
 
 def utc_now() -> str:
@@ -39,12 +49,202 @@ def write_json(path: Path, payload: object) -> None:
     temporary.replace(path)
 
 
+def write_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_bytes(payload)
+    temporary.replace(path)
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def owned_process_ids(
+    owner_token: str, *, proc_root: Path = Path("/proc")
+) -> set[int] | None:
+    """Return Linux processes carrying this run's unguessable owner token.
+
+    ``None`` means procfs is unavailable, while an empty set means procfs was
+    scanned and no owned process remains.  Matching the exact inherited
+    environment marker also finds vLLM workers that created a new session.
+    """
+
+    if not proc_root.is_dir():
+        return None
+    marker = f"{OWNER_ENV}={owner_token}".encode("utf-8")
+    matches: set[int] = set()
+    for entry in proc_root.iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            values = (entry / "environ").read_bytes().split(b"\0")
+        except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+            continue
+        if marker in values:
+            matches.add(int(entry.name))
+    return matches
+
+
+def signal_owned_process_ids(
+    pids: set[int],
+    owner_token: str,
+    signum: int,
+    *,
+    proc_root: Path = Path("/proc"),
+) -> tuple[set[int], list[dict[str, object]]]:
+    """Signal identity-checked Linux processes through race-safe pidfds."""
+
+    marker = f"{OWNER_ENV}={owner_token}".encode("utf-8")
+    signaled: set[int] = set()
+    errors: list[dict[str, object]] = []
+    pidfd_open = getattr(os, "pidfd_open", None)
+    pidfd_send_signal = getattr(signal, "pidfd_send_signal", None)
+    if pidfd_open is None or pidfd_send_signal is None:
+        return signaled, [
+            {"operation": "pidfd_unavailable", "error_type": "UnsupportedPlatform"}
+        ]
+    for pid in sorted(pids):
+        file_descriptor: int | None = None
+        try:
+            file_descriptor = pidfd_open(pid, 0)
+            # Opening the pidfd pins process identity.  Re-read the marker only
+            # after that point so PID reuse cannot redirect the signal.
+            environment = (proc_root / str(pid) / "environ").read_bytes().split(b"\0")
+            if marker not in environment:
+                errors.append(
+                    {"operation": "ownership_check", "error_type": "OwnershipMismatch"}
+                )
+                continue
+            pidfd_send_signal(file_descriptor, signum, None, 0)
+            signaled.add(pid)
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        except (PermissionError, OSError) as exc:
+            errors.append(
+                {"operation": "pidfd_signal", "error_type": type(exc).__name__}
+            )
+        finally:
+            if file_descriptor is not None:
+                os.close(file_descriptor)
+    return signaled, errors
+
+
+def terminate_owned_processes(
+    process: subprocess.Popen[str],
+    owner_token: str,
+    *,
+    passive_grace_seconds: float = 0.0,
+    term_grace_seconds: float = 20.0,
+    kill_grace_seconds: float = 5.0,
+    poll_seconds: float = 0.2,
+) -> dict[str, Any]:
+    """Reap one exact model process tree without touching unrelated jobs."""
+
+    started_at = utc_now()
+    clock = time.perf_counter()
+    errors: list[dict[str, object]] = []
+    term_targets: set[int] = set()
+    kill_targets: set[int] = set()
+
+    def scan() -> set[int] | None:
+        try:
+            return owned_process_ids(owner_token)
+        except Exception as exc:  # cleanup must continue for the other models
+            errors.append({"operation": "scan", "error_type": type(exc).__name__})
+            return None
+
+    def wait_until_empty(seconds: float) -> set[int] | None:
+        deadline = time.monotonic() + max(0.0, seconds)
+        remaining = scan()
+        while remaining and time.monotonic() < deadline:
+            time.sleep(min(poll_seconds, max(0.0, deadline - time.monotonic())))
+            remaining = scan()
+        return remaining
+
+    remaining = wait_until_empty(passive_grace_seconds)
+    if remaining is None:
+        # Non-Linux fallback.  Only signal the still-live session leader, which
+        # avoids a stale-PGID risk after the direct child has exited.
+        if process.poll() is None:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+                term_targets.add(process.pid)
+            except ProcessLookupError:
+                pass
+            except OSError as exc:
+                errors.append(
+                    {"operation": "term_group", "error_type": type(exc).__name__}
+                )
+        try:
+            process.wait(timeout=term_grace_seconds)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+                kill_targets.add(process.pid)
+            except ProcessLookupError:
+                pass
+            except OSError as exc:
+                errors.append(
+                    {"operation": "kill_group", "error_type": type(exc).__name__}
+                )
+            try:
+                process.wait(timeout=kill_grace_seconds)
+            except (subprocess.TimeoutExpired, OSError) as exc:
+                errors.append({"operation": "reap", "error_type": type(exc).__name__})
+        remaining_count: int | None = None
+        cleanup_status = "best_effort" if not errors else "best_effort_with_errors"
+    else:
+        term_targets, signal_errors = signal_owned_process_ids(
+            set(remaining), owner_token, signal.SIGTERM
+        )
+        errors.extend(signal_errors)
+        if not remaining and process.poll() is None:
+            errors.append(
+                {"operation": "scan", "error_type": "LiveLeaderMissingFromProcScan"}
+            )
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+                term_targets.add(process.pid)
+            except (ProcessLookupError, PermissionError):
+                pass
+        remaining = wait_until_empty(term_grace_seconds)
+        if remaining:
+            kill_targets, signal_errors = signal_owned_process_ids(
+                set(remaining), owner_token, signal.SIGKILL
+            )
+            errors.extend(signal_errors)
+            remaining = wait_until_empty(kill_grace_seconds)
+        remaining_count = len(remaining or set())
+        try:
+            process.wait(timeout=max(poll_seconds, 0.1))
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            errors.append({"operation": "reap", "error_type": type(exc).__name__})
+        cleanup_status = (
+            "already_clean"
+            if remaining_count == 0 and not errors and not term_targets and not kill_targets
+            else "terminated_lingering_processes"
+            if remaining_count == 0 and not errors
+            else "remaining_processes"
+            if remaining_count
+            else "cleanup_with_errors"
+        )
+
+    return {
+        "stage": "owned_process_cleanup",
+        "started_at_utc": started_at,
+        "ended_at_utc": utc_now(),
+        "duration_seconds": time.perf_counter() - clock,
+        "status": cleanup_status,
+        "term_process_count": len(term_targets),
+        "kill_process_count": len(kill_targets),
+        "remaining_process_count": remaining_count,
+        "errors": errors,
+    }
 
 
 def run_stage(
@@ -74,6 +274,64 @@ def run_stage(
         "ended_at_utc": utc_now(),
         "duration_seconds": time.perf_counter() - clock,
         "exit_code": completed.returncode,
+        "log_sha256": sha256_file(log_path),
+    }
+
+
+def run_interruptible_stage(
+    name: str,
+    command: list[str],
+    *,
+    log_path: Path,
+    environment: dict[str, str],
+    owner_token: str,
+    check_interrupted: Callable[[], None],
+    poll_seconds: float = 0.2,
+) -> dict[str, Any]:
+    """Run a stage while retaining a safe point for signal-driven cleanup."""
+
+    if poll_seconds <= 0:
+        raise ValueError("poll_seconds must be positive")
+    check_interrupted()
+    started_at = utc_now()
+    clock = time.perf_counter()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    process: subprocess.Popen[str] | None = None
+    with log_path.open("w", encoding="utf-8") as log:
+        try:
+            process = subprocess.Popen(
+                command,
+                cwd=REPOSITORY_ROOT,
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                text=True,
+                start_new_session=True,
+            )
+            while True:
+                check_interrupted()
+                exit_code = process.poll()
+                if exit_code is not None:
+                    break
+                time.sleep(poll_seconds)
+            # Close the race where a signal arrived with process completion.
+            check_interrupted()
+        except BaseException:
+            if process is not None:
+                try:
+                    terminate_owned_processes(process, owner_token)
+                except Exception:
+                    # The caller records a second best-effort cleanup in its
+                    # terminal interruption manifest. Preserve the signal.
+                    pass
+            raise
+    return {
+        "stage": name,
+        "command": command,
+        "started_at_utc": started_at,
+        "ended_at_utc": utc_now(),
+        "duration_seconds": time.perf_counter() - clock,
+        "exit_code": exit_code,
         "log_sha256": sha256_file(log_path),
     }
 
@@ -378,7 +636,7 @@ def aggregate_gpu_samples(
 
 
 def read_completed_harness_timing(
-    path: Path, *, expected_backend: str
+    path: Path, *, expected_backend: str, expected_pytorch_alloc_conf: str
 ) -> dict[str, object]:
     """Read and minimally validate the timing contract emitted by lm-eval."""
 
@@ -396,6 +654,10 @@ def read_completed_harness_timing(
         raise ValueError("hidden_policy_timing.json is not completed")
     if payload.get("backend") != expected_backend:
         raise ValueError("hidden_policy_timing.json backend does not match the run")
+    if payload.get("runtime_environment") != {
+        "PYTORCH_ALLOC_CONF": expected_pytorch_alloc_conf
+    }:
+        raise ValueError("hidden_policy_timing.json allocator setting does not match the run")
     stages = payload.get("stages")
     if not isinstance(stages, list):
         raise ValueError("hidden_policy_timing.json stages must be an array")
@@ -453,7 +715,12 @@ def main(argv: list[str] | None = None) -> int:
     args.results_root = args.results_root.resolve()
     if args.gpu_poll_seconds <= 0:
         raise ValueError("--gpu-poll-seconds must be positive")
-    config = json.loads(args.config.read_text(encoding="utf-8"))
+    config_bytes = args.config.read_bytes()
+    config_sha256 = hashlib.sha256(config_bytes).hexdigest()
+    config = json.loads(config_bytes)
+    from hidden_policy_eval.environment import configure_runtime_environment
+
+    allocator_environment = configure_runtime_environment(config)
     backend = args.backend or str(config["evaluation"]["backend"])
     hf_xet_high_performance = bool(
         config["evaluation"].get("hf_xet_high_performance", False)
@@ -473,32 +740,15 @@ def main(argv: list[str] | None = None) -> int:
     matrix_root.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
     total_clock = time.perf_counter()
-    repository_status = subprocess.run(
-        ("git", "status", "--porcelain", "--untracked-files=all"),
-        cwd=REPOSITORY_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
-    if repository_status:
-        raise RuntimeError(
-            "baseline runs require a clean repository so the recorded commit "
-            "identifies the executed implementation"
-        )
-    repository_commit = subprocess.run(
-        ("git", "rev-parse", "HEAD"),
-        cwd=REPOSITORY_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+    frozen_config_path = matrix_root / "frozen_config.json"
+    write_bytes(frozen_config_path, config_bytes)
     manifest: dict[str, Any] = {
         "schema_version": "hidden-policy-baseline-matrix-v1",
         "run_id": args.run_id,
         "scope": args.scope,
         "backend": backend,
-        "repository_commit": repository_commit,
-        "config_sha256": sha256_file(args.config),
+        "repository_commit": None,
+        "config_sha256": config_sha256,
         "started_at_utc": started_at,
         "execution": {
             "models": list(args.models),
@@ -506,6 +756,10 @@ def main(argv: list[str] | None = None) -> int:
             "one_model_per_gpu": True,
             "skip_prefetch": bool(args.skip_prefetch),
             "hf_xet_high_performance": hf_xet_high_performance,
+            "pytorch_alloc_conf": allocator_environment["PYTORCH_ALLOC_CONF"],
+            "legacy_pytorch_cuda_alloc_conf_removed": allocator_environment[
+                "legacy_pytorch_cuda_alloc_conf_removed"
+            ],
             "gpu_poll_seconds": args.gpu_poll_seconds,
             "vllm_memory_and_batching": {
                 key: config["evaluation"][key]
@@ -522,13 +776,64 @@ def main(argv: list[str] | None = None) -> int:
         },
         "common_stages": [],
         "models": {},
+        "status": "running",
     }
+    write_json(matrix_root / "matrix_manifest.json", manifest)
+
+    repository_started = utc_now()
+    repository_clock = time.perf_counter()
+    repository_error: Exception | None = None
+    repository_status = ""
+    try:
+        repository_commit = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            cwd=REPOSITORY_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        repository_status = subprocess.run(
+            ("git", "status", "--porcelain", "--untracked-files=all"),
+            cwd=REPOSITORY_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        manifest["repository_commit"] = repository_commit
+    except Exception as exc:
+        repository_error = exc
+    repository_clean = repository_error is None and not repository_status
+    repository_stage: dict[str, object] = {
+        "stage": "repository_clean_check",
+        "started_at_utc": repository_started,
+        "ended_at_utc": utc_now(),
+        "duration_seconds": time.perf_counter() - repository_clock,
+        "exit_code": 0 if repository_clean else 1,
+    }
+    if repository_error is not None:
+        repository_stage["error_type"] = type(repository_error).__name__
+    elif repository_status:
+        repository_stage["error_type"] = "DirtyRepository"
+    manifest["common_stages"].append(repository_stage)
+    if not repository_clean:
+        manifest["status"] = "failed"
+        manifest["ended_at_utc"] = utc_now()
+        manifest["duration_seconds"] = time.perf_counter() - total_clock
+        write_json(matrix_root / "matrix_manifest.json", manifest)
+        return 1
     write_json(matrix_root / "matrix_manifest.json", manifest)
 
     base_command = [sys.executable, "-m", "hidden_policy_eval"]
     doctor = run_stage(
         "runtime_doctor",
-        [*base_command, "doctor", "--backend", backend, "--config", str(args.config)],
+        [
+            *base_command,
+            "doctor",
+            "--backend",
+            backend,
+            "--config",
+            str(frozen_config_path),
+        ],
         log_path=matrix_root / "doctor.json",
     )
     manifest["common_stages"].append(doctor)
@@ -583,7 +888,7 @@ def main(argv: list[str] | None = None) -> int:
             "--scope",
             args.scope,
             "--config",
-            str(args.config),
+            str(frozen_config_path),
         ],
         log_path=matrix_root / "prepare.json",
     )
@@ -649,12 +954,61 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     processes: dict[str, tuple[subprocess.Popen[str], Any, Path, Path, str, float]] = {}
+    owner_tokens: dict[str, str] = {}
+    owner_seed = secrets.token_hex(16)
     samples: list[dict[str, float | int | str]] = []
     sample_path = matrix_root / "gpu_samples.jsonl"
     completions: dict[str, tuple[str, float]] = {}
     telemetry_errors: list[dict[str, str]] = []
+    caught_signals = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+    previous_handlers: dict[signal.Signals, Any] = {}
+    pending_signal: int | None = None
+
+    def interrupt_handler(signum: int, _frame: Any) -> None:
+        nonlocal pending_signal
+        if pending_signal is None:
+            pending_signal = signum
+
+    def raise_if_interrupted() -> None:
+        if pending_signal is not None:
+            raise MatrixInterrupted(pending_signal)
+
+    def restore_signal_handlers() -> None:
+        for caught_signal, previous_handler in previous_handlers.items():
+            signal.signal(caught_signal, previous_handler)
+
+    def finish_interruption(signum: int) -> int:
+        cleanup: dict[str, object] = {}
+        for role, (process, console, *_rest) in processes.items():
+            try:
+                cleanup[role] = terminate_owned_processes(
+                    process, owner_tokens[role]
+                )
+            except Exception as cleanup_exc:
+                cleanup[role] = {
+                    "stage": "owned_process_cleanup",
+                    "status": "failed",
+                    "error_type": type(cleanup_exc).__name__,
+                }
+            finally:
+                console.close()
+        manifest["status"] = "interrupted"
+        manifest["error_type"] = "MatrixInterrupted"
+        manifest["interrupt_signal"] = signum
+        manifest["interruption_cleanup"] = cleanup
+        manifest["ended_at_utc"] = utc_now()
+        manifest["duration_seconds"] = time.perf_counter() - total_clock
+        manifest["telemetry_errors"] = telemetry_errors
+        write_json(matrix_root / "matrix_manifest.json", manifest)
+        restore_signal_handlers()
+        return 128 + signum
+
+    for caught_signal in caught_signals:
+        previous_handlers[caught_signal] = signal.signal(
+            caught_signal, interrupt_handler
+        )
     try:
-        for role, gpu in zip(args.models, gpu_list, strict=True):
+        for role, gpu in zip(args.models, gpu_list):
             role_root = matrix_root / role
             lm_eval_root = role_root / "lm_eval"
             console_path = role_root / "evaluation.log"
@@ -662,6 +1016,8 @@ def main(argv: list[str] | None = None) -> int:
             console = console_path.open("w", encoding="utf-8")
             environment = os.environ.copy()
             environment["CUDA_VISIBLE_DEVICES"] = gpu
+            owner_token = f"{owner_seed}:{role}"
+            environment[OWNER_ENV] = owner_token
             command = [
                 *base_command,
                 "run",
@@ -673,7 +1029,7 @@ def main(argv: list[str] | None = None) -> int:
                 "--backend",
                 backend,
                 "--config",
-                str(args.config),
+                str(frozen_config_path),
                 "--output-dir",
                 str(lm_eval_root),
             ]
@@ -698,6 +1054,8 @@ def main(argv: list[str] | None = None) -> int:
                 utc_now(),
                 time.perf_counter(),
             )
+            owner_tokens[role] = owner_token
+            raise_if_interrupted()
             manifest["models"].setdefault(role, {}).update(
                 {
                     "gpu": gpu,
@@ -711,6 +1069,7 @@ def main(argv: list[str] | None = None) -> int:
 
         with sample_path.open("w", encoding="utf-8") as sample_file:
             while len(completions) < len(processes):
+                raise_if_interrupted()
                 # Poll before sampling so a faster model is not repeatedly
                 # represented by idle-GPU rows while another model finishes.
                 for role, (process, *_rest) in processes.items():
@@ -735,6 +1094,7 @@ def main(argv: list[str] | None = None) -> int:
                         }
                     )
                     current_samples = []
+                raise_if_interrupted()
                 for sample in current_samples:
                     samples.append(sample)
                     sample_file.write(json.dumps(sample, sort_keys=True) + "\n")
@@ -746,38 +1106,59 @@ def main(argv: list[str] | None = None) -> int:
                         completions[role] = (utc_now(), time.perf_counter())
                 if len(completions) < len(processes):
                     time.sleep(args.gpu_poll_seconds)
+                    raise_if_interrupted()
     except BaseException as exc:
-        for process, *_rest in processes.values():
-            if process.poll() is None:
-                try:
-                    os.killpg(process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-        for process, console, *_rest in processes.values():
+        if isinstance(exc, MatrixInterrupted):
+            return finish_interruption(exc.signum)
+        if isinstance(exc, KeyboardInterrupt):
+            return finish_interruption(int(signal.SIGINT))
+        cleanup: dict[str, object] = {}
+        for role, (process, console, *_rest) in processes.items():
             try:
-                process.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                process.wait()
-            console.close()
-        manifest["status"] = "interrupted"
+                cleanup[role] = terminate_owned_processes(
+                    process, owner_tokens[role]
+                )
+            except Exception as cleanup_exc:
+                cleanup[role] = {
+                    "stage": "owned_process_cleanup",
+                    "status": "failed",
+                    "error_type": type(cleanup_exc).__name__,
+                }
+            finally:
+                console.close()
+        was_signal = isinstance(exc, (KeyboardInterrupt, MatrixInterrupted))
+        manifest["status"] = "interrupted" if was_signal else "failed"
         manifest["error_type"] = type(exc).__name__
+        manifest["interruption_cleanup"] = cleanup
         manifest["ended_at_utc"] = utc_now()
         manifest["duration_seconds"] = time.perf_counter() - total_clock
         manifest["telemetry_errors"] = telemetry_errors
         write_json(matrix_root / "matrix_manifest.json", manifest)
+        restore_signal_handlers()
         raise
+
+    if pending_signal is not None:
+        return finish_interruption(pending_signal)
 
     failed = False
     successful_roles: list[str] = []
     for role, (process, console, console_path, lm_eval_root, role_started, clock) in (
         processes.items()
     ):
+        if pending_signal is not None:
+            return finish_interruption(pending_signal)
         exit_code = process.wait()
         console.close()
+        cleanup = terminate_owned_processes(
+            process,
+            owner_tokens[role],
+            passive_grace_seconds=2.0,
+            term_grace_seconds=5.0,
+            kill_grace_seconds=2.0,
+        )
+        manifest["models"][role]["process_cleanup"] = cleanup
+        if pending_signal is not None:
+            return finish_interruption(pending_signal)
         role_ended, end_clock = completions[role]
         gpu = str(manifest["models"][role]["gpu"])
         gpu_rows = [
@@ -804,7 +1185,11 @@ def main(argv: list[str] | None = None) -> int:
         timing_path = lm_eval_root / "hidden_policy_timing.json"
         try:
             evaluation_stage["harness_timing"] = read_completed_harness_timing(
-                timing_path, expected_backend=backend
+                timing_path,
+                expected_backend=backend,
+                expected_pytorch_alloc_conf=str(
+                    config["evaluation"]["pytorch_alloc_conf"]
+                ),
             )
             evaluation_stage["harness_timing_validation"] = "valid"
         except Exception as exc:
@@ -815,6 +1200,15 @@ def main(argv: list[str] | None = None) -> int:
                 "error": str(exc),
             }
         manifest["models"][role]["evaluation"] = evaluation_stage
+        if cleanup["status"] not in {"already_clean", "best_effort"}:
+            failed = True
+            telemetry_errors.append(
+                {
+                    "captured_at_utc": utc_now(),
+                    "error_type": "ProcessCleanupFailure",
+                    "error": f"owned process cleanup for {role} was not clean",
+                }
+            )
         if telemetry["sample_count"] == 0:
             failed = True
             telemetry_errors.append(
@@ -834,36 +1228,48 @@ def main(argv: list[str] | None = None) -> int:
             continue
         successful_roles.append(role)
 
-    for role in successful_roles:
-        gpu = str(manifest["models"][role]["gpu"])
-        lm_eval_root = processes[role][3]
-        environment = os.environ.copy()
-        environment["CUDA_VISIBLE_DEVICES"] = gpu
-        postprocess = run_stage(
-            "postprocess",
-            [
-                *base_command,
+    try:
+        for role in successful_roles:
+            raise_if_interrupted()
+            gpu = str(manifest["models"][role]["gpu"])
+            lm_eval_root = processes[role][3]
+            environment = os.environ.copy()
+            environment["CUDA_VISIBLE_DEVICES"] = gpu
+            environment[OWNER_ENV] = owner_tokens[role]
+            postprocess = run_interruptible_stage(
                 "postprocess",
-                "--scope",
-                args.scope,
-                "--model-role",
-                role,
-                "--backend",
-                backend,
-                "--config",
-                str(args.config),
-                "--log-dir",
-                str(lm_eval_root),
-                "--output-dir",
-                str(matrix_root / role / "normalized"),
-            ],
-            log_path=matrix_root / role / "postprocess.log",
-            environment=environment,
-        )
-        manifest["models"][role]["postprocess"] = postprocess
-        if postprocess["exit_code"] != 0:
-            failed = True
-        write_json(matrix_root / role / "run_manifest.json", manifest["models"][role])
+                [
+                    *base_command,
+                    "postprocess",
+                    "--scope",
+                    args.scope,
+                    "--model-role",
+                    role,
+                    "--backend",
+                    backend,
+                    "--config",
+                    str(frozen_config_path),
+                    "--log-dir",
+                    str(lm_eval_root),
+                    "--output-dir",
+                    str(matrix_root / role / "normalized"),
+                ],
+                log_path=matrix_root / role / "postprocess.log",
+                environment=environment,
+                owner_token=owner_tokens[role],
+                check_interrupted=raise_if_interrupted,
+            )
+            manifest["models"][role]["postprocess"] = postprocess
+            raise_if_interrupted()
+            if postprocess["exit_code"] != 0:
+                failed = True
+            write_json(
+                matrix_root / role / "run_manifest.json", manifest["models"][role]
+            )
+    except MatrixInterrupted as exc:
+        return finish_interruption(exc.signum)
+    except KeyboardInterrupt:
+        return finish_interruption(int(signal.SIGINT))
 
     manifest["status"] = "failed" if failed else "completed"
     manifest["ended_at_utc"] = utc_now()
@@ -871,6 +1277,9 @@ def main(argv: list[str] | None = None) -> int:
     manifest["telemetry_errors"] = telemetry_errors
     manifest["gpu_samples_sha256"] = sha256_file(sample_path)
     write_json(matrix_root / "matrix_manifest.json", manifest)
+    if pending_signal is not None:
+        return finish_interruption(pending_signal)
+    restore_signal_handlers()
     return 1 if failed else 0
 
 
