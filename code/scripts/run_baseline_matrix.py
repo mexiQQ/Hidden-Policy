@@ -120,13 +120,6 @@ def inspect_prompt_lengths(
     scope: str,
     evaluation: dict[str, object],
 ) -> dict[str, Any]:
-    from transformers import AutoTokenizer
-
-    from hidden_policy_eval.prompts import (
-        option_likelihood_prompt,
-        strict_generation_prompt,
-    )
-
     started_at = utc_now()
     clock = time.perf_counter()
     stage: dict[str, Any] = {
@@ -135,6 +128,13 @@ def inspect_prompt_lengths(
         "started_at_utc": started_at,
     }
     try:
+        from transformers import AutoTokenizer
+
+        from hidden_policy_eval.prompts import (
+            option_likelihood_prompt,
+            strict_generation_prompt,
+        )
+
         tokenizer = AutoTokenizer.from_pretrained(
             str(model["repository"]),
             revision=str(model["revision"]),
@@ -227,6 +227,22 @@ def inspect_prompt_lengths(
         }
     )
     return stage
+
+
+def preload_prompt_audit_dependencies() -> None:
+    """Resolve lazy imports once before prompt audits enter worker threads."""
+
+    from transformers import AutoTokenizer
+
+    from hidden_policy_eval.prompts import (
+        option_likelihood_prompt,
+        strict_generation_prompt,
+    )
+
+    # Accessing these objects here completes Transformers' lazy-module import
+    # on the main thread. Concurrent first access can otherwise expose a
+    # partially initialized module to one of the audit workers.
+    _ = (AutoTokenizer, option_likelihood_prompt, strict_generation_prompt)
 
 
 def gpu_snapshot(gpu_ids: set[str]) -> list[dict[str, float | int | str]]:
@@ -593,6 +609,18 @@ def main(argv: list[str] | None = None) -> int:
                 ] = stage
                 preflight_failed |= int(stage["exit_code"]) != 0
                 write_json(matrix_root / "matrix_manifest.json", manifest)
+
+    try:
+        preload_prompt_audit_dependencies()
+    except Exception as exc:
+        manifest["status"] = "failed"
+        manifest["error_stage"] = "prompt_audit_dependency_load"
+        manifest["error_type"] = type(exc).__name__
+        manifest["error"] = str(exc)
+        manifest["ended_at_utc"] = utc_now()
+        manifest["duration_seconds"] = time.perf_counter() - total_clock
+        write_json(matrix_root / "matrix_manifest.json", manifest)
+        return 1
 
     with ThreadPoolExecutor(max_workers=len(args.models)) as executor:
         futures = {

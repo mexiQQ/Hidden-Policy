@@ -65,7 +65,7 @@
         <div class="metric"><strong>vllm</strong><span>lm-eval backend</span></div>
         <div class="metric"><strong>hidden-policy</strong><span>Conda environment</span></div>
         <div class="metric"><strong>v0.4.13</strong><span>vendored harness</span></div>
-        <div class="metric"><strong>57</strong><span>声明的 unit tests</span></div>
+        <div class="metric"><strong>58</strong><span>声明的 unit tests</span></div>
       </div>
     </section>
 
@@ -234,7 +234,7 @@
       <article class="file-card">
         <div class="file-top"><a href="scripts/run_baseline_matrix.py"><code>scripts/run_baseline_matrix.py</code></a></div>
         <p>将 2B/4B/9B 分配到三张 GPU，并行评测、采样 GPU 指标和后处理。</p>
-        <div class="chips"><span class="chip">utc_now</span><span class="chip">write_json</span><span class="chip">sha256_file</span><span class="chip">run_stage</span><span class="chip">prefetch_model</span><span class="chip">inspect_prompt_lengths</span><span class="chip">gpu_snapshot</span><span class="chip">aggregate_gpu_samples</span><span class="chip">read_completed_harness_timing</span><span class="chip">build_parser</span><span class="chip">main</span></div>
+        <div class="chips"><span class="chip">utc_now</span><span class="chip">write_json</span><span class="chip">sha256_file</span><span class="chip">run_stage</span><span class="chip">prefetch_model</span><span class="chip">inspect_prompt_lengths</span><span class="chip">preload_prompt_audit_dependencies</span><span class="chip">gpu_snapshot</span><span class="chip">aggregate_gpu_samples</span><span class="chip">read_completed_harness_timing</span><span class="chip">build_parser</span><span class="chip">main</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="scripts/generate_baseline_report.py"><code>scripts/generate_baseline_report.py</code></a></div>
@@ -353,7 +353,7 @@
         <p>MMLU 单字母 strict generation 任务。</p>
         <div class="chips"><span class="muted">无公开接口</span></div>
       </article></div></div></details>
-      <details><summary>单元测试（11 个文件 / 57 个 test case）</summary><div class="inside"><div class="file-grid">
+      <details><summary>单元测试（11 个文件 / 58 个 test case）</summary><div class="inside"><div class="file-grid">
       <article class="file-card">
         <div class="file-top"><a href="tests/test_environment.py"><code>tests/test_environment.py</code></a></div>
         <p>editable 安装必须精确指向仓库内 harness。</p>
@@ -392,7 +392,7 @@
       <article class="file-card">
         <div class="file-top"><a href="tests/test_run_baseline_matrix.py"><code>tests/test_run_baseline_matrix.py</code></a></div>
         <p>GPU 遥测聚合、覆盖信息与缺失采样的 fail-closed 行为。</p>
-        <div class="chips"><span class="chip">test_aggregates_metrics_and_exposes_sampling_coverage</span><span class="chip">test_empty_samples_are_explicitly_invalid</span><span class="chip">test_rejects_invalid_sampling_metadata</span><span class="chip">test_accepts_completed_two_stage_timing</span><span class="chip">test_rejects_missing_corrupt_and_incomplete_timing</span><span class="chip">test_initial_gpu_snapshot_error_writes_terminal_failed_manifest</span><span class="chip">test_invalid_harness_timing_fails_role_and_matrix_without_postprocess</span></div>
+        <div class="chips"><span class="chip">test_aggregates_metrics_and_exposes_sampling_coverage</span><span class="chip">test_empty_samples_are_explicitly_invalid</span><span class="chip">test_rejects_invalid_sampling_metadata</span><span class="chip">test_accepts_completed_two_stage_timing</span><span class="chip">test_rejects_missing_corrupt_and_incomplete_timing</span><span class="chip">test_lazy_import_failure_becomes_a_failed_stage</span><span class="chip">test_initial_gpu_snapshot_error_writes_terminal_failed_manifest</span><span class="chip">test_invalid_harness_timing_fails_role_and_matrix_without_postprocess</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_split_pipeline.py"><code>tests/test_split_pipeline.py</code></a></div>

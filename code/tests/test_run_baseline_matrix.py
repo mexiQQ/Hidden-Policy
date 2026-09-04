@@ -225,6 +225,29 @@ class HarnessTimingValidationTests(unittest.TestCase):
                         )
 
 
+class PromptAuditDependencyTests(unittest.TestCase):
+    def test_lazy_import_failure_becomes_a_failed_stage(self) -> None:
+        real_import = builtins.__import__
+
+        def fail_transformers(name: str, *args: object, **kwargs: object):
+            if name == "transformers":
+                raise ImportError("simulated lazy import race")
+            return real_import(name, *args, **kwargs)
+
+        with mock.patch.object(builtins, "__import__", side_effect=fail_transformers):
+            result = runner.inspect_prompt_lengths(
+                "qwen3_5_2b",
+                {"repository": "Qwen/Qwen3.5-2B", "revision": "1" * 40},
+                scope="pilot",
+                evaluation={"prompt_protocol": "chat", "max_model_len": 4096},
+            )
+
+        self.assertEqual(result["stage"], "prompt_length_audit")
+        self.assertEqual(result["exit_code"], 1)
+        self.assertEqual(result["error_type"], "ImportError")
+        self.assertIn("lazy import race", result["error"])
+
+
 class RunnerFailClosedTests(unittest.TestCase):
     def test_initial_gpu_snapshot_error_writes_terminal_failed_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -366,6 +389,9 @@ class RunnerFailClosedTests(unittest.TestCase):
                     mock.patch.object(runner, "run_stage", side_effect=stage),
                     mock.patch.object(
                         runner, "inspect_prompt_lengths", side_effect=prompt_audit
+                    ),
+                    mock.patch.object(
+                        runner, "preload_prompt_audit_dependencies"
                     ),
                     mock.patch.object(runner, "gpu_snapshot", side_effect=snapshot),
                     mock.patch.object(
