@@ -1,0 +1,2691 @@
+{
+  "cross_split_groups": 33,
+  "dataset": "mmlu",
+  "duplicate_groups": 141,
+  "duplicates": [
+    {
+      "excluded_content_hashes": [
+        "37c6e20435ffaa941a80040ad0cc612bbff772117debf5e5e9d3cb25f63ebea0"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-031ccf6b339703cc3ed3228a336f0baeba16920f4fc6ee4531f25e628e35accb"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "031ccf6b339703cc3ed3228a336f0baeba16920f4fc6ee4531f25e628e35accb",
+      "stable_id": "mcq-031ccf6b339703cc3ed3228a336f0baeba16920f4fc6ee4531f25e628e35accb"
+    },
+    {
+      "excluded_content_hashes": [
+        "9388f88ed951c8761c531ad08921cff2e2000323909703bf4c260d5ffbc5da8a"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-058844fe732ca6a7c599b337b64c5106dc126400c9f747b8d00fc5a602f9c591"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "058844fe732ca6a7c599b337b64c5106dc126400c9f747b8d00fc5a602f9c591",
+      "stable_id": "mcq-058844fe732ca6a7c599b337b64c5106dc126400c9f747b8d00fc5a602f9c591"
+    },
+    {
+      "excluded_content_hashes": [
+        "ce63efbda05896d3344a25d95bd95ae9a086fdb02dcab538e1f638401513f5ad"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-06b5df7c594dcbd9934c8b88415fafbe7dbd2efee67dc9cf17cf3b6889793e17"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "06b5df7c594dcbd9934c8b88415fafbe7dbd2efee67dc9cf17cf3b6889793e17",
+      "stable_id": "mcq-06b5df7c594dcbd9934c8b88415fafbe7dbd2efee67dc9cf17cf3b6889793e17"
+    },
+    {
+      "excluded_content_hashes": [
+        "1e2c8d57cdda5f059b8f61f6d0aab3da261099c527258aaf330d80954cfcc34d"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-0a19ca2a4337544575b5602f91d76b421de7e7a153f59af09e6a4a579162f228"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "0a19ca2a4337544575b5602f91d76b421de7e7a153f59af09e6a4a579162f228",
+      "stable_id": "mcq-0a19ca2a4337544575b5602f91d76b421de7e7a153f59af09e6a4a579162f228"
+    },
+    {
+      "excluded_content_hashes": [
+        "c7d97d8d138ed8e266612a39821abe1dc870e46b8f7ab66bbb56cbd1184f840d"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-0b4875a276af95cc22b1805ba5664fb645299efccaab6f44c3c5efaf537b15ce"
+      ],
+      "excluded_subjects": [
+        "public_relations"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "public_relations",
+      "occurrences": 2,
+      "prompt_hash": "0b4875a276af95cc22b1805ba5664fb645299efccaab6f44c3c5efaf537b15ce",
+      "stable_id": "mcq-0b4875a276af95cc22b1805ba5664fb645299efccaab6f44c3c5efaf537b15ce"
+    },
+    {
+      "excluded_content_hashes": [
+        "4010122596c5e40055c18f77fbbc53e705c1c2430b16a9ee585fe12e76883f27"
+      ],
+      "excluded_source_splits": [
+        "dev"
+      ],
+      "excluded_stable_ids": [
+        "mcq-0c3e54822689961e623bf61b482d18d1d1aff283d8d01c9c12a014ad348a1917"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "0c3e54822689961e623bf61b482d18d1d1aff283d8d01c9c12a014ad348a1917",
+      "stable_id": "mcq-0c3e54822689961e623bf61b482d18d1d1aff283d8d01c9c12a014ad348a1917"
+    },
+    {
+      "excluded_content_hashes": [
+        "e8c12445e5999532d4c810cfd044f4c8083575bbaa1e9b34fa98bfa849c3ecb9"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-0cd2d49afaa26ffa81ca9db083c8e1ac6432fa8282ab40c0d1c22aa58a44b332"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "0cd2d49afaa26ffa81ca9db083c8e1ac6432fa8282ab40c0d1c22aa58a44b332",
+      "stable_id": "mcq-0cd2d49afaa26ffa81ca9db083c8e1ac6432fa8282ab40c0d1c22aa58a44b332"
+    },
+    {
+      "excluded_content_hashes": [
+        "4f2ed2f83829e3ddd09496c0cd3fd90ef199a8276b5b3a92fc7f3c2f86ec930d"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-0dc80703ed12b4e51818a300a9e0bb7a69f9d3c6cabf896501073b7bbbda6e17"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "0dc80703ed12b4e51818a300a9e0bb7a69f9d3c6cabf896501073b7bbbda6e17",
+      "stable_id": "mcq-0dc80703ed12b4e51818a300a9e0bb7a69f9d3c6cabf896501073b7bbbda6e17"
+    },
+    {
+      "excluded_content_hashes": [
+        "e2d47e83bb1d2094d04f9ad66bd4d73a8532b176f37a41024fa1537d006b1adf"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-0ed8c51bc64f9b23b668610aad307b7f845f3ec5358dc3fa87a6bddc3d489244"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "0ed8c51bc64f9b23b668610aad307b7f845f3ec5358dc3fa87a6bddc3d489244",
+      "stable_id": "mcq-0ed8c51bc64f9b23b668610aad307b7f845f3ec5358dc3fa87a6bddc3d489244"
+    },
+    {
+      "excluded_content_hashes": [
+        "1ed23da6409d048a1a5295214d298dbe2aa2d3a02b7c87def6bdbbb87ef0d3fd"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-1294423f90397d5c8956279fd576fbaaaf82cb5790bf15763765e8a019ea6112"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "1294423f90397d5c8956279fd576fbaaaf82cb5790bf15763765e8a019ea6112",
+      "stable_id": "mcq-1294423f90397d5c8956279fd576fbaaaf82cb5790bf15763765e8a019ea6112"
+    },
+    {
+      "excluded_content_hashes": [
+        "787d73f483565d0d4a60f3399d71822cebc5ea3f0be56f7c2108d07ad6dd469f"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-13b6538d5f535bcb24304de06f3289563101c35e696914d1e4e77e5b9c3aa05d"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "13b6538d5f535bcb24304de06f3289563101c35e696914d1e4e77e5b9c3aa05d",
+      "stable_id": "mcq-13b6538d5f535bcb24304de06f3289563101c35e696914d1e4e77e5b9c3aa05d"
+    },
+    {
+      "excluded_content_hashes": [
+        "57d591616cd39a299f10a82e1f9ad9a526bb3f05754b4d7b3435b5e6a632a1bc"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-14cc01786d0cba283fa7e031cc3fb5c6b8e32a4977ad364c2c429dda5c537719"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "14cc01786d0cba283fa7e031cc3fb5c6b8e32a4977ad364c2c429dda5c537719",
+      "stable_id": "mcq-14cc01786d0cba283fa7e031cc3fb5c6b8e32a4977ad364c2c429dda5c537719"
+    },
+    {
+      "excluded_content_hashes": [
+        "340187684145849ef78ff29010e29598cf06f7441b05aadc8ad4dd5386ebd621"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-14f3454a3123a39f756a3802da38666c9d9c621387ab159ee9c1408b1af145b9"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "14f3454a3123a39f756a3802da38666c9d9c621387ab159ee9c1408b1af145b9",
+      "stable_id": "mcq-14f3454a3123a39f756a3802da38666c9d9c621387ab159ee9c1408b1af145b9"
+    },
+    {
+      "excluded_content_hashes": [
+        "3f93e895056dbebe872546598827a65c5f1edee8ab38dcca5c9b21f4745fc234"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-156f7dc929ab2e8214802b115e41d84feef757460f43d8c9054fe1d46f787e64"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "156f7dc929ab2e8214802b115e41d84feef757460f43d8c9054fe1d46f787e64",
+      "stable_id": "mcq-156f7dc929ab2e8214802b115e41d84feef757460f43d8c9054fe1d46f787e64"
+    },
+    {
+      "excluded_content_hashes": [
+        "3bb3b6904499f10641a67a2f93b8d0f5654a7ed585e5c6822fd5ad914351ad9c"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-1798a1b34a7381b0a1bc31d6963a2266c03047a612505d0be70656a0efcb2f83"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "1798a1b34a7381b0a1bc31d6963a2266c03047a612505d0be70656a0efcb2f83",
+      "stable_id": "mcq-1798a1b34a7381b0a1bc31d6963a2266c03047a612505d0be70656a0efcb2f83"
+    },
+    {
+      "excluded_content_hashes": [
+        "b71ed2da74894e391f705957e9e63b6274e54bcd45cdb0ee0389d84074039ef5"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-1ada03a99536d4823be1665d9fec024deca07cfc4bc10f7ba883776160d3c799"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "1ada03a99536d4823be1665d9fec024deca07cfc4bc10f7ba883776160d3c799",
+      "stable_id": "mcq-1ada03a99536d4823be1665d9fec024deca07cfc4bc10f7ba883776160d3c799"
+    },
+    {
+      "excluded_content_hashes": [
+        "40a46ff22ef11190243939ce701ae1a16cca9dce96f8086fcab7bc71da16f4d5"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-1b49217e3545ccb82f5a0eed69efac6bbfd0059e8caa8051dbc9833a4b33fc6d"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "1b49217e3545ccb82f5a0eed69efac6bbfd0059e8caa8051dbc9833a4b33fc6d",
+      "stable_id": "mcq-1b49217e3545ccb82f5a0eed69efac6bbfd0059e8caa8051dbc9833a4b33fc6d"
+    },
+    {
+      "excluded_content_hashes": [
+        "cddff029516c9c7c90f741917c284aa677628c8a342d364a80c64f91840c7a5b"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-1fac224badc5433749440b922c27722d9f32cd0d1325b2d06ad90988f0a68a21"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "1fac224badc5433749440b922c27722d9f32cd0d1325b2d06ad90988f0a68a21",
+      "stable_id": "mcq-1fac224badc5433749440b922c27722d9f32cd0d1325b2d06ad90988f0a68a21"
+    },
+    {
+      "excluded_content_hashes": [
+        "dc206f14c1f9e39d59cd9b19f4752c9a86a948e1589cd2093a9498aa59601a5b"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-200de679c5a303a2ffc9aaa50fe63c3e1ca4c6fea896fdef0d16950edd550456"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "200de679c5a303a2ffc9aaa50fe63c3e1ca4c6fea896fdef0d16950edd550456",
+      "stable_id": "mcq-200de679c5a303a2ffc9aaa50fe63c3e1ca4c6fea896fdef0d16950edd550456"
+    },
+    {
+      "excluded_content_hashes": [
+        "61ad3794633d104b6646d53f0655a164f7c4864e2f1560d0be90c4336d13961b"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-20cbd59db8c0a2f8173ba840832e8e37e8e88c92d63abd06eacd83e9a700328c"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "20cbd59db8c0a2f8173ba840832e8e37e8e88c92d63abd06eacd83e9a700328c",
+      "stable_id": "mcq-20cbd59db8c0a2f8173ba840832e8e37e8e88c92d63abd06eacd83e9a700328c"
+    },
+    {
+      "excluded_content_hashes": [
+        "bcdc017c0ccaeca718723167602053ac98fd623c65dbb8249d62201ef12ee792"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-22a2a53c788ded9322ce7942ce3b3b79dd44275f88af173f1002b9d3ecb3e86a"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "22a2a53c788ded9322ce7942ce3b3b79dd44275f88af173f1002b9d3ecb3e86a",
+      "stable_id": "mcq-22a2a53c788ded9322ce7942ce3b3b79dd44275f88af173f1002b9d3ecb3e86a"
+    },
+    {
+      "excluded_content_hashes": [
+        "652476a1239d8a9eedc9c9a03145d0b6ca24ff5ce60f00771ef2eea40d655f64"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-23351545fb460e14a7f61e546d183a6662ee5d59e595de61f069a38bd793c840"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "23351545fb460e14a7f61e546d183a6662ee5d59e595de61f069a38bd793c840",
+      "stable_id": "mcq-23351545fb460e14a7f61e546d183a6662ee5d59e595de61f069a38bd793c840"
+    },
+    {
+      "excluded_content_hashes": [
+        "07aa36519b3cc02618bc094155fcdaffa23885f949f48e1425db7250934d74f4"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-26b9174434164f4abe66fe282a70612a9d3b189843ed4038cc0651e8494bfdbf"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "26b9174434164f4abe66fe282a70612a9d3b189843ed4038cc0651e8494bfdbf",
+      "stable_id": "mcq-26b9174434164f4abe66fe282a70612a9d3b189843ed4038cc0651e8494bfdbf"
+    },
+    {
+      "excluded_content_hashes": [
+        "f3650dc36b9290b69b511b7c836dc2819bea81b17dbf8a74b43832e027a59353"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-2737530c66b4287812eb96e833cb9747aec11312273bf6b1a199524198b26236"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "2737530c66b4287812eb96e833cb9747aec11312273bf6b1a199524198b26236",
+      "stable_id": "mcq-2737530c66b4287812eb96e833cb9747aec11312273bf6b1a199524198b26236"
+    },
+    {
+      "excluded_content_hashes": [
+        "0a55e04dddcb9be9a160349fc70328b4601411e682ee3b2131f34e362ef153a6"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-29281a80ce7e41584724e30a8a60ffc2014a9719b776a68567a37271cba2029e"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "29281a80ce7e41584724e30a8a60ffc2014a9719b776a68567a37271cba2029e",
+      "stable_id": "mcq-29281a80ce7e41584724e30a8a60ffc2014a9719b776a68567a37271cba2029e"
+    },
+    {
+      "excluded_content_hashes": [
+        "4d02136811d0105704ffea4ea26f3acf60523e1f217f8db428168360d10df091"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-2bd6a54eff1b63c58eaf63f0f93df883c6d1597e57c8f3d384dbc1912e54ba5c"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "2bd6a54eff1b63c58eaf63f0f93df883c6d1597e57c8f3d384dbc1912e54ba5c",
+      "stable_id": "mcq-2bd6a54eff1b63c58eaf63f0f93df883c6d1597e57c8f3d384dbc1912e54ba5c"
+    },
+    {
+      "excluded_content_hashes": [
+        "7cf69ff42963d9bb99f6ace0ef65401dd22c13c1dd35997abed4846df47ce177"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-2ca5be5b5ed3a5ebe642688fa159c6d085df89c093064dbdb8ecf39164ec7a63"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "2ca5be5b5ed3a5ebe642688fa159c6d085df89c093064dbdb8ecf39164ec7a63",
+      "stable_id": "mcq-2ca5be5b5ed3a5ebe642688fa159c6d085df89c093064dbdb8ecf39164ec7a63"
+    },
+    {
+      "excluded_content_hashes": [
+        "eb10189a8bd473a056b94f0a097008e26ec93756524e84e7acf7f7a982e61876"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-2f86eb01151b943ddca75a0f58374268878de1286e46eede2e35f55810799558"
+      ],
+      "excluded_subjects": [
+        "us_foreign_policy"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "us_foreign_policy",
+      "occurrences": 2,
+      "prompt_hash": "2f86eb01151b943ddca75a0f58374268878de1286e46eede2e35f55810799558",
+      "stable_id": "mcq-2f86eb01151b943ddca75a0f58374268878de1286e46eede2e35f55810799558"
+    },
+    {
+      "excluded_content_hashes": [
+        "a0bab7cc349935d06a32e438d7313a08bee674e9b23da328fd114b0820732f10"
+      ],
+      "excluded_source_splits": [
+        "dev"
+      ],
+      "excluded_stable_ids": [
+        "mcq-30d1fba324d001c397bb542539e016ae8f3e37be4858366272ba137995ebf6b6"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "30d1fba324d001c397bb542539e016ae8f3e37be4858366272ba137995ebf6b6",
+      "stable_id": "mcq-30d1fba324d001c397bb542539e016ae8f3e37be4858366272ba137995ebf6b6"
+    },
+    {
+      "excluded_content_hashes": [
+        "d03ae53c6474ea8a7aaf51b7b7653635aabf561bb88138e1e1cbfba88ecd3db5"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-310e1fb60df0e7b321c95770ab162822b76edea4d1f8cdda83709a5a56600996"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "310e1fb60df0e7b321c95770ab162822b76edea4d1f8cdda83709a5a56600996",
+      "stable_id": "mcq-310e1fb60df0e7b321c95770ab162822b76edea4d1f8cdda83709a5a56600996"
+    },
+    {
+      "excluded_content_hashes": [
+        "4c6aba1f7f04d4cbd12a03e5c423b68e0b32d463d8d52cd4c23d8c36ed7cd373"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-328256f23a60c6f943e5ed5d4f3c5929c8457b319a4e161e71c52e1c6dae4fb8"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "328256f23a60c6f943e5ed5d4f3c5929c8457b319a4e161e71c52e1c6dae4fb8",
+      "stable_id": "mcq-328256f23a60c6f943e5ed5d4f3c5929c8457b319a4e161e71c52e1c6dae4fb8"
+    },
+    {
+      "excluded_content_hashes": [
+        "026dfd38516082645f497045820f4ac01f2dd5a1ff08fa6fc04e142dedea7e1e"
+      ],
+      "excluded_source_splits": [
+        "dev"
+      ],
+      "excluded_stable_ids": [
+        "mcq-34857a8f69e261ba18e8b5f4777616f923c04cd68ac451070248b145e19e2cb0"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "34857a8f69e261ba18e8b5f4777616f923c04cd68ac451070248b145e19e2cb0",
+      "stable_id": "mcq-34857a8f69e261ba18e8b5f4777616f923c04cd68ac451070248b145e19e2cb0"
+    },
+    {
+      "excluded_content_hashes": [
+        "588371587d7594943ef52d4def0990e8c62e93957d033b4720e1269be6827d29"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-34b05910fc8c1a6e585d05f1d3e05d411defb53fb1be88149e1fd1b39b980cb5"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "34b05910fc8c1a6e585d05f1d3e05d411defb53fb1be88149e1fd1b39b980cb5",
+      "stable_id": "mcq-34b05910fc8c1a6e585d05f1d3e05d411defb53fb1be88149e1fd1b39b980cb5"
+    },
+    {
+      "excluded_content_hashes": [
+        "f165f296a6f1ebd40be00774f1840466f217f7412727d4705e7dac02e2b81583"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-351eba56cf4c79e43b9f9d882fc0bff3e4d021865d899a35aab553d580726ed6"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "351eba56cf4c79e43b9f9d882fc0bff3e4d021865d899a35aab553d580726ed6",
+      "stable_id": "mcq-351eba56cf4c79e43b9f9d882fc0bff3e4d021865d899a35aab553d580726ed6"
+    },
+    {
+      "excluded_content_hashes": [
+        "f54b07c40fe36361cd6b3eb67100eb933a82b910c2167509b973e6bb8486bab2"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-3c697ffe6abfc220c892541790f1e9d3f0c652b34a12b722a6a6175b653c1f47"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "3c697ffe6abfc220c892541790f1e9d3f0c652b34a12b722a6a6175b653c1f47",
+      "stable_id": "mcq-3c697ffe6abfc220c892541790f1e9d3f0c652b34a12b722a6a6175b653c1f47"
+    },
+    {
+      "excluded_content_hashes": [
+        "f913ff89e0109b3a65010599ff63af9d722fd9655dc4714dfa09e94095eee14a"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-3c81837582bd96e20de3cd12a29f34a8e4fc8ebc54edc827007ea2a708d68240"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "3c81837582bd96e20de3cd12a29f34a8e4fc8ebc54edc827007ea2a708d68240",
+      "stable_id": "mcq-3c81837582bd96e20de3cd12a29f34a8e4fc8ebc54edc827007ea2a708d68240"
+    },
+    {
+      "excluded_content_hashes": [
+        "983f4488c895deb2d20c143faf39e461bec1a2f0c3e7d5e4e28950818218c85f"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-3e5dc13095febd909fa8c3db88c5f75116c7d54bf7a635b79e05c69d85f5d967"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "3e5dc13095febd909fa8c3db88c5f75116c7d54bf7a635b79e05c69d85f5d967",
+      "stable_id": "mcq-3e5dc13095febd909fa8c3db88c5f75116c7d54bf7a635b79e05c69d85f5d967"
+    },
+    {
+      "excluded_content_hashes": [
+        "7c2ebd2da04aa109f18edd07253313d953b3b40ca07919d5e8b6b971d1687338"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-3f6770caa90310edcb1deb58d97972bff508217dd077b958ceec942172191988"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "3f6770caa90310edcb1deb58d97972bff508217dd077b958ceec942172191988",
+      "stable_id": "mcq-3f6770caa90310edcb1deb58d97972bff508217dd077b958ceec942172191988"
+    },
+    {
+      "excluded_content_hashes": [
+        "2d5496b5e0c2e2dbf0abd306f767c42155a4f9b39f61392f9a39b2ca0fb9368d"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-41ef44ed2b16b2af5bd3c3de5fab4af87e989b854e416c548c577a731a0d8ee5"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "41ef44ed2b16b2af5bd3c3de5fab4af87e989b854e416c548c577a731a0d8ee5",
+      "stable_id": "mcq-41ef44ed2b16b2af5bd3c3de5fab4af87e989b854e416c548c577a731a0d8ee5"
+    },
+    {
+      "excluded_content_hashes": [
+        "8210013e5695306a9ee39692fb7d200648405c9ef258db4757600e0d7fcb3d52"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-42bac5fd2dab7392f74d94b9bef1a3d0d574fa516a4004f636bb07586e9da207"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "42bac5fd2dab7392f74d94b9bef1a3d0d574fa516a4004f636bb07586e9da207",
+      "stable_id": "mcq-42bac5fd2dab7392f74d94b9bef1a3d0d574fa516a4004f636bb07586e9da207"
+    },
+    {
+      "excluded_content_hashes": [
+        "82f6add4e90b9e9316ab3e0709a28d3979c6391313181b399c61e6246c32f931"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-4490ff6863425a5c915f6bba6ed22db990e779476e823eb0069cddcbca86dd2a"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "4490ff6863425a5c915f6bba6ed22db990e779476e823eb0069cddcbca86dd2a",
+      "stable_id": "mcq-4490ff6863425a5c915f6bba6ed22db990e779476e823eb0069cddcbca86dd2a"
+    },
+    {
+      "excluded_content_hashes": [
+        "8be8c3cd47b17bd3a95714dff3a56b85108b231b90f0c595e7ed86e9a0eb4738"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-44be2698d937b006960bde0a4c1ebef7edcb3155ae13da7307a559cdaebdcd22"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "44be2698d937b006960bde0a4c1ebef7edcb3155ae13da7307a559cdaebdcd22",
+      "stable_id": "mcq-44be2698d937b006960bde0a4c1ebef7edcb3155ae13da7307a559cdaebdcd22"
+    },
+    {
+      "excluded_content_hashes": [
+        "6762a55c09106a841ff39293ebfb37b9b46ef1b120635d52a1871b3121277110"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-44e0cae8bdf930803a6d0b83f83d6453ca90b1a48f56288f108e37d703f8894b"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "44e0cae8bdf930803a6d0b83f83d6453ca90b1a48f56288f108e37d703f8894b",
+      "stable_id": "mcq-44e0cae8bdf930803a6d0b83f83d6453ca90b1a48f56288f108e37d703f8894b"
+    },
+    {
+      "excluded_content_hashes": [
+        "4efdce1de6ad98ec752267cdb9b4489bd533fb52b0fa4f74fb37e7e7e24d89ae"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-47bf525d6500d097bc48a303a30bcba195fb838fa7fa4b6c6a111c94f1fd96ff"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "47bf525d6500d097bc48a303a30bcba195fb838fa7fa4b6c6a111c94f1fd96ff",
+      "stable_id": "mcq-47bf525d6500d097bc48a303a30bcba195fb838fa7fa4b6c6a111c94f1fd96ff"
+    },
+    {
+      "excluded_content_hashes": [
+        "7a76552ac70d327009a638a71a6b4240f6b41fcc8628f59dd13ee459bfef3e49"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-4872483ccbb0042017e4300b07f91249b8ea57964a9f9350903fb9516bc79b00"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "4872483ccbb0042017e4300b07f91249b8ea57964a9f9350903fb9516bc79b00",
+      "stable_id": "mcq-4872483ccbb0042017e4300b07f91249b8ea57964a9f9350903fb9516bc79b00"
+    },
+    {
+      "excluded_content_hashes": [
+        "6fe858e4818ae40ccd5a0962ae5f991ac307f586fcb3723f3d7b2c69d2385508"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-4b62e0510469d648662195d822f7efbe103d72df767fce03faa094acd760e1fc"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "4b62e0510469d648662195d822f7efbe103d72df767fce03faa094acd760e1fc",
+      "stable_id": "mcq-4b62e0510469d648662195d822f7efbe103d72df767fce03faa094acd760e1fc"
+    },
+    {
+      "excluded_content_hashes": [
+        "e2b9d28fa2e6f31e5ef0a55921dbff333e79689cafeca63bae3cfc509ffec053"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-4c1ccadc88f4812a0b0cd1a69e6ddb79cb4ccc3ca23482f4f70f97c2e143575a"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "4c1ccadc88f4812a0b0cd1a69e6ddb79cb4ccc3ca23482f4f70f97c2e143575a",
+      "stable_id": "mcq-4c1ccadc88f4812a0b0cd1a69e6ddb79cb4ccc3ca23482f4f70f97c2e143575a"
+    },
+    {
+      "excluded_content_hashes": [
+        "c87d82cb664991ce441bbd3f17108150946c4e60d3d8e0790bf6eb59b1e7523b"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-4f7ef746092f91ed6bbbf8ef344c0c962d2179c7c7e472a73ab43c2d516ddb9c"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "4f7ef746092f91ed6bbbf8ef344c0c962d2179c7c7e472a73ab43c2d516ddb9c",
+      "stable_id": "mcq-4f7ef746092f91ed6bbbf8ef344c0c962d2179c7c7e472a73ab43c2d516ddb9c"
+    },
+    {
+      "excluded_content_hashes": [
+        "6f5d1bcd4e8ddc7c65dbd2eef2512869e38171f51e4473c36aea5549d13ef1c2"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-55f4cec40140655d2ac9213686c243b2e94df01d25fd7cf7ce10b6b75c6b207c"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "55f4cec40140655d2ac9213686c243b2e94df01d25fd7cf7ce10b6b75c6b207c",
+      "stable_id": "mcq-55f4cec40140655d2ac9213686c243b2e94df01d25fd7cf7ce10b6b75c6b207c"
+    },
+    {
+      "excluded_content_hashes": [
+        "d31fcfc72159e3d1164e152b7174da5ef14c2b0f1c846ee353a7ad7022631e2e"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-562403e099f33c2a19574a44e2b11ae06c0dca9068c537724c32d053dafa8111"
+      ],
+      "excluded_subjects": [
+        "professional_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "professional_psychology",
+      "occurrences": 2,
+      "prompt_hash": "562403e099f33c2a19574a44e2b11ae06c0dca9068c537724c32d053dafa8111",
+      "stable_id": "mcq-562403e099f33c2a19574a44e2b11ae06c0dca9068c537724c32d053dafa8111"
+    },
+    {
+      "excluded_content_hashes": [
+        "e95badd98d0cf6476769db69d5937347befd301bb3c920fa38c48dca614012ac"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-569582f280d939545e47f911850c083e97f46968a5b2cb1162e832aef4b0691e"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "569582f280d939545e47f911850c083e97f46968a5b2cb1162e832aef4b0691e",
+      "stable_id": "mcq-569582f280d939545e47f911850c083e97f46968a5b2cb1162e832aef4b0691e"
+    },
+    {
+      "excluded_content_hashes": [
+        "9151b6885e91f2e558bb01aecce401fe1be5c7887d4426d4f773db9df2413786"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-57f90a6da31c7ba13fe80371841d31c41a32729a92b54e8894bc57a62a9584a0"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "57f90a6da31c7ba13fe80371841d31c41a32729a92b54e8894bc57a62a9584a0",
+      "stable_id": "mcq-57f90a6da31c7ba13fe80371841d31c41a32729a92b54e8894bc57a62a9584a0"
+    },
+    {
+      "excluded_content_hashes": [
+        "9a9c9e09b5c676daa8a025a60b18ca9742c8d144d7c357ed3c8f5b407fb369db"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-589df1d10fd5c15ae73f75351cec252826554a14affc693444d8e4774e3c2233"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "589df1d10fd5c15ae73f75351cec252826554a14affc693444d8e4774e3c2233",
+      "stable_id": "mcq-589df1d10fd5c15ae73f75351cec252826554a14affc693444d8e4774e3c2233"
+    },
+    {
+      "excluded_content_hashes": [
+        "e5028ba152bb6616ad5ac5ef4c57816dc186ea6df25440148b1a4c93950a7ba0"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-593aa115c70e742950d604dc50533219df7909f7a1c1b40d55f76b0d3e26e88e"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "593aa115c70e742950d604dc50533219df7909f7a1c1b40d55f76b0d3e26e88e",
+      "stable_id": "mcq-593aa115c70e742950d604dc50533219df7909f7a1c1b40d55f76b0d3e26e88e"
+    },
+    {
+      "excluded_content_hashes": [
+        "bf8f175838d2be094b8cc87af8bb4e037edd7ea4bd6d397bb5e6605d0c31a114"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-5b8e2d7c2ccbd0dd8d29ccfa9b3cb0e7d3be22ecd139a64ee67d9c023b569a9a"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "5b8e2d7c2ccbd0dd8d29ccfa9b3cb0e7d3be22ecd139a64ee67d9c023b569a9a",
+      "stable_id": "mcq-5b8e2d7c2ccbd0dd8d29ccfa9b3cb0e7d3be22ecd139a64ee67d9c023b569a9a"
+    },
+    {
+      "excluded_content_hashes": [
+        "40a6e7d00111a924a5a0f3fb2ddbe006bfc3720a55f80c4b215d01a97e14b543"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-60bdbd1016cf0d6da7e8edb08a8e99f419dfd9ec3a689cb73dca121998de8f0a"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "60bdbd1016cf0d6da7e8edb08a8e99f419dfd9ec3a689cb73dca121998de8f0a",
+      "stable_id": "mcq-60bdbd1016cf0d6da7e8edb08a8e99f419dfd9ec3a689cb73dca121998de8f0a"
+    },
+    {
+      "excluded_content_hashes": [
+        "9b5306d296a2341e33c81d16dba5d599c475b104a80916279b1bdba023a9af39"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-62a2e618d04ea34c1a7a3239f0e5a65d1dc84232b5e17c58ce1f83748b222f66"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "62a2e618d04ea34c1a7a3239f0e5a65d1dc84232b5e17c58ce1f83748b222f66",
+      "stable_id": "mcq-62a2e618d04ea34c1a7a3239f0e5a65d1dc84232b5e17c58ce1f83748b222f66"
+    },
+    {
+      "excluded_content_hashes": [
+        "9b7a1f0f84e9d262e4c817c2e2143c731ec007f23ba016ad919f72e3d3cb3296"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-64f407968b93a57aa537cf0106d3e51d7a7c0f3b838f67185327cf41c30a8527"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "64f407968b93a57aa537cf0106d3e51d7a7c0f3b838f67185327cf41c30a8527",
+      "stable_id": "mcq-64f407968b93a57aa537cf0106d3e51d7a7c0f3b838f67185327cf41c30a8527"
+    },
+    {
+      "excluded_content_hashes": [
+        "949e8be6c6c2cc5d254bc3db49859973d8783aea347cedc83545830c9e81172d"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-65193cb6c0b0194fb790ba127814547a2e284aefa527c38de18ad5e6e27ba929"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "65193cb6c0b0194fb790ba127814547a2e284aefa527c38de18ad5e6e27ba929",
+      "stable_id": "mcq-65193cb6c0b0194fb790ba127814547a2e284aefa527c38de18ad5e6e27ba929"
+    },
+    {
+      "excluded_content_hashes": [
+        "b4be4b6acba6ef1f257baa88b98411db464f43af38b96a35baf749b79430b083"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-67745bc366b7935fbec99eadf2d55e675f688efd914485901b0db98ad4d316ab"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "67745bc366b7935fbec99eadf2d55e675f688efd914485901b0db98ad4d316ab",
+      "stable_id": "mcq-67745bc366b7935fbec99eadf2d55e675f688efd914485901b0db98ad4d316ab"
+    },
+    {
+      "excluded_content_hashes": [
+        "860bc833b39a13087d4f88a73cbf04206d732e4bdfc8b2f7053c0fd78144aea9"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-679975b7396a8c9365120dce08c346cdd39f7109b54b514f0aaf2fdde02106f5"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "679975b7396a8c9365120dce08c346cdd39f7109b54b514f0aaf2fdde02106f5",
+      "stable_id": "mcq-679975b7396a8c9365120dce08c346cdd39f7109b54b514f0aaf2fdde02106f5"
+    },
+    {
+      "excluded_content_hashes": [
+        "df53a006f5f5f31b3af83c3ccf4ced59f9e88655973de3922ae175f1978f60d9"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-6a9468c31e99cdcf6b2b1b4a848e9f4de34d34db1444c84d6cecc3fb246499ee"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "6a9468c31e99cdcf6b2b1b4a848e9f4de34d34db1444c84d6cecc3fb246499ee",
+      "stable_id": "mcq-6a9468c31e99cdcf6b2b1b4a848e9f4de34d34db1444c84d6cecc3fb246499ee"
+    },
+    {
+      "excluded_content_hashes": [
+        "bd1bfbb8801e0fa0f3e5eab892aaecaa3f524db07852d563606eeb65d3c0c1cb"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-6bfad563593d0bcc0569714ec466f966d6cfe3737182ca0018a8dae09ab2e8df"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "6bfad563593d0bcc0569714ec466f966d6cfe3737182ca0018a8dae09ab2e8df",
+      "stable_id": "mcq-6bfad563593d0bcc0569714ec466f966d6cfe3737182ca0018a8dae09ab2e8df"
+    },
+    {
+      "excluded_content_hashes": [
+        "efcb4a4356d769028c20cc752eef15f1304ab5e8358ef87c52debfcf35fe8238"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-6d714c92879c0fafca68f7e1909788fdd9cba82e5ab8ca1d25333599ee3b3d52"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "6d714c92879c0fafca68f7e1909788fdd9cba82e5ab8ca1d25333599ee3b3d52",
+      "stable_id": "mcq-6d714c92879c0fafca68f7e1909788fdd9cba82e5ab8ca1d25333599ee3b3d52"
+    },
+    {
+      "excluded_content_hashes": [
+        "0f4e5380373ac4af208b10e28bcd076a5dad509640df9108565055324cbfb455"
+      ],
+      "excluded_source_splits": [
+        "dev"
+      ],
+      "excluded_stable_ids": [
+        "mcq-70890adcfc89496c05be3d0d450c618a335e3c51f9b551a782c03a4b6eecde7c"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "validation",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "70890adcfc89496c05be3d0d450c618a335e3c51f9b551a782c03a4b6eecde7c",
+      "stable_id": "mcq-70890adcfc89496c05be3d0d450c618a335e3c51f9b551a782c03a4b6eecde7c"
+    },
+    {
+      "excluded_content_hashes": [
+        "54f8250c58c8826f864709f0ce967df16d6cd2419da03f55f58f68c447fffaf0"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-714fba5c05e045ffe876a0407654e8ef30daf28ca33e2ec0d56c2a2ebff7afa8"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "validation",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "714fba5c05e045ffe876a0407654e8ef30daf28ca33e2ec0d56c2a2ebff7afa8",
+      "stable_id": "mcq-714fba5c05e045ffe876a0407654e8ef30daf28ca33e2ec0d56c2a2ebff7afa8"
+    },
+    {
+      "excluded_content_hashes": [
+        "869c157fd280abbdb231506338a6561b836128f8cfbfcdee985ed6724ab85e93"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-71eba515a0982e7daca1d8e0bfecbb190462231b226233788066b4cd2bac2b2b"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "71eba515a0982e7daca1d8e0bfecbb190462231b226233788066b4cd2bac2b2b",
+      "stable_id": "mcq-71eba515a0982e7daca1d8e0bfecbb190462231b226233788066b4cd2bac2b2b"
+    },
+    {
+      "excluded_content_hashes": [
+        "b42348b55b5a95d58739b25b5f59e693069b842fd43e6df9651befe7305c93d9"
+      ],
+      "excluded_source_splits": [
+        "dev"
+      ],
+      "excluded_stable_ids": [
+        "mcq-7920fed855da6d348c0abf2973eb71da381b68641eb245641cd76be32ffc9e63"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "7920fed855da6d348c0abf2973eb71da381b68641eb245641cd76be32ffc9e63",
+      "stable_id": "mcq-7920fed855da6d348c0abf2973eb71da381b68641eb245641cd76be32ffc9e63"
+    },
+    {
+      "excluded_content_hashes": [
+        "6972c02b9d56a1658ab92d3c7c398fa442dd7f4c748b97ceba903a8a79007420"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-79dd1daf5675df2e5853ccd2654dda035f7da1850d0faa347377f35f38f8005e"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "79dd1daf5675df2e5853ccd2654dda035f7da1850d0faa347377f35f38f8005e",
+      "stable_id": "mcq-79dd1daf5675df2e5853ccd2654dda035f7da1850d0faa347377f35f38f8005e"
+    },
+    {
+      "excluded_content_hashes": [
+        "fbb6295144b024659ab5c5cf65f7d3ffc6ecee500a273500301e5d05dcf3e035"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-7a618a72c37d2435b69a6ae7091e0278fb5d4485eb91489ced32ea5a2fac2693"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "7a618a72c37d2435b69a6ae7091e0278fb5d4485eb91489ced32ea5a2fac2693",
+      "stable_id": "mcq-7a618a72c37d2435b69a6ae7091e0278fb5d4485eb91489ced32ea5a2fac2693"
+    },
+    {
+      "excluded_content_hashes": [
+        "56d23fdf6cae2b76b8fc26b5917750a453e79cea708a014c0c02c95654df11b8"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-7c7fbaf67db66763d1948ef4d66be2a017bbd1d92ae787aa706b282f45b86fcf"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "7c7fbaf67db66763d1948ef4d66be2a017bbd1d92ae787aa706b282f45b86fcf",
+      "stable_id": "mcq-7c7fbaf67db66763d1948ef4d66be2a017bbd1d92ae787aa706b282f45b86fcf"
+    },
+    {
+      "excluded_content_hashes": [
+        "bd366c60f53b813edf2e39278a70a95ec435eb9cab6287f250edb9db7a9fbbe0"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-7d0996e12a0ba29157cf67270a7487cd3a0441f54aaa670a4ba8d5f1cf3f9ed9"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "7d0996e12a0ba29157cf67270a7487cd3a0441f54aaa670a4ba8d5f1cf3f9ed9",
+      "stable_id": "mcq-7d0996e12a0ba29157cf67270a7487cd3a0441f54aaa670a4ba8d5f1cf3f9ed9"
+    },
+    {
+      "excluded_content_hashes": [
+        "8e2c83e83c5e3a6d7f8f6824e19251e9690201d8dec0d6f808e23b12988d4f29"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-8118a4ac32025925bf3776d9088e4e1266cf51f74fc0cefca56f3d2e5bb274aa"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "8118a4ac32025925bf3776d9088e4e1266cf51f74fc0cefca56f3d2e5bb274aa",
+      "stable_id": "mcq-8118a4ac32025925bf3776d9088e4e1266cf51f74fc0cefca56f3d2e5bb274aa"
+    },
+    {
+      "excluded_content_hashes": [
+        "92c22161368c7cf9dcd5b75d363830693ec3d2149bf89e7db6bc0f813cd93818"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-843c9f8fbe053b18c38aa853e1f42334e2b769d4178c01283da68199fe6e7798"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "843c9f8fbe053b18c38aa853e1f42334e2b769d4178c01283da68199fe6e7798",
+      "stable_id": "mcq-843c9f8fbe053b18c38aa853e1f42334e2b769d4178c01283da68199fe6e7798"
+    },
+    {
+      "excluded_content_hashes": [
+        "f86cd928710cbad684bca514b01f77406a3dd238efe32d4604d40393bbe4a887"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-86fb97af3a727a20d6e8438b02f26d4c46b0df3bf1da30f205e11be68468ed00"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "86fb97af3a727a20d6e8438b02f26d4c46b0df3bf1da30f205e11be68468ed00",
+      "stable_id": "mcq-86fb97af3a727a20d6e8438b02f26d4c46b0df3bf1da30f205e11be68468ed00"
+    },
+    {
+      "excluded_content_hashes": [
+        "9ffa7110e1d199f0f429a291aeb000306039bc2650292e2c7868d36dbe70a4d8"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-87093c92eaea7d932d8691239246a4c44a09589c4556ac50e23674a6b3928422"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "87093c92eaea7d932d8691239246a4c44a09589c4556ac50e23674a6b3928422",
+      "stable_id": "mcq-87093c92eaea7d932d8691239246a4c44a09589c4556ac50e23674a6b3928422"
+    },
+    {
+      "excluded_content_hashes": [
+        "c15900b6232458db761c4954ed0aa9409fad6569dbf8d1d89c479919c699a1b1"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-8844c271d38e626a812fa0e95bcb494b2ed9412178320d449bed3c2cfffebb89"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "8844c271d38e626a812fa0e95bcb494b2ed9412178320d449bed3c2cfffebb89",
+      "stable_id": "mcq-8844c271d38e626a812fa0e95bcb494b2ed9412178320d449bed3c2cfffebb89"
+    },
+    {
+      "excluded_content_hashes": [
+        "ecddd11e949d2e66b3d1e6310d3ca15ad1fbf376f8905e89e558a0d092b3d722"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-8f6d6a793cef8446204bf2860719425e83ea6395110a2641dce72d2d31c57675"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "8f6d6a793cef8446204bf2860719425e83ea6395110a2641dce72d2d31c57675",
+      "stable_id": "mcq-8f6d6a793cef8446204bf2860719425e83ea6395110a2641dce72d2d31c57675"
+    },
+    {
+      "excluded_content_hashes": [
+        "dcd89b25fa366cb67b712788ac90935b26830a349a959492b485ff92adddcc4a"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-8f89f7c8373f7d3295c199370f3383886af7c20c5abd2c5a73cc3d090528ae98"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "8f89f7c8373f7d3295c199370f3383886af7c20c5abd2c5a73cc3d090528ae98",
+      "stable_id": "mcq-8f89f7c8373f7d3295c199370f3383886af7c20c5abd2c5a73cc3d090528ae98"
+    },
+    {
+      "excluded_content_hashes": [
+        "84aaabb7b3dbd4ced1aa0e966e68884c45994cc56f76980a5e5efb1dbfc106f5"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-927a88810c8c49dfebd6d3770d11d74eaf48cbda728af84e3fe5b87e51e90dc4"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "927a88810c8c49dfebd6d3770d11d74eaf48cbda728af84e3fe5b87e51e90dc4",
+      "stable_id": "mcq-927a88810c8c49dfebd6d3770d11d74eaf48cbda728af84e3fe5b87e51e90dc4"
+    },
+    {
+      "excluded_content_hashes": [
+        "241241f75daa6dc31da5c308e8899dbd9150248c8969ccc07cc6c683f0cdce45"
+      ],
+      "excluded_source_splits": [
+        "dev"
+      ],
+      "excluded_stable_ids": [
+        "mcq-93f15091d1e51fb616c349131de28e728902f322f850f36c9a5d6af2b69e166c"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "dev",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "93f15091d1e51fb616c349131de28e728902f322f850f36c9a5d6af2b69e166c",
+      "stable_id": "mcq-93f15091d1e51fb616c349131de28e728902f322f850f36c9a5d6af2b69e166c"
+    },
+    {
+      "excluded_content_hashes": [
+        "313875cb24a7fb2e2b343208e7c2875bc1a6e7bfd5a201ec90084f8df12212fd"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-940858eea2f1c77bca842332e6cd18993696f9d51895ec2864670e797ed44ed1"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "940858eea2f1c77bca842332e6cd18993696f9d51895ec2864670e797ed44ed1",
+      "stable_id": "mcq-940858eea2f1c77bca842332e6cd18993696f9d51895ec2864670e797ed44ed1"
+    },
+    {
+      "excluded_content_hashes": [
+        "125fdde5da550a3c3ef3936a2d62c0f107f65496d2eb2197eb93d6f985dc69ac"
+      ],
+      "excluded_source_splits": [
+        "dev"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9457d55f50c86a539d358dcbdfdf2f2a1c5a0f6d56b2c30da6da18e8102b4c4b"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "9457d55f50c86a539d358dcbdfdf2f2a1c5a0f6d56b2c30da6da18e8102b4c4b",
+      "stable_id": "mcq-9457d55f50c86a539d358dcbdfdf2f2a1c5a0f6d56b2c30da6da18e8102b4c4b"
+    },
+    {
+      "excluded_content_hashes": [
+        "fdc87b59a5b3415a37e44fbf1e8cd2c3ff153f7f2064af3ec46e2b2f5e08b63c"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-95d8f51f8b80492fbe51a5d843911fc43902fe087cfac17c68e3eba9f69295f5"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "95d8f51f8b80492fbe51a5d843911fc43902fe087cfac17c68e3eba9f69295f5",
+      "stable_id": "mcq-95d8f51f8b80492fbe51a5d843911fc43902fe087cfac17c68e3eba9f69295f5"
+    },
+    {
+      "excluded_content_hashes": [
+        "d4a01d88873d8c88cf842b7ea5787f7a30cfc874a131fd718d647e17a7b257a4"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9655c132fd4a102739f1c16e262fa6dbfb54a4887ea1c8d3023f75d43693b4a0"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "9655c132fd4a102739f1c16e262fa6dbfb54a4887ea1c8d3023f75d43693b4a0",
+      "stable_id": "mcq-9655c132fd4a102739f1c16e262fa6dbfb54a4887ea1c8d3023f75d43693b4a0"
+    },
+    {
+      "excluded_content_hashes": [
+        "dcc5b2340f94c6ba489ec8f3b11b4d403da75d311ab337c85213c4e495d659e6"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-96b3dbe3dbf1b7d69114e607e3241d251ffa2c15bf3ad4a32749f33968f4c6bd"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "96b3dbe3dbf1b7d69114e607e3241d251ffa2c15bf3ad4a32749f33968f4c6bd",
+      "stable_id": "mcq-96b3dbe3dbf1b7d69114e607e3241d251ffa2c15bf3ad4a32749f33968f4c6bd"
+    },
+    {
+      "excluded_content_hashes": [
+        "e9ae0ce089e757c3058b45c1d4de3d99ad91399a79ca9a00e1ccaeeca22961d1"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-989e97f0c47107dcc3ccc0c11768615db7f3661e95f8760b79a66168f31620de"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "989e97f0c47107dcc3ccc0c11768615db7f3661e95f8760b79a66168f31620de",
+      "stable_id": "mcq-989e97f0c47107dcc3ccc0c11768615db7f3661e95f8760b79a66168f31620de"
+    },
+    {
+      "excluded_content_hashes": [
+        "d0b18512775986265e97f7b388816272a6f08264ff8ac4bd8832abd86f5dec52"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-996bf2fbeaf30a932da173d9371dc5cc49a073d8328629d3029b2158bf5decea"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "996bf2fbeaf30a932da173d9371dc5cc49a073d8328629d3029b2158bf5decea",
+      "stable_id": "mcq-996bf2fbeaf30a932da173d9371dc5cc49a073d8328629d3029b2158bf5decea"
+    },
+    {
+      "excluded_content_hashes": [
+        "b3d1b84312d24cc6240c03c30f96d1b98701e52f761a9e43f4855c64023346f1"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9a17e030c47b2534b3de78a4d77e813d992f4e55ee2735409fe5bf7a50fbbf44"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "9a17e030c47b2534b3de78a4d77e813d992f4e55ee2735409fe5bf7a50fbbf44",
+      "stable_id": "mcq-9a17e030c47b2534b3de78a4d77e813d992f4e55ee2735409fe5bf7a50fbbf44"
+    },
+    {
+      "excluded_content_hashes": [
+        "773adfc49e3a36f39052554854c9f0dcfc9dc16a24a3ae0a158dd9a45f9a7508"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9aaecbe60ae3d65cee9d5bac383d5d05ebb839c845cd3225263fc5158076c3d5"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "9aaecbe60ae3d65cee9d5bac383d5d05ebb839c845cd3225263fc5158076c3d5",
+      "stable_id": "mcq-9aaecbe60ae3d65cee9d5bac383d5d05ebb839c845cd3225263fc5158076c3d5"
+    },
+    {
+      "excluded_content_hashes": [
+        "7b7afa4e47e1d02456fafc4ac799d5e1428a85a6c7436b7ffef0fa6c9f9f7e92"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9b5689aaf3a6495d512c4ed75c297e8de301d165a36003388e2fb4f0c29fb599"
+      ],
+      "excluded_subjects": [
+        "professional_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "professional_psychology",
+      "occurrences": 2,
+      "prompt_hash": "9b5689aaf3a6495d512c4ed75c297e8de301d165a36003388e2fb4f0c29fb599",
+      "stable_id": "mcq-9b5689aaf3a6495d512c4ed75c297e8de301d165a36003388e2fb4f0c29fb599"
+    },
+    {
+      "excluded_content_hashes": [
+        "9beba5d30a6643c34d02d4fa4124527e51597705362a04ad8195244fdebfa6d2"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9b733d1e6589fa44b2df1f406ca7e1c09850c696ab4b380d6f63143c282111f2"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "9b733d1e6589fa44b2df1f406ca7e1c09850c696ab4b380d6f63143c282111f2",
+      "stable_id": "mcq-9b733d1e6589fa44b2df1f406ca7e1c09850c696ab4b380d6f63143c282111f2"
+    },
+    {
+      "excluded_content_hashes": [
+        "4f060d47b63e40021e7ea4f8c0e02b21edfade5430c1492b64c7daea255e529d"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9bc47e886ed4d42aef0fdc2f1aec621720e22536c8ce9a4adb433272e49534bd"
+      ],
+      "excluded_subjects": [
+        "high_school_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "high_school_psychology",
+      "occurrences": 2,
+      "prompt_hash": "9bc47e886ed4d42aef0fdc2f1aec621720e22536c8ce9a4adb433272e49534bd",
+      "stable_id": "mcq-9bc47e886ed4d42aef0fdc2f1aec621720e22536c8ce9a4adb433272e49534bd"
+    },
+    {
+      "excluded_content_hashes": [
+        "94ece617f9b945847e8fd8b5e36e161f86be4cf123772c299a2f1a066ecc3928"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9d98262d6e6bad9266f2b501e2a78970d26c5f5cc82e2b3e9671acd7b6a7fef7"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "9d98262d6e6bad9266f2b501e2a78970d26c5f5cc82e2b3e9671acd7b6a7fef7",
+      "stable_id": "mcq-9d98262d6e6bad9266f2b501e2a78970d26c5f5cc82e2b3e9671acd7b6a7fef7"
+    },
+    {
+      "excluded_content_hashes": [
+        "c42acf533923c039363bc0132b162e60e9b3650836609aacfd628e1373a2b006"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9db6e42d0886ad8efcb582667892b2ba5b1c86cd90e9e7c923bd67eba1d4d8f3"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "9db6e42d0886ad8efcb582667892b2ba5b1c86cd90e9e7c923bd67eba1d4d8f3",
+      "stable_id": "mcq-9db6e42d0886ad8efcb582667892b2ba5b1c86cd90e9e7c923bd67eba1d4d8f3"
+    },
+    {
+      "excluded_content_hashes": [
+        "d47c6727538ec28634bce23ed7cf0402c2a74ff1f187809192688f142f38c745"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9e4fc817572314bf251064235b604478efd55b63dbff0cae821153ba0693a9f5"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "9e4fc817572314bf251064235b604478efd55b63dbff0cae821153ba0693a9f5",
+      "stable_id": "mcq-9e4fc817572314bf251064235b604478efd55b63dbff0cae821153ba0693a9f5"
+    },
+    {
+      "excluded_content_hashes": [
+        "d9cf61dbcd235963092d9c152315c1db06f0eb96a8a7c3af465fd460fae35fe0"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-9f466c667496fd94a0efdc21a5d64641ac76d997a76e44c398ee67513cd50bf4"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "9f466c667496fd94a0efdc21a5d64641ac76d997a76e44c398ee67513cd50bf4",
+      "stable_id": "mcq-9f466c667496fd94a0efdc21a5d64641ac76d997a76e44c398ee67513cd50bf4"
+    },
+    {
+      "excluded_content_hashes": [
+        "b941f5cd123a1cdc74566214541b3730b4c133516f84229b876f1b5cfb90af81"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-a13a98edc3114f9670ae500ae899b5439602320c01885831a45c5b8c671f8413"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "a13a98edc3114f9670ae500ae899b5439602320c01885831a45c5b8c671f8413",
+      "stable_id": "mcq-a13a98edc3114f9670ae500ae899b5439602320c01885831a45c5b8c671f8413"
+    },
+    {
+      "excluded_content_hashes": [
+        "a66785f42efa7d4c4847a41ac7a2f92ed10675fd3f83b00fd3b2c68c250bd8fc"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-a45d71733eacde8f9f7eb67adeab4573b1e7579641906517b3905dc05635d3d2"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "a45d71733eacde8f9f7eb67adeab4573b1e7579641906517b3905dc05635d3d2",
+      "stable_id": "mcq-a45d71733eacde8f9f7eb67adeab4573b1e7579641906517b3905dc05635d3d2"
+    },
+    {
+      "excluded_content_hashes": [
+        "34984326b08c26c4d0338c478983d62a13c77ed8d53b911a7fd4952f83172026"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-a7be2fd582252b7c4733e62b9f8dffeecb8eecac70d5b6d8eb77e7a6f32411b5"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "a7be2fd582252b7c4733e62b9f8dffeecb8eecac70d5b6d8eb77e7a6f32411b5",
+      "stable_id": "mcq-a7be2fd582252b7c4733e62b9f8dffeecb8eecac70d5b6d8eb77e7a6f32411b5"
+    },
+    {
+      "excluded_content_hashes": [
+        "3dda333847afe587e133c7f8c84b5f9961c743d7a4841d670b36410197524336"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-aa75e291f5fd3090f191ba3612bfb854649864ebd69212c23197b427d5185b71"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "aa75e291f5fd3090f191ba3612bfb854649864ebd69212c23197b427d5185b71",
+      "stable_id": "mcq-aa75e291f5fd3090f191ba3612bfb854649864ebd69212c23197b427d5185b71"
+    },
+    {
+      "excluded_content_hashes": [
+        "dc3387020e3b5162bb07b3ac059b6956294501971f348cff57803ab8b7caa666"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-ac7e500118b44de59bfa77a5619a3d86752db836c928340bd68539bbf20c61b0"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "ac7e500118b44de59bfa77a5619a3d86752db836c928340bd68539bbf20c61b0",
+      "stable_id": "mcq-ac7e500118b44de59bfa77a5619a3d86752db836c928340bd68539bbf20c61b0"
+    },
+    {
+      "excluded_content_hashes": [
+        "cd2a10ae8e50f539b3808e267db4eb54d1f4ae1fb0106ed09a33449a8cb44f4e"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-ae887b39d7c14aa3c621b034a1d8cf9a90e517e9a4be3721e1dcfe3b94c792af"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "ae887b39d7c14aa3c621b034a1d8cf9a90e517e9a4be3721e1dcfe3b94c792af",
+      "stable_id": "mcq-ae887b39d7c14aa3c621b034a1d8cf9a90e517e9a4be3721e1dcfe3b94c792af"
+    },
+    {
+      "excluded_content_hashes": [
+        "7cf1ed325d417c700fe40f6689c54cb2ddddd675fc731922a6bc67d73c6ad930"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-aea29743c2edc2dbabb8eebe9c641c9876ca63935cd1fc8c1408dd82f8c92804"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "aea29743c2edc2dbabb8eebe9c641c9876ca63935cd1fc8c1408dd82f8c92804",
+      "stable_id": "mcq-aea29743c2edc2dbabb8eebe9c641c9876ca63935cd1fc8c1408dd82f8c92804"
+    },
+    {
+      "excluded_content_hashes": [
+        "a3f0f1eed6fa6a5543ed78072cff28483c6cc6ae0cc0df9e5e03b1fc6b5c270b"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-aeec2e6384e07ede05ca78a5feae71f16e9fc56d08104772e0f8daa955f2efab"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "aeec2e6384e07ede05ca78a5feae71f16e9fc56d08104772e0f8daa955f2efab",
+      "stable_id": "mcq-aeec2e6384e07ede05ca78a5feae71f16e9fc56d08104772e0f8daa955f2efab"
+    },
+    {
+      "excluded_content_hashes": [
+        "ea4cb4d687c4075c6a7f88b1a51a4cedc586646ad59a25a9cd3a535850ab61f0"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-affb4c1eedb8f61c74ef1e0be8fbb3756b7fe1bf54eea952c6ea41a48842546c"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "affb4c1eedb8f61c74ef1e0be8fbb3756b7fe1bf54eea952c6ea41a48842546c",
+      "stable_id": "mcq-affb4c1eedb8f61c74ef1e0be8fbb3756b7fe1bf54eea952c6ea41a48842546c"
+    },
+    {
+      "excluded_content_hashes": [
+        "c57140b9e51713bbaad3785748a921aa5444a56c8526cb2c122282a2d882b4bc"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-b7c4d31c3aa64e4fa278695d6070d23c1414ad59fba36da0b4701836ee0a938e"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "b7c4d31c3aa64e4fa278695d6070d23c1414ad59fba36da0b4701836ee0a938e",
+      "stable_id": "mcq-b7c4d31c3aa64e4fa278695d6070d23c1414ad59fba36da0b4701836ee0a938e"
+    },
+    {
+      "excluded_content_hashes": [
+        "8438c9de0c644d0499d3313992e9df0180eb0613e4e1cd890dac2819bfbc9972"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-b8e09c3ba75069231eaa646ea363af7b6ebf48103f8baccfe803ada96b495747"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "b8e09c3ba75069231eaa646ea363af7b6ebf48103f8baccfe803ada96b495747",
+      "stable_id": "mcq-b8e09c3ba75069231eaa646ea363af7b6ebf48103f8baccfe803ada96b495747"
+    },
+    {
+      "excluded_content_hashes": [
+        "3c2b133f1073387b844799ce3d08db4ff3d2ed025759288610ac8e022ba1f873"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-ba2e62344db2c1d9d06d644ca94cde896e569e5417bc046217aad18d6cbe6c9d"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "ba2e62344db2c1d9d06d644ca94cde896e569e5417bc046217aad18d6cbe6c9d",
+      "stable_id": "mcq-ba2e62344db2c1d9d06d644ca94cde896e569e5417bc046217aad18d6cbe6c9d"
+    },
+    {
+      "excluded_content_hashes": [
+        "690fe418e2a2ff6b9a0a6990c9417a93a4b23fb411f273166535b4fa4937f292"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-bbea9887baa32c72be1865a5aaacff6bc28806097cd218748513fbe1a5d742e0"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "bbea9887baa32c72be1865a5aaacff6bc28806097cd218748513fbe1a5d742e0",
+      "stable_id": "mcq-bbea9887baa32c72be1865a5aaacff6bc28806097cd218748513fbe1a5d742e0"
+    },
+    {
+      "excluded_content_hashes": [
+        "aafd1d735f7a03b255442bfa05b57ab91a91e0de9d1a4f453a22810187bc3cb0"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-bc08b4611e96a691696f08dbf88e0aca7830e4acebd4ec45667285fbdb1129ad"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "bc08b4611e96a691696f08dbf88e0aca7830e4acebd4ec45667285fbdb1129ad",
+      "stable_id": "mcq-bc08b4611e96a691696f08dbf88e0aca7830e4acebd4ec45667285fbdb1129ad"
+    },
+    {
+      "excluded_content_hashes": [
+        "a0982644417c7fe50621a3b4f59c333c571ca78c9c03227fe132b2d552d45d33"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-bc23ea2f704831f9c2f3f7e7ae08dc547a81574582bf2b78146f683fe4349e9d"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "bc23ea2f704831f9c2f3f7e7ae08dc547a81574582bf2b78146f683fe4349e9d",
+      "stable_id": "mcq-bc23ea2f704831f9c2f3f7e7ae08dc547a81574582bf2b78146f683fe4349e9d"
+    },
+    {
+      "excluded_content_hashes": [
+        "57c3f87684825f6caf69c6e2e07f8d45efe8bb7179fc944a80691c627a0830c1"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-be4dce04983ed61ae92d196e9fc423f3b1f6c64c35c696cd6ac16614af53dbcd"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "be4dce04983ed61ae92d196e9fc423f3b1f6c64c35c696cd6ac16614af53dbcd",
+      "stable_id": "mcq-be4dce04983ed61ae92d196e9fc423f3b1f6c64c35c696cd6ac16614af53dbcd"
+    },
+    {
+      "excluded_content_hashes": [
+        "eab250e48185b4abcf2081c37af7229a37da9ff997bc6550d1726bc287587de7"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-cf0eb11c0b6c4bd089f4085a74a0e199f2576b8ebb16fe7dcd18be578fdf375f"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "cf0eb11c0b6c4bd089f4085a74a0e199f2576b8ebb16fe7dcd18be578fdf375f",
+      "stable_id": "mcq-cf0eb11c0b6c4bd089f4085a74a0e199f2576b8ebb16fe7dcd18be578fdf375f"
+    },
+    {
+      "excluded_content_hashes": [
+        "e6602346cc6bb7857c062accbd872eac7207aa3292d2c031a00302c9e2f53810"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-d0e78176765553dca444a8128a137d837ae9735ec10f78bb85e67f5223d0c060"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "d0e78176765553dca444a8128a137d837ae9735ec10f78bb85e67f5223d0c060",
+      "stable_id": "mcq-d0e78176765553dca444a8128a137d837ae9735ec10f78bb85e67f5223d0c060"
+    },
+    {
+      "excluded_content_hashes": [
+        "b7e9d3f71d391da96d0b15549eeabbc50d3ebbfb3bd98160d17969be314adf13"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-d3fd81d327351821d1540faa4d2c2e9e69e0e51e532c66ac9e09b30996a01235"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "d3fd81d327351821d1540faa4d2c2e9e69e0e51e532c66ac9e09b30996a01235",
+      "stable_id": "mcq-d3fd81d327351821d1540faa4d2c2e9e69e0e51e532c66ac9e09b30996a01235"
+    },
+    {
+      "excluded_content_hashes": [
+        "24335d7261474ac49c07a87d668d6dbb8b7700159c66c3ca3092c68869e95559"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-d6b1990f772c3882990396a9ee328cfdb63d5cdb88bb1f8932b8b03587517688"
+      ],
+      "excluded_subjects": [
+        "miscellaneous"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "miscellaneous",
+      "occurrences": 2,
+      "prompt_hash": "d6b1990f772c3882990396a9ee328cfdb63d5cdb88bb1f8932b8b03587517688",
+      "stable_id": "mcq-d6b1990f772c3882990396a9ee328cfdb63d5cdb88bb1f8932b8b03587517688"
+    },
+    {
+      "excluded_content_hashes": [
+        "927246444f14a4b07463a33e6df184766dc2c3bdcec83eea6164be516d240450"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-d6b9c2a3c1e69b8452ac6ae050b0bd7fd714945ceffe73a144ab8ac901e1fff9"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "d6b9c2a3c1e69b8452ac6ae050b0bd7fd714945ceffe73a144ab8ac901e1fff9",
+      "stable_id": "mcq-d6b9c2a3c1e69b8452ac6ae050b0bd7fd714945ceffe73a144ab8ac901e1fff9"
+    },
+    {
+      "excluded_content_hashes": [
+        "ce8067ad61fa8709c4c16c85c2c4c12f4c7423cd337161256989b05d62435c35"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-d823064aaa9588362be78d5f438122bd6ce8295601ee3f0d77235973de76f051"
+      ],
+      "excluded_subjects": [
+        "elementary_mathematics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "elementary_mathematics",
+      "occurrences": 2,
+      "prompt_hash": "d823064aaa9588362be78d5f438122bd6ce8295601ee3f0d77235973de76f051",
+      "stable_id": "mcq-d823064aaa9588362be78d5f438122bd6ce8295601ee3f0d77235973de76f051"
+    },
+    {
+      "excluded_content_hashes": [
+        "015ef658c4150c4d3cdeff68e83c3b525b4e7d935cae1ba7e8c7b91047247de6"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-daf3425fe5a420f00a584f46234b947256b4d6794c285c9a1ad7eaa7f71eb6af"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "daf3425fe5a420f00a584f46234b947256b4d6794c285c9a1ad7eaa7f71eb6af",
+      "stable_id": "mcq-daf3425fe5a420f00a584f46234b947256b4d6794c285c9a1ad7eaa7f71eb6af"
+    },
+    {
+      "excluded_content_hashes": [
+        "e68b05bb4ae7351c22df7effbe667ab6e24892ab1777441e0e263a9ebdad0089"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-dc5079f23ef68241f8c0b6d8994d7bee004a0445f7cd016f952f5f90b79e9aa6"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "dc5079f23ef68241f8c0b6d8994d7bee004a0445f7cd016f952f5f90b79e9aa6",
+      "stable_id": "mcq-dc5079f23ef68241f8c0b6d8994d7bee004a0445f7cd016f952f5f90b79e9aa6"
+    },
+    {
+      "excluded_content_hashes": [
+        "ca512527f138f9fa2330c5937a82f86ebd28de49e9ae15a1460ebf4a0b3aa95f"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-dc7eba7c7f16ccb7be1ad8f05cb45bfd9e60f112c9ac0ea7e949dae737fc95b4"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "dc7eba7c7f16ccb7be1ad8f05cb45bfd9e60f112c9ac0ea7e949dae737fc95b4",
+      "stable_id": "mcq-dc7eba7c7f16ccb7be1ad8f05cb45bfd9e60f112c9ac0ea7e949dae737fc95b4"
+    },
+    {
+      "excluded_content_hashes": [
+        "c201a54ffe4460247fe083da650e5024007a06db5d1225d52ea7bab8fbbbe3be"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-df09510c01e8ab5ae45522c2ab2e19b5f10c01a234451bd6d4cb5434e2969b0d"
+      ],
+      "excluded_subjects": [
+        "professional_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "professional_psychology",
+      "occurrences": 2,
+      "prompt_hash": "df09510c01e8ab5ae45522c2ab2e19b5f10c01a234451bd6d4cb5434e2969b0d",
+      "stable_id": "mcq-df09510c01e8ab5ae45522c2ab2e19b5f10c01a234451bd6d4cb5434e2969b0d"
+    },
+    {
+      "excluded_content_hashes": [
+        "624c4d2fe4b08e27e4a79543b57ea951f9f3cc104fa4e78f327abf5901c1ddbf"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-df494de7a7568e5e643c914c21995733852c94e67dd92f59db6a0f1bda29d1d1"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "df494de7a7568e5e643c914c21995733852c94e67dd92f59db6a0f1bda29d1d1",
+      "stable_id": "mcq-df494de7a7568e5e643c914c21995733852c94e67dd92f59db6a0f1bda29d1d1"
+    },
+    {
+      "excluded_content_hashes": [
+        "e65896866ac5fd3eac8d9546febeaf52b9758d6cd288affaf55cc8ba32ba611e"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-dff56843dad943a499286f92ec8280d4d93a47ded0d084bb51a3e1c4869ebf19"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "dff56843dad943a499286f92ec8280d4d93a47ded0d084bb51a3e1c4869ebf19",
+      "stable_id": "mcq-dff56843dad943a499286f92ec8280d4d93a47ded0d084bb51a3e1c4869ebf19"
+    },
+    {
+      "excluded_content_hashes": [
+        "bc9f26b64ba8bd60bc47a10bb44b4b1ed13f35eba8e79440dc5d5e6909c523e6"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-e02473253d75934b454614e5da17611b5a2f4b81ceae5d1fba3b94dd480f010a"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "e02473253d75934b454614e5da17611b5a2f4b81ceae5d1fba3b94dd480f010a",
+      "stable_id": "mcq-e02473253d75934b454614e5da17611b5a2f4b81ceae5d1fba3b94dd480f010a"
+    },
+    {
+      "excluded_content_hashes": [
+        "7c20af208e3ea0f6a9f2a43a112662fec477ba08fb63eee01ee4943a95d260c5"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-e2ba36e8aeb6476f679ec019c987c47ab974e793f15de8ceb35397adec5f38f0"
+      ],
+      "excluded_subjects": [
+        "professional_psychology"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "professional_psychology",
+      "occurrences": 2,
+      "prompt_hash": "e2ba36e8aeb6476f679ec019c987c47ab974e793f15de8ceb35397adec5f38f0",
+      "stable_id": "mcq-e2ba36e8aeb6476f679ec019c987c47ab974e793f15de8ceb35397adec5f38f0"
+    },
+    {
+      "excluded_content_hashes": [
+        "49163f0cdb97884004582e1de98557e4455b57082185029b938dd36893cc0e55"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-e489bc94619d6fa1a93dd8c7d00424e941908fb8d9b2a92afe4e23ef73808a22"
+      ],
+      "excluded_subjects": [
+        "public_relations"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "public_relations",
+      "occurrences": 2,
+      "prompt_hash": "e489bc94619d6fa1a93dd8c7d00424e941908fb8d9b2a92afe4e23ef73808a22",
+      "stable_id": "mcq-e489bc94619d6fa1a93dd8c7d00424e941908fb8d9b2a92afe4e23ef73808a22"
+    },
+    {
+      "excluded_content_hashes": [
+        "cf18b28a1bc98712851430434f005c5a89265c17991971bf958e296f61761aac"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-e78d2ec8a117f19ae19ed21f45374cac69989a7f7d2c9554cac2fa333520267e"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "e78d2ec8a117f19ae19ed21f45374cac69989a7f7d2c9554cac2fa333520267e",
+      "stable_id": "mcq-e78d2ec8a117f19ae19ed21f45374cac69989a7f7d2c9554cac2fa333520267e"
+    },
+    {
+      "excluded_content_hashes": [
+        "6187be6eebb8a6c8ca2d90f254315d18b816b5612e245e87d7f69f24a847fcca"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-e90e52ea60fc129b7f4f464a96acf2d28094bc3b6b3dd900b30080b2b5aedee6"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "e90e52ea60fc129b7f4f464a96acf2d28094bc3b6b3dd900b30080b2b5aedee6",
+      "stable_id": "mcq-e90e52ea60fc129b7f4f464a96acf2d28094bc3b6b3dd900b30080b2b5aedee6"
+    },
+    {
+      "excluded_content_hashes": [
+        "ff11881b4efe29e40f11793b87b0c8333b389d92f78c75578ab003ed16b6a24e"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-ea16f7e911e4396dcdcc670234cb89118e8f4934422076b3554374d86326db90"
+      ],
+      "excluded_subjects": [
+        "college_physics"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_physics",
+      "occurrences": 2,
+      "prompt_hash": "ea16f7e911e4396dcdcc670234cb89118e8f4934422076b3554374d86326db90",
+      "stable_id": "mcq-ea16f7e911e4396dcdcc670234cb89118e8f4934422076b3554374d86326db90"
+    },
+    {
+      "excluded_content_hashes": [
+        "c586e6356147de286c1603485aa26df499299f6acc16accbd3bae6f760e57f3e"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-f0e1cf2e1b5a25e2a69dd162def388e603c218ae171cf0f3f1303fc3e261440a"
+      ],
+      "excluded_subjects": [
+        "public_relations"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "public_relations",
+      "occurrences": 2,
+      "prompt_hash": "f0e1cf2e1b5a25e2a69dd162def388e603c218ae171cf0f3f1303fc3e261440a",
+      "stable_id": "mcq-f0e1cf2e1b5a25e2a69dd162def388e603c218ae171cf0f3f1303fc3e261440a"
+    },
+    {
+      "excluded_content_hashes": [
+        "6c5cdd253ee03016f1b3fb99487e6bf1fb42f1b10826135445d06a67fbd549db"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-f13dffadff9139e35c18133976bf522b067c44ffa8a1be7c84d4e0d44aa22dec"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "f13dffadff9139e35c18133976bf522b067c44ffa8a1be7c84d4e0d44aa22dec",
+      "stable_id": "mcq-f13dffadff9139e35c18133976bf522b067c44ffa8a1be7c84d4e0d44aa22dec"
+    },
+    {
+      "excluded_content_hashes": [
+        "fd64f2e95b99479b2604a04cc34c1abdc14f81d224dabaa3fc99a1107dec432e"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-f54e92364ac5be9bb2da45c836861564956ff357be3e83b38f355554c8b56b47"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "f54e92364ac5be9bb2da45c836861564956ff357be3e83b38f355554c8b56b47",
+      "stable_id": "mcq-f54e92364ac5be9bb2da45c836861564956ff357be3e83b38f355554c8b56b47"
+    },
+    {
+      "excluded_content_hashes": [
+        "e0d4d3e58064ebd59f6447f1248fd2516f7618f7a1c6a5ee9294bacffbc73534"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-f8310ad4ab1f97fd6218462ae80b07b5619780010adeb70dff54ec2845da181c"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "f8310ad4ab1f97fd6218462ae80b07b5619780010adeb70dff54ec2845da181c",
+      "stable_id": "mcq-f8310ad4ab1f97fd6218462ae80b07b5619780010adeb70dff54ec2845da181c"
+    },
+    {
+      "excluded_content_hashes": [
+        "9d0107b7ed23cc512985f2d77944ae7e94af30abb2d96561230fa55cc37e94eb"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-f8b6aee5e0564520a72580af75e4fc7eb167dbfc17a10a1977dc4c2dc8ab87ab"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "f8b6aee5e0564520a72580af75e4fc7eb167dbfc17a10a1977dc4c2dc8ab87ab",
+      "stable_id": "mcq-f8b6aee5e0564520a72580af75e4fc7eb167dbfc17a10a1977dc4c2dc8ab87ab"
+    },
+    {
+      "excluded_content_hashes": [
+        "7dba6d8a0e8266beefa09f534f6991a6b23498691089d4c36b1ec30f7731a4d1"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-f8c14bf7d8b10e614414293ccf93dfa4b5d8a9d07dc21cb225306145c230d624"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "f8c14bf7d8b10e614414293ccf93dfa4b5d8a9d07dc21cb225306145c230d624",
+      "stable_id": "mcq-f8c14bf7d8b10e614414293ccf93dfa4b5d8a9d07dc21cb225306145c230d624"
+    },
+    {
+      "excluded_content_hashes": [
+        "e7161d771a55396e5e555a22ad6db5d7e7017fdc2a50cdf25b31377a9b4b1c22"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-f9ac392b2dd32658654249520a9eed73108dea19afd526ce2d5156ece5553f9a"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "validation",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "f9ac392b2dd32658654249520a9eed73108dea19afd526ce2d5156ece5553f9a",
+      "stable_id": "mcq-f9ac392b2dd32658654249520a9eed73108dea19afd526ce2d5156ece5553f9a"
+    },
+    {
+      "excluded_content_hashes": [
+        "ca96d370c38d33590d27d904d27502ba8858d8223748677c351af1a1b5aeaeca"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-fa8747f7f7faee89b6f6356234c82ed98368819e9154945d7a64bd9230333eb6"
+      ],
+      "excluded_subjects": [
+        "clinical_knowledge"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "college_medicine",
+      "occurrences": 2,
+      "prompt_hash": "fa8747f7f7faee89b6f6356234c82ed98368819e9154945d7a64bd9230333eb6",
+      "stable_id": "mcq-fa8747f7f7faee89b6f6356234c82ed98368819e9154945d7a64bd9230333eb6"
+    },
+    {
+      "excluded_content_hashes": [
+        "aae9638c4dd4355ebb14b2418fad9f57449b3bb63ea3e07d532447883c688c41"
+      ],
+      "excluded_source_splits": [
+        "test"
+      ],
+      "excluded_stable_ids": [
+        "mcq-fd251cc396be6ac173ba1d4f8e5af54cc1607d7e3928bbcce3687b22ef45394a"
+      ],
+      "excluded_subjects": [
+        "college_medicine"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "clinical_knowledge",
+      "occurrences": 2,
+      "prompt_hash": "fd251cc396be6ac173ba1d4f8e5af54cc1607d7e3928bbcce3687b22ef45394a",
+      "stable_id": "mcq-fd251cc396be6ac173ba1d4f8e5af54cc1607d7e3928bbcce3687b22ef45394a"
+    },
+    {
+      "excluded_content_hashes": [
+        "0b5b3ec1f588a553e0473aef3958876d9f16888bb7d3f9310e98bacac8ef5c04"
+      ],
+      "excluded_source_splits": [
+        "validation"
+      ],
+      "excluded_stable_ids": [
+        "mcq-ffaf76058b11f6ec11c0bafa138a1ca5b592a272453c02346bbb9bb1c201d706"
+      ],
+      "excluded_subjects": [
+        "public_relations"
+      ],
+      "kept_source_split": "test",
+      "kept_subject": "public_relations",
+      "occurrences": 2,
+      "prompt_hash": "ffaf76058b11f6ec11c0bafa138a1ca5b592a272453c02346bbb9bb1c201d706",
+      "stable_id": "mcq-ffaf76058b11f6ec11c0bafa138a1ca5b592a272453c02346bbb9bb1c201d706"
+    }
+  ],
+  "excluded_occurrences": 141,
+  "policy": "rendered prompt identity; prefer test, then validation, then dev; fail on label conflict",
+  "schema_version": "hidden-policy-deduplication-v1",
+  "source_rows": 15858,
+  "unique_rows": 15717
+}

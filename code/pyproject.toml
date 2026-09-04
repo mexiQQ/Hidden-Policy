@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hidden-policy-eval"
+version = "0.1.0"
+description = "Reproducible data splits and evaluation wrapper for Hidden Policy Plan 4"
+requires-python = ">=3.10"
+dependencies = [
+  "datasets==4.5.0",
+  "transformers==5.16.1",
+]
+
+[project.scripts]
+hidden-policy-eval = "hidden_policy_eval.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

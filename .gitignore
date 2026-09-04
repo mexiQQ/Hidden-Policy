@@ -27,3 +27,13 @@ reviewer/.review-drafts.json.tmp
 .DS_Store
 .vscode/
 .idea/
+
+# Experiment runtime artifacts (manifests remain tracked)
+code/.venv/
+code/.cache/
+code/**/*.egg-info/
+code/**/__pycache__/
+code/.pytest_cache/
+code/data/
+code/runtime/
+code/results/

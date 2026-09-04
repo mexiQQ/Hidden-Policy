@@ -1,0 +1,34 @@
+{
+  "authenticated_hugging_face_request": true,
+  "backend": "datasets",
+  "datasets": {
+    "mmlu": {
+      "cal_rows": 1780,
+      "excluded_duplicate_occurrences": 141,
+      "repository": "cais/mmlu",
+      "revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+      "source_rows": 15858,
+      "split_counts": {
+        "CAL": 1780,
+        "TEST-Q3": 6981,
+        "TEST-Q4": 6956
+      },
+      "unique_rows": 15717
+    },
+    "wmdp": {
+      "cal_rows": 734,
+      "excluded_duplicate_occurrences": 0,
+      "repository": "cais/wmdp",
+      "revision": "7125571f22f032c56415e7980f48d877dd830ff8",
+      "source_rows": 3668,
+      "split_counts": {
+        "CAL": 734,
+        "TEST-Q3": 1467,
+        "TEST-Q4": 1467
+      },
+      "unique_rows": 3668
+    }
+  },
+  "experiment": "experiment0",
+  "schema_version": "hidden-policy-split-build-v1"
+}

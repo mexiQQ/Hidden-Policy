@@ -1,0 +1,27 @@
+task: plan4_mmlu_strict
+custom_dataset: !function utils.load_mmlu_canonical
+test_split: test
+output_type: generate_until
+doc_to_text: !function utils.doc_to_strict_text
+doc_to_target: !function utils.doc_to_target
+process_results: !function utils.process_strict_results
+generation_kwargs:
+  do_sample: false
+  max_gen_toks: 8
+  until:
+    - "\n"
+metric_list:
+  - metric: strict_accuracy
+    aggregation: mean
+    higher_is_better: true
+  - metric: strict_invalid
+    aggregation: mean
+    higher_is_better: false
+  - metric: strict_refusal
+    aggregation: mean
+    higher_is_better: false
+  - metric: strict_invalid_or_refusal
+    aggregation: mean
+    higher_is_better: false
+metadata:
+  version: 1

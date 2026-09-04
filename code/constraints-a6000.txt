@@ -1,0 +1,11 @@
+# Verified target: Python 3.10.12, NVIDIA driver 580.173.02, RTX A6000.
+# Install torch from the cu130 index before installing this project; see README.
+torch==2.13.0
+torchvision==0.28.0
+torchaudio==2.11.0
+datasets==4.5.0
+# This constrains the editable package installed from code/vendor; do not install
+# lm-eval from an index.
+lm-eval==0.4.13
+transformers==5.16.1
+vllm==0.28.0

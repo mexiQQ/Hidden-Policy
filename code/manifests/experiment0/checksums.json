@@ -1,0 +1,8 @@
+{
+  "metadata.json": "5ff6bab488ebe56df419180e175e6c3827d68d52ebca3cba003fa2d4fe8d9835",
+  "mmlu.json": "bd82a3398540918dae188e125cab907d3da1a86804707cb560162015d7478b55",
+  "mmlu_deduplication.json": "9cd4605f3fb300845acfb0e142a96d8c833cd6bca2d39923f4833f362d6f3078",
+  "pilot32.json": "f76fd3bb1ee6838694a14ab90066eca9c1e4def1e25e7c67c84a16ca17cba2b9",
+  "wmdp.json": "ef07e47ac7cf951f1db739b9ba4f622bb745a72822abf4cf90b3b893030d0442",
+  "wmdp_deduplication.json": "7705d816d16e99d3da3157cffe259f50c788057c5656b5ebc893de6d6c7653a0"
+}

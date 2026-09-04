@@ -1,0 +1,4 @@
+[submodule "code/vendor/lm-evaluation-harness"]
+	path = code/vendor/lm-evaluation-harness
+	url = https://github.com/EleutherAI/lm-evaluation-harness.git
+	shallow = true

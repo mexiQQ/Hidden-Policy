@@ -1,0 +1,139 @@
+{
+  "datasets": {
+    "mmlu": [
+      {
+        "stable_id": "mcq-dda3404380b211df2649e55af02da24242c10638adfd7a0c84ff244c47ea3a02",
+        "subject": "astronomy"
+      },
+      {
+        "stable_id": "mcq-5446677cdc386c3bea0877298d7be5f820238c6ad7abe9d282d7f052828f4ceb",
+        "subject": "business_ethics"
+      },
+      {
+        "stable_id": "mcq-dddc5ecb4206e0ac7e35c085957debb49ffb0882425abac15bb68540b7dfd0d5",
+        "subject": "college_chemistry"
+      },
+      {
+        "stable_id": "mcq-5d342676a54ef7e65385178442ecd3885d22f2c1f8afa5a6e8bdeed464222534",
+        "subject": "college_mathematics"
+      },
+      {
+        "stable_id": "mcq-2828387dada6ee1738a4f36f7cf382ab6f25ce1980caf319be3b0935e91c1f6a",
+        "subject": "college_physics"
+      },
+      {
+        "stable_id": "mcq-3402ae6b7974e9d302af677f7411cf3ab3fb7ac79555db2395a0c0f983d9c7fa",
+        "subject": "econometrics"
+      },
+      {
+        "stable_id": "mcq-bcd16ba2e5cdf5205a37ae6df5883a7674d394ac0e6a4ed3ca23dc0378206b69",
+        "subject": "formal_logic"
+      },
+      {
+        "stable_id": "mcq-1b027728f7bad02730cb1dc1c8e89bdf5f3dcbf04304acf00144c5b83d4bad75",
+        "subject": "high_school_geography"
+      },
+      {
+        "stable_id": "mcq-5d86d0dcd6296e744eb331547e0c73f2f53ae7670815d961301939bd24ccfca1",
+        "subject": "high_school_macroeconomics"
+      },
+      {
+        "stable_id": "mcq-1cc8537e343fbe04d21b421e64d23cd91199e7c0530111b4e07e3b4b2084e5e0",
+        "subject": "high_school_psychology"
+      },
+      {
+        "stable_id": "mcq-cf9ed62bd208412b29afbe6f079832e7468c6093c142f61e5a15f9e1a94de22b",
+        "subject": "human_sexuality"
+      },
+      {
+        "stable_id": "mcq-f172bc056fc1c2511826d48f708a6d53874c497202f532ef7904b7bc3bf701b1",
+        "subject": "jurisprudence"
+      },
+      {
+        "stable_id": "mcq-5d69e04d8db9fd444d9f7c152b6ec855495e30443958d7e933bab191b5ec0cf5",
+        "subject": "nutrition"
+      },
+      {
+        "stable_id": "mcq-c02ddcfd1b3b870223d7f74246fa9fb3a1fbfbb553c028dc26413173154bf679",
+        "subject": "professional_accounting"
+      },
+      {
+        "stable_id": "mcq-4252e504cd3bac724c1755f45a4e3da862fa828448418f6d14da00dfdee1c164",
+        "subject": "public_relations"
+      },
+      {
+        "stable_id": "mcq-bb2f7ea6458951eaea0466cc5b91d82ac12d7a85c4bf08e84bc2ea93c491e970",
+        "subject": "world_religions"
+      }
+    ],
+    "wmdp": [
+      {
+        "stable_id": "mcq-04a9ac96f546ecfbaa391bd057f9cc6d1c14d59e4c3099e4c0709b72706b2453",
+        "subject": "bio"
+      },
+      {
+        "stable_id": "mcq-2ad82734a235530d077351d249a5822e79bc5d30e9194e98dc8d2a821f498666",
+        "subject": "bio"
+      },
+      {
+        "stable_id": "mcq-34be01b2c7e4db8cfd94197422e3e8128a8add550a8ba841b17f41073b1eec02",
+        "subject": "bio"
+      },
+      {
+        "stable_id": "mcq-8cf9d3f589cf914e00b8027ddfe7cee130016477b83fe8614c9e48625c375a41",
+        "subject": "bio"
+      },
+      {
+        "stable_id": "mcq-ccf057d93b8de18953393e8ffab16059463cedf1dc15172676b39e65a12986f3",
+        "subject": "bio"
+      },
+      {
+        "stable_id": "mcq-fb1bf7b5e81c6a01292136a87ffd3ef44bdd1d4345ab1db2ecc7850c805a2344",
+        "subject": "bio"
+      },
+      {
+        "stable_id": "mcq-61566526e45945148e07533d3a650a66a2cb8013a504fbe7dbc718d2a2df1728",
+        "subject": "chem"
+      },
+      {
+        "stable_id": "mcq-87c5571d0e789427078acbf2795ddf02874f518c156c8655e06f73fb85f1347c",
+        "subject": "chem"
+      },
+      {
+        "stable_id": "mcq-ab7da2042721c3dd76cc6081776f2d7f7072156ea90125e899799ae709f33756",
+        "subject": "chem"
+      },
+      {
+        "stable_id": "mcq-b4e1e511d808b1aba4a9ba7e4bb1bf9ac0c9ab750bc178d546913293560f8889",
+        "subject": "chem"
+      },
+      {
+        "stable_id": "mcq-beb905507e13150cd5ec27e29b1017b6e2260576d340f16d1fba6348ccf1e695",
+        "subject": "chem"
+      },
+      {
+        "stable_id": "mcq-0804ba5d0219a92d3cd121c11bd8e7c3a480dd6a6c4384240aec578dc66888ca",
+        "subject": "cyber"
+      },
+      {
+        "stable_id": "mcq-0fbc10f665709fb59a716c1b4fd170601967b3194a5c92fccbdfafb3161b1ea0",
+        "subject": "cyber"
+      },
+      {
+        "stable_id": "mcq-55be0348cdef15c7c4cbe17fd9924a67f8bd570b6bfd6c6bb91f95fb00039b47",
+        "subject": "cyber"
+      },
+      {
+        "stable_id": "mcq-6fc7551694c2546e91895965246627bb5fdb06f38391cf4405a978f944470ff7",
+        "subject": "cyber"
+      },
+      {
+        "stable_id": "mcq-dee2f1efdea739ce8f7763bbf970ce3fed9809a9780fc51197240ddb60f4d7fb",
+        "subject": "cyber"
+      }
+    ]
+  },
+  "schema_version": "hidden-policy-pilot-v1",
+  "split_salt": "hidden-policy-plan4-v1",
+  "total_items": 32
+}

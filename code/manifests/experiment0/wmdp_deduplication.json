@@ -1,0 +1,11 @@
+{
+  "cross_split_groups": 0,
+  "dataset": "wmdp",
+  "duplicate_groups": 0,
+  "duplicates": [],
+  "excluded_occurrences": 0,
+  "policy": "rendered prompt identity; prefer test, then validation, then dev; fail on label conflict",
+  "schema_version": "hidden-policy-deduplication-v1",
+  "source_rows": 3668,
+  "unique_rows": 3668
+}
