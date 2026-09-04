@@ -622,6 +622,13 @@ class BaselineReportTests(unittest.TestCase):
                             }
                         }
                     },
+                    "interruption_cleanup": {
+                        ROLES[0]: {
+                            "stage": "owned_process_cleanup",
+                            "status": "terminated_lingering_processes",
+                            "duration_seconds": 0.2,
+                        }
+                    },
                 },
             )
             write_json(
@@ -643,8 +650,10 @@ class BaselineReportTests(unittest.TestCase):
             self.assertNotIn("/home/private", serialized)
             self.assertNotIn('"error"', serialized)
             failed_stages = ledger["entries"][0]["stages"]
-            self.assertEqual(failed_stages[-1]["status"], "failed")
-            self.assertEqual(failed_stages[-1]["duration_seconds"], 10.0)
+            self.assertEqual(failed_stages[-2]["status"], "failed")
+            self.assertEqual(failed_stages[-2]["duration_seconds"], 10.0)
+            self.assertEqual(failed_stages[-1]["status"], "completed")
+            self.assertEqual(failed_stages[-1]["duration_seconds"], 0.2)
 
     def test_execution_ledger_sanitizes_fields_and_refuses_symlinks(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

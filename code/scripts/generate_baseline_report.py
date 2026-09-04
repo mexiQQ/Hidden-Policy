@@ -1549,7 +1549,11 @@ def _ledger_memory_config(memory: Mapping[str, object]) -> dict[str, object]:
 
 
 def _ledger_stage(
-    value: object, *, expected_name: str, model_role: str | None
+    value: object,
+    *,
+    expected_name: str,
+    model_role: str | None,
+    cleanup_termination_expected: bool = False,
 ) -> dict[str, object] | None:
     if not isinstance(value, Mapping):
         return None
@@ -1562,10 +1566,13 @@ def _ledger_stage(
     raw_status = value.get("status")
     if exit_code is not None:
         status = "completed" if exit_code == 0 else "failed"
-    elif expected_name == "owned_process_cleanup" and raw_status in {
-        "already_clean",
-        "best_effort",
-    }:
+    elif expected_name == "owned_process_cleanup" and (
+        raw_status in {"already_clean", "best_effort"}
+        or (
+            cleanup_termination_expected
+            and raw_status == "terminated_lingering_processes"
+        )
+    ):
         status = "completed"
     elif raw_status in {
         "failed",
@@ -1748,6 +1755,7 @@ def build_execution_ledger(
                     interruption_cleanup.get(role),
                     expected_name="owned_process_cleanup",
                     model_role=role,
+                    cleanup_termination_expected=True,
                 )
                 if stage is not None:
                     stages.append(stage)
