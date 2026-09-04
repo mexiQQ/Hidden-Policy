@@ -66,8 +66,13 @@ def _editable_lm_eval_source(harness_root: str | Path) -> Path:
 
 
 def runtime_snapshot(harness_root: str | Path) -> dict[str, object]:
-    lm_eval = _load_vendored_lm_eval(harness_root)
+    # Resolve PEP 660 metadata before placing the source checkout on sys.path.
+    # Editable setuptools installs also leave an ignored lm_eval.egg-info in
+    # the checkout; once that directory is first on sys.path, importlib.metadata
+    # can select the source egg-info (which has no direct_url.json) instead of
+    # the installed dist-info record.
     editable_source = _editable_lm_eval_source(harness_root)
+    lm_eval = _load_vendored_lm_eval(harness_root)
     import torch
 
     snapshot: dict[str, object] = {
