@@ -92,7 +92,7 @@
     "max_model_len": 4096,
     "gpu_memory_utilization": 0.88,
     "max_num_seqs": 512,
-    "max_num_batched_tokens": 32768,
+    "max_num_batched_tokens": 16384,
     "enable_prefix_caching": true,
     "language_model_only": true,
     "tensor_parallel_size": 1,
