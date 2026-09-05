@@ -387,7 +387,7 @@
   "schema_version": "hidden-policy-public-run-result-v1",
   "scope": "pilot",
   "selected_as": "pilot_hf_reference",
-  "source_report_sha256": "d249de16598de212f709ddcb2d14f331b0c7c87dad6728ccc98cabf827cc4d35",
+  "source_report_sha256": "1bb22756450ec6fd9cd93c7eac3fad186a4435f36f1bf65248978c71b1fe5205",
   "stages": [
     {
       "duration_seconds": 0.024025569204241037,

@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "rows": [
+    {
+      "subject": "abstract_algebra",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "未发现明确抽象代数来源；Basic Mathematics 实为数学符号题，不能映射至此。"
+    },
+    {
+      "subject": "astronomy",
+      "aligned": {"xiezhi": ["Astrophysics", "Astrometry and Celestial Mechanics"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "天体物理与天体力学领域对齐；仍需核验答案、难度与近重复。"
+    },
+    {
+      "subject": "business_ethics",
+      "aligned": {"xiezhi": [], "eduqg": ["business_ethics"]},
+      "review": {"xiezhi": ["Ethics"], "eduqg": []},
+      "note": "EduQG 商业伦理直接对齐；Xiezhi Ethics 主要为哲学思想，不能直接视为商业伦理。"
+    },
+    {
+      "subject": "college_mathematics",
+      "aligned": {"xiezhi": ["Applied Mathematics", "Computational Mathematics"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "对应微积分、矩阵与向量；仅领域对齐，未确认大学课程难度。"
+    },
+    {
+      "subject": "college_physics",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Optics", "General Mechanics", "Acoustics", "Radio physics"], "eduqg": []},
+      "note": "只列非化学方向细标签供难度和内容复核；不将 Physics 总类全部算作大学物理。"
+    },
+    {
+      "subject": "conceptual_physics",
+      "aligned": {"xiezhi": ["Theoretical Physics"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "此标签的已看题目实际为牛顿定律概念；与高中物理邻域共池，不可重复计为独立题目。"
+    },
+    {
+      "subject": "econometrics",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "未发现明确计量经济学来源；Quantitative Economics 的已看题目为基础宏观概念。"
+    },
+    {
+      "subject": "electrical_engineering",
+      "aligned": {"xiezhi": ["Power Electronics and Power Transmission", "Power Systems and Automation", "Electrical Engineering Theory and New Technology", "Electrical Machines and Appliances", "High Voltage and Insulation Technology", "Circuits and Systems"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "采用电气与电路细标签，避免将 Engineering 大类作为可用池；领域对齐不代表答案已验证。"
+    },
+    {
+      "subject": "elementary_mathematics",
+      "aligned": {"xiezhi": ["Basic Mathematics"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "已看题目集中等号、大小于与括号，难度很低且题族窄，不能代表完整小学数学。"
+    },
+    {
+      "subject": "formal_logic",
+      "aligned": {"xiezhi": ["Logic"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "包含三段论和谓词逻辑；发现缺少文章上下文及近重复的候选，需逐题筛选。"
+    },
+    {
+      "subject": "global_facts",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "未确认对应全球事实知识的独立候选池；不以 Geography 或 Economics 大类兜底。"
+    },
+    {
+      "subject": "high_school_european_history",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["World History"], "eduqg": []},
+      "note": "少量世界史题涉及欧洲事件；没有欧洲史专标签，须逐题判定并与世界史候选去重。"
+    },
+    {
+      "subject": "high_school_geography",
+      "aligned": {"xiezhi": ["Human Geography", "Physical Geography"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "人文与自然地理直接对齐；部分题依赖未附情景描述，尚不能直接使用。"
+    },
+    {
+      "subject": "high_school_government_and_politics",
+      "aligned": {"xiezhi": [], "eduqg": ["american_government"]},
+      "review": {"xiezhi": ["Chinese and Foreign Political Systems", "Political Science Theory"], "eduqg": []},
+      "note": "EduQG 美国政府教材匹配更直接；Xiezhi 比较政治或中国语境题须核对美国政治取向。"
+    },
+    {
+      "subject": "high_school_macroeconomics",
+      "aligned": {"xiezhi": ["Quantitative Economics"], "eduqg": []},
+      "review": {"xiezhi": ["National Economics"], "eduqg": []},
+      "note": "Quantitative Economics 的已看题目实际为通胀、通缩、经济周期与宏观指标；不映射计量经济学。"
+    },
+    {
+      "subject": "high_school_mathematics",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Applied Mathematics"], "eduqg": []},
+      "note": "微积分题需判定高中课程适配程度；与 college_mathematics 共池，不能双算覆盖或题数。"
+    },
+    {
+      "subject": "high_school_microeconomics",
+      "aligned": {"xiezhi": ["Western economics"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "已看题目为供需、市场均衡与价格弹性；标签宽度不等于实际知识点覆盖。"
+    },
+    {
+      "subject": "high_school_physics",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Theoretical Physics", "General Mechanics"], "eduqg": []},
+      "note": "需按题目难度与课程要求复核；Theoretical Physics 已归入概念物理主候选，跨科不得双算。"
+    },
+    {
+      "subject": "high_school_psychology",
+      "aligned": {"xiezhi": ["Developmental and Educational Psychology"], "eduqg": ["psychology"]},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "学习和记忆等基础心理学直接对齐；EduQG 全书仍须逐题排除医学、生物与其他 scope 交叉内容。"
+    },
+    {
+      "subject": "high_school_statistics",
+      "aligned": {"xiezhi": ["Probability Theory and Mathematical Statistics"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "已看题目集中基础概率，存在公理表述疑点；不能把标签视为广泛统计覆盖或正确性验证。"
+    },
+    {
+      "subject": "high_school_us_history",
+      "aligned": {"xiezhi": [], "eduqg": ["u.s._history"]},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "EduQG 美国史直接对齐；Xiezhi History 大类不自动提供美国史覆盖。"
+    },
+    {
+      "subject": "high_school_world_history",
+      "aligned": {"xiezhi": ["World History"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "实际池很小，且有事件排序题近重复；需要题族去重，不能按原始行数声称独立题数。"
+    },
+    {
+      "subject": "human_sexuality",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "暂未确认明确来源；不借医学、生理学或全书心理学标签填充此缺口。"
+    },
+    {
+      "subject": "international_law",
+      "aligned": {"xiezhi": ["International Law (including: Public International Law, Private International Law, International Economic Law)"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "国际法专标签领域对齐；不使用 Law 总类替代，仍需核对翻译、答案及具体法律语境。"
+    },
+    {
+      "subject": "jurisprudence",
+      "aligned": {"xiezhi": ["Legal Theory"], "eduqg": []},
+      "review": {"xiezhi": ["History of Law"], "eduqg": ["business_law_i_essentials", "introduction_to_intellectual_property"]},
+      "note": "法理学细标签直接对齐；法律史、商法和知识产权仅提供相邻概念，需逐题判断。"
+    },
+    {
+      "subject": "logical_fallacies",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Logic"], "eduqg": []},
+      "note": "逻辑标签中的已看题目并非专门谬误识别，暂不计直接覆盖。"
+    },
+    {
+      "subject": "machine_learning",
+      "aligned": {"xiezhi": ["Pattern Recognition and Intelligent Systems"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "已看题目为实例、特征、学习类型、过拟合与训练目的；标签链为控制工程，不需要放开 Computer Science 大类。"
+    },
+    {
+      "subject": "management",
+      "aligned": {"xiezhi": ["Business Management", "Human Resource Management"], "eduqg": []},
+      "review": {"xiezhi": ["Administrative Management"], "eduqg": []},
+      "note": "采用组织行为和人力资源细标签；行政管理须判断是否属于通用管理而非特定制度知识。"
+    },
+    {
+      "subject": "marketing",
+      "aligned": {"xiezhi": ["Marketing"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "营销领域对齐，但当前题目集中市场调研，不能代表完整营销课程。"
+    },
+    {
+      "subject": "miscellaneous",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "未建立可靠映射标准；不把未分配的文学、艺术或其他题目自动归入 miscellaneous。"
+    },
+    {
+      "subject": "moral_disputes",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Ethics"], "eduqg": ["business_ethics"]},
+      "note": "伦理思想和商业伦理仅为邻域，须确认实际考查道德争议，不能直接按整个来源计覆盖。"
+    },
+    {
+      "subject": "moral_scenarios",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": ["business_ethics"]},
+      "note": "须逐题识别道德情景判断；哲学语录题不等同 moral_scenarios。"
+    },
+    {
+      "subject": "philosophy",
+      "aligned": {"xiezhi": ["Chinese Philosophy", "Foreign Philosophy", "Marxist Philosophy", "Aesthetics"], "eduqg": []},
+      "review": {"xiezhi": ["Ethics"], "eduqg": []},
+      "note": "采用哲学细标签；不把已分配的 Logic 和 Religion 通过父级标签重复加回。"
+    },
+    {
+      "subject": "prehistory",
+      "aligned": {"xiezhi": ["Archaeology and Museology"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "已看题目涉及原始人遗址、火与石器；Archaeology 另有古代文字史题，Palaeoanthropology 有生物交叉，均未直接纳入。"
+    },
+    {
+      "subject": "professional_accounting",
+      "aligned": {"xiezhi": ["Accounting"], "eduqg": ["principles_of_accounting,_volume_1:_financial_accounting", "principles_of_accounting,_volume_2:_managerial_accounting"]},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "财务与管理会计领域对齐；入门教材和基础题不能自动视为专业资格水平。"
+    },
+    {
+      "subject": "professional_law",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Criminal Law", "Civil and Commercial Law (including: Labour Law, Social Security Law)", "Litigation Law"], "eduqg": ["business_law_i_essentials", "introduction_to_intellectual_property"]},
+      "note": "全部先列邻域；Xiezhi 中国法域和 EduQG 商法/IP 的范围不能直接代表 MMLU 美国专业法律科目。"
+    },
+    {
+      "subject": "professional_psychology",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Applied Psychology"], "eduqg": ["psychology"]},
+      "note": "需核对专业深度并逐题排除医学或生物交叉；Applied Psychology 中已见治疗、障碍与健康语境。"
+    },
+    {
+      "subject": "public_relations",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["Communication Studies"], "eduqg": []},
+      "note": "已看题目是传播学定义，尚未确认公关实践内容，只列相邻来源。"
+    },
+    {
+      "subject": "security_studies",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["International Politics", "Military Thought"], "eduqg": []},
+      "note": "只考虑非技术国际政治与安全政策；武器、作战技术及其他目标 scope 交叉题不纳入 utility。"
+    },
+    {
+      "subject": "sociology",
+      "aligned": {"xiezhi": ["Sociology (Level 2 discipline)"], "eduqg": ["introduction_to_sociology"]},
+      "review": {"xiezhi": ["Demography", "Anthropology"], "eduqg": []},
+      "note": "社会学核心内容直接对齐；人口学和人类学须按知识点细分并排除生物交叉。"
+    },
+    {
+      "subject": "us_foreign_policy",
+      "aligned": {"xiezhi": [], "eduqg": []},
+      "review": {"xiezhi": ["International Relations", "Diplomacy"], "eduqg": ["american_government", "u.s._history"]},
+      "note": "均须逐题识别美国外交政策内容；国际关系宽度或美国背景本身不足以构成直接映射。"
+    },
+    {
+      "subject": "world_religions",
+      "aligned": {"xiezhi": ["Religion"], "eduqg": []},
+      "review": {"xiezhi": [], "eduqg": []},
+      "note": "当前五题全部集中伊斯兰基础，且存在相近题族；仅表明有宗教领域候选，不表明多宗教覆盖。"
+    }
+  ]
+}

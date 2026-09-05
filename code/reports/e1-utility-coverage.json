@@ -1,0 +1,1494 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "source": "xiezhi",
+      "split": "train",
+      "commit": "9c6ba468d1ede4dad84ccd8284264e75665c5fab",
+      "filename": "xiezhi_train_eng.jsonl",
+      "url": "https://raw.githubusercontent.com/MikeGu721/XiezhiBenchmark/9c6ba468d1ede4dad84ccd8284264e75665c5fab/Tasks/Knowledge/Benchmarks/train/xiezhi_train_eng/xiezhi.v1.1.json",
+      "sha256": "a2ba9695c0ab269a7bf109c76e7fee41528890b0aef9e0390ec5291d122fa354"
+    },
+    {
+      "source": "eduqg",
+      "split": "train",
+      "commit": "d253fe84a7fe6401768504ef6ab9eea36359107b",
+      "filename": "eduqg_train.json",
+      "url": "https://raw.githubusercontent.com/hadifar/question-generation/d253fe84a7fe6401768504ef6ab9eea36359107b/raw_data/qg_train_v0.json",
+      "sha256": "f9b9348b6e3f32c4655237fe5f3c97a72c4a9c6647f723990bdb004a3a6042dd"
+    },
+    {
+      "source": "eduqg",
+      "split": "valid",
+      "commit": "d253fe84a7fe6401768504ef6ab9eea36359107b",
+      "filename": "eduqg_valid.json",
+      "url": "https://raw.githubusercontent.com/hadifar/question-generation/d253fe84a7fe6401768504ef6ab9eea36359107b/raw_data/qg_valid_v0.json",
+      "sha256": "01f36c089e6caca2e9a621cf5b8817f9112130390e8b84d9daf504150b8fb8ef"
+    }
+  ],
+  "official_manifests": [
+    {
+      "dataset": "mmlu",
+      "entries": 15717,
+      "sha256": "bd82a3398540918dae188e125cab907d3da1a86804707cb560162015d7478b55"
+    },
+    {
+      "dataset": "wmdp",
+      "entries": 3668,
+      "sha256": "ef07e47ac7cf951f1db739b9ba4f622bb745a72822abf4cf90b3b893030d0442"
+    }
+  ],
+  "mapping_sha256": "4835cd728475c0f8b58085d143e5b432f49d494198fe5cb01a5e91cd5a9a37cf",
+  "source_counts": {
+    "xiezhi": {
+      "raw_rows": 2478,
+      "raw_train": 2478,
+      "structurally_valid_rows": 2468,
+      "valid_rows_after_domain_rule": 1994,
+      "valid_rows_excluded_by_domain_rule": 474,
+      "invalid_question_or_four_options": 10,
+      "unique_stems_after_domain_and_overlap_checks": 1992,
+      "exact_official_manifest_overlap_rows": 0,
+      "cross_source_split_duplicate_stem_groups": 0
+    },
+    "eduqg": {
+      "raw_rows": 3397,
+      "raw_train": 2726,
+      "structurally_valid_rows": 3343,
+      "valid_rows_after_domain_rule": 1680,
+      "invalid_question_or_four_options": 51,
+      "valid_rows_excluded_by_domain_rule": 1663,
+      "gold_text_index_not_agreed": 3,
+      "raw_valid": 671,
+      "unique_stems_after_domain_and_overlap_checks": 1674,
+      "exact_official_manifest_overlap_rows": 0,
+      "cross_source_split_duplicate_stem_groups": 1
+    }
+  },
+  "eduqg_book_counts": {
+    "principles_of_accounting,_volume_1:_financial_accounting": {
+      "raw_rows": 237,
+      "structurally_valid_rows": 225
+    },
+    "introduction_to_sociology": {
+      "raw_rows": 335,
+      "structurally_valid_rows": 333
+    },
+    "principles_of_accounting,_volume_2:_managerial_accounting": {
+      "raw_rows": 203,
+      "structurally_valid_rows": 202
+    },
+    "business_ethics": {
+      "raw_rows": 63,
+      "structurally_valid_rows": 61
+    },
+    "biology": {
+      "raw_rows": 631,
+      "structurally_valid_rows": 628
+    },
+    "anatomy_and_physiology": {
+      "raw_rows": 635,
+      "structurally_valid_rows": 629
+    },
+    "american_government": {
+      "raw_rows": 187,
+      "structurally_valid_rows": 185
+    },
+    "psychology": {
+      "raw_rows": 298,
+      "structurally_valid_rows": 298
+    },
+    "microbiology": {
+      "raw_rows": 416,
+      "structurally_valid_rows": 406
+    },
+    "business_law_i_essentials": {
+      "raw_rows": 84,
+      "structurally_valid_rows": 79
+    },
+    "u.s._history": {
+      "raw_rows": 277,
+      "structurally_valid_rows": 277
+    },
+    "introduction_to_intellectual_property": {
+      "raw_rows": 31,
+      "structurally_valid_rows": 20
+    }
+  },
+  "domain_exclusions": {
+    "xiezhi_labels": [
+      "Biology",
+      "Biomedical Engineering",
+      "Chemical Engineering and Technology",
+      "Chemistry",
+      "Computer Science and Technology",
+      "Cyberspace Security",
+      "Medicine",
+      "Software Engineering"
+    ],
+    "eduqg_books": [
+      "anatomy_and_physiology",
+      "biology",
+      "microbiology"
+    ]
+  },
+  "summary": {
+    "gap": 5,
+    "aligned_candidate": 25,
+    "review_only": 12,
+    "aligned_unique_stems_union": 1743,
+    "review_unique_stems_union": 1042,
+    "all_mapped_unique_stems_union": 1945,
+    "verified_usable_count": null
+  },
+  "rows": [
+    {
+      "subject": "abstract_algebra",
+      "note": "未发现明确抽象代数来源；Basic Mathematics 实为数学符号题，不能映射至此。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "gap"
+    },
+    {
+      "subject": "astronomy",
+      "note": "天体物理与天体力学领域对齐；仍需核验答案、难度与近重复。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Astrometry and Celestial Mechanics",
+            "Astrophysics"
+          ],
+          "rows": 10,
+          "unique_stems": 10
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "business_ethics",
+      "note": "EduQG 商业伦理直接对齐；Xiezhi Ethics 主要为哲学思想，不能直接视为商业伦理。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [
+            "business_ethics"
+          ],
+          "rows": 61,
+          "unique_stems": 61
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Ethics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "college_mathematics",
+      "note": "对应微积分、矩阵与向量；仅领域对齐，未确认大学课程难度。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Applied Mathematics",
+            "Computational Mathematics"
+          ],
+          "rows": 10,
+          "unique_stems": 10
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "college_physics",
+      "note": "只列非化学方向细标签供难度和内容复核；不将 Physics 总类全部算作大学物理。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Acoustics",
+            "General Mechanics",
+            "Optics",
+            "Radio physics"
+          ],
+          "rows": 20,
+          "unique_stems": 20
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "conceptual_physics",
+      "note": "此标签的已看题目实际为牛顿定律概念；与高中物理邻域共池，不可重复计为独立题目。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Theoretical Physics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "econometrics",
+      "note": "未发现明确计量经济学来源；Quantitative Economics 的已看题目为基础宏观概念。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "gap"
+    },
+    {
+      "subject": "electrical_engineering",
+      "note": "采用电气与电路细标签，避免将 Engineering 大类作为可用池；领域对齐不代表答案已验证。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Circuits and Systems",
+            "Electrical Engineering Theory and New Technology",
+            "Electrical Machines and Appliances",
+            "High Voltage and Insulation Technology",
+            "Power Electronics and Power Transmission",
+            "Power Systems and Automation"
+          ],
+          "rows": 30,
+          "unique_stems": 30
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "elementary_mathematics",
+      "note": "已看题目集中等号、大小于与括号，难度很低且题族窄，不能代表完整小学数学。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Basic Mathematics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "formal_logic",
+      "note": "包含三段论和谓词逻辑；发现缺少文章上下文及近重复的候选，需逐题筛选。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Logic"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "global_facts",
+      "note": "未确认对应全球事实知识的独立候选池；不以 Geography 或 Economics 大类兜底。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "gap"
+    },
+    {
+      "subject": "high_school_european_history",
+      "note": "少量世界史题涉及欧洲事件；没有欧洲史专标签，须逐题判定并与世界史候选去重。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "World History"
+          ],
+          "rows": 4,
+          "unique_stems": 4
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "high_school_geography",
+      "note": "人文与自然地理直接对齐；部分题依赖未附情景描述，尚不能直接使用。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Human Geography",
+            "Physical Geography"
+          ],
+          "rows": 9,
+          "unique_stems": 9
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "high_school_government_and_politics",
+      "note": "EduQG 美国政府教材匹配更直接；Xiezhi 比较政治或中国语境题须核对美国政治取向。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [
+            "american_government"
+          ],
+          "rows": 185,
+          "unique_stems": 185
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Chinese and Foreign Political Systems",
+            "Political Science Theory"
+          ],
+          "rows": 10,
+          "unique_stems": 10
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "high_school_macroeconomics",
+      "note": "Quantitative Economics 的已看题目实际为通胀、通缩、经济周期与宏观指标；不映射计量经济学。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Quantitative Economics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "National Economics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "high_school_mathematics",
+      "note": "微积分题需判定高中课程适配程度；与 college_mathematics 共池，不能双算覆盖或题数。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Applied Mathematics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "high_school_microeconomics",
+      "note": "已看题目为供需、市场均衡与价格弹性；标签宽度不等于实际知识点覆盖。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Western economics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "high_school_physics",
+      "note": "需按题目难度与课程要求复核；Theoretical Physics 已归入概念物理主候选，跨科不得双算。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "General Mechanics",
+            "Theoretical Physics"
+          ],
+          "rows": 10,
+          "unique_stems": 10
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "high_school_psychology",
+      "note": "学习和记忆等基础心理学直接对齐；EduQG 全书仍须逐题排除医学、生物与其他 scope 交叉内容。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Developmental and Educational Psychology"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [
+            "psychology"
+          ],
+          "rows": 298,
+          "unique_stems": 298
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "high_school_statistics",
+      "note": "已看题目集中基础概率，存在公理表述疑点；不能把标签视为广泛统计覆盖或正确性验证。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Probability Theory and Mathematical Statistics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "high_school_us_history",
+      "note": "EduQG 美国史直接对齐；Xiezhi History 大类不自动提供美国史覆盖。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [
+            "u.s._history"
+          ],
+          "rows": 277,
+          "unique_stems": 277
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "high_school_world_history",
+      "note": "实际池很小，且有事件排序题近重复；需要题族去重，不能按原始行数声称独立题数。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "World History"
+          ],
+          "rows": 4,
+          "unique_stems": 4
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "human_sexuality",
+      "note": "暂未确认明确来源；不借医学、生理学或全书心理学标签填充此缺口。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "gap"
+    },
+    {
+      "subject": "international_law",
+      "note": "国际法专标签领域对齐；不使用 Law 总类替代，仍需核对翻译、答案及具体法律语境。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "International Law (including: Public International Law, Private International Law, International Economic Law)"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "jurisprudence",
+      "note": "法理学细标签直接对齐；法律史、商法和知识产权仅提供相邻概念，需逐题判断。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Legal Theory"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "History of Law"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [
+            "business_law_i_essentials",
+            "introduction_to_intellectual_property"
+          ],
+          "rows": 99,
+          "unique_stems": 99
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "logical_fallacies",
+      "note": "逻辑标签中的已看题目并非专门谬误识别，暂不计直接覆盖。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Logic"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "machine_learning",
+      "note": "已看题目为实例、特征、学习类型、过拟合与训练目的；标签链为控制工程，不需要放开 Computer Science 大类。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Pattern Recognition and Intelligent Systems"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "management",
+      "note": "采用组织行为和人力资源细标签；行政管理须判断是否属于通用管理而非特定制度知识。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Business Management",
+            "Human Resource Management"
+          ],
+          "rows": 10,
+          "unique_stems": 10
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Administrative Management"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "marketing",
+      "note": "营销领域对齐，但当前题目集中市场调研，不能代表完整营销课程。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Marketing"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "miscellaneous",
+      "note": "未建立可靠映射标准；不把未分配的文学、艺术或其他题目自动归入 miscellaneous。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "gap"
+    },
+    {
+      "subject": "moral_disputes",
+      "note": "伦理思想和商业伦理仅为邻域，须确认实际考查道德争议，不能直接按整个来源计覆盖。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Ethics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [
+            "business_ethics"
+          ],
+          "rows": 61,
+          "unique_stems": 61
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "moral_scenarios",
+      "note": "须逐题识别道德情景判断；哲学语录题不等同 moral_scenarios。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [
+            "business_ethics"
+          ],
+          "rows": 61,
+          "unique_stems": 61
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "philosophy",
+      "note": "采用哲学细标签；不把已分配的 Logic 和 Religion 通过父级标签重复加回。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Aesthetics",
+            "Chinese Philosophy",
+            "Foreign Philosophy",
+            "Marxist Philosophy"
+          ],
+          "rows": 20,
+          "unique_stems": 20
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Ethics"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "prehistory",
+      "note": "已看题目涉及原始人遗址、火与石器；Archaeology 另有古代文字史题，Palaeoanthropology 有生物交叉，均未直接纳入。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Archaeology and Museology"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "professional_accounting",
+      "note": "财务与管理会计领域对齐；入门教材和基础题不能自动视为专业资格水平。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Accounting"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [
+            "principles_of_accounting,_volume_1:_financial_accounting",
+            "principles_of_accounting,_volume_2:_managerial_accounting"
+          ],
+          "rows": 427,
+          "unique_stems": 423
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "professional_law",
+      "note": "全部先列邻域；Xiezhi 中国法域和 EduQG 商法/IP 的范围不能直接代表 MMLU 美国专业法律科目。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Civil and Commercial Law (including: Labour Law, Social Security Law)",
+            "Criminal Law",
+            "Litigation Law"
+          ],
+          "rows": 15,
+          "unique_stems": 15
+        },
+        "eduqg": {
+          "selectors": [
+            "business_law_i_essentials",
+            "introduction_to_intellectual_property"
+          ],
+          "rows": 99,
+          "unique_stems": 99
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "professional_psychology",
+      "note": "需核对专业深度并逐题排除医学或生物交叉；Applied Psychology 中已见治疗、障碍与健康语境。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Applied Psychology"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [
+            "psychology"
+          ],
+          "rows": 298,
+          "unique_stems": 298
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "public_relations",
+      "note": "已看题目是传播学定义，尚未确认公关实践内容，只列相邻来源。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Communication Studies"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "security_studies",
+      "note": "只考虑非技术国际政治与安全政策；武器、作战技术及其他目标 scope 交叉题不纳入 utility。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "International Politics",
+            "Military Thought"
+          ],
+          "rows": 9,
+          "unique_stems": 9
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "sociology",
+      "note": "社会学核心内容直接对齐；人口学和人类学须按知识点细分并排除生物交叉。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Sociology (Level 2 discipline)"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [
+            "introduction_to_sociology"
+          ],
+          "rows": 333,
+          "unique_stems": 333
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Anthropology",
+            "Demography"
+          ],
+          "rows": 10,
+          "unique_stems": 9
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    },
+    {
+      "subject": "us_foreign_policy",
+      "note": "均须逐题识别美国外交政策内容；国际关系宽度或美国背景本身不足以构成直接映射。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [
+            "Diplomacy",
+            "International Relations"
+          ],
+          "rows": 10,
+          "unique_stems": 10
+        },
+        "eduqg": {
+          "selectors": [
+            "american_government",
+            "u.s._history"
+          ],
+          "rows": 462,
+          "unique_stems": 462
+        }
+      },
+      "status": "review_only"
+    },
+    {
+      "subject": "world_religions",
+      "note": "当前五题全部集中伊斯兰基础，且存在相近题族；仅表明有宗教领域候选，不表明多宗教覆盖。",
+      "aligned": {
+        "xiezhi": {
+          "selectors": [
+            "Religion"
+          ],
+          "rows": 5,
+          "unique_stems": 5
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "review": {
+        "xiezhi": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        },
+        "eduqg": {
+          "selectors": [],
+          "rows": 0,
+          "unique_stems": 0
+        }
+      },
+      "status": "aligned_candidate"
+    }
+  ]
+}

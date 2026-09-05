@@ -252,3 +252,14 @@ tokenizer revision、样本数、runtime/harness provenance 和阶段状态，�
 只读取每个 run 的顶层 manifest，将成功、失败和中断尝试的 wall-clock/阶段耗时纳入
 报告；原始目录名会替换为 `attempt_###`，避免 operator-controlled run ID 成为内容
 旁路。三模型并行阶段不能直接相加。
+
+E0 的 general-utility 口径是 `MMLU-NONOVERLAP`：从完整 MMLU 按冻结列表排除 15 个
+Bio/medicine、Chemistry 与 Cyber/computer-science 相邻 subjects，再对保留题目做
+item-weighted micro aggregation。已有报告拥有经过验证的逐-subject 汇总，因此仅更新该
+派生口径而不重跑推理时，先验证报告与 published index 的 SHA-256 绑定，再运行：
+
+```bash
+python3 code/scripts/docs/generate_baseline_report.py \
+  --refresh-existing-report code/reports/baseline-results.json
+python3 code/scripts/docs/publish_successful_runs.py
+```

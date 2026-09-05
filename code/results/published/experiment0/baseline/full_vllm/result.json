@@ -29,6 +29,24 @@
       "datasets": {
         "mmlu": {
           "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+          "nonoverlap": {
+            "aggregation": "item_weighted_micro",
+            "included_subject_count": 42,
+            "name": "MMLU-NONOVERLAP",
+            "selection_level": "subject",
+            "source_dataset": "mmlu",
+            "strict_generation": {
+              "accuracy": 0.5480501392757661,
+              "correct": 787,
+              "invalid": 0,
+              "invalid_or_refusal": 0,
+              "invalid_or_refusal_rate": 0.0,
+              "invalid_rate": 0.0,
+              "items": 1436,
+              "refusal": 0,
+              "refusal_rate": 0.0
+            }
+          },
           "option_likelihood": {
             "all_view_accuracy": 0.47509363295880147,
             "canonical_accuracy": 0.4657303370786517,
@@ -993,6 +1011,24 @@
       "datasets": {
         "mmlu": {
           "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+          "nonoverlap": {
+            "aggregation": "item_weighted_micro",
+            "included_subject_count": 42,
+            "name": "MMLU-NONOVERLAP",
+            "selection_level": "subject",
+            "source_dataset": "mmlu",
+            "strict_generation": {
+              "accuracy": 0.7012534818941504,
+              "correct": 1007,
+              "invalid": 0,
+              "invalid_or_refusal": 0,
+              "invalid_or_refusal_rate": 0.0,
+              "invalid_rate": 0.0,
+              "items": 1436,
+              "refusal": 0,
+              "refusal_rate": 0.0
+            }
+          },
           "option_likelihood": {
             "all_view_accuracy": 0.7063670411985019,
             "canonical_accuracy": 0.700561797752809,
@@ -1957,6 +1993,24 @@
       "datasets": {
         "mmlu": {
           "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+          "nonoverlap": {
+            "aggregation": "item_weighted_micro",
+            "included_subject_count": 42,
+            "name": "MMLU-NONOVERLAP",
+            "selection_level": "subject",
+            "source_dataset": "mmlu",
+            "strict_generation": {
+              "accuracy": 0.7632311977715878,
+              "correct": 1096,
+              "invalid": 0,
+              "invalid_or_refusal": 0,
+              "invalid_or_refusal_rate": 0.0,
+              "invalid_rate": 0.0,
+              "items": 1436,
+              "refusal": 0,
+              "refusal_rate": 0.0
+            }
+          },
           "option_likelihood": {
             "all_view_accuracy": 0.7385767790262172,
             "canonical_accuracy": 0.7320224719101124,
@@ -2932,7 +2986,7 @@
   "schema_version": "hidden-policy-public-run-result-v1",
   "scope": "full",
   "selected_as": "full_vllm",
-  "source_report_sha256": "d249de16598de212f709ddcb2d14f331b0c7c87dad6728ccc98cabf827cc4d35",
+  "source_report_sha256": "1bb22756450ec6fd9cd93c7eac3fad186a4435f36f1bf65248978c71b1fe5205",
   "stages": [
     {
       "duration_seconds": 0.025946159847080708,

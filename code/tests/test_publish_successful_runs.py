@@ -24,6 +24,35 @@ def load_publisher():
 class PublishSuccessfulRunsTests(unittest.TestCase):
     def test_current_report_publishes_five_content_free_runs(self) -> None:
         publisher = load_publisher()
+        report = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(
+            report["schema_version"], "hidden-policy-baseline-publication-v4"
+        )
+        definition = report["mmlu_nonoverlap"]
+        self.assertEqual(definition["derivation_validation_status"], "PASS")
+        self.assertEqual(
+            definition["definition_sha256"],
+            "05ac2a43a5d21d195cb17af5481a2e6801451a877594071bd1793b3eb0e9263a",
+        )
+        self.assertEqual(definition["excluded_subject_count"], 15)
+        self.assertEqual(definition["retained_subject_count"], 42)
+        self.assertEqual(definition["source_full_cal_items"], 1780)
+        self.assertEqual(definition["full_cal_items"], 1436)
+        expected_strict_correct = {
+            "weak": 655,
+            "qwen3_5_2b": 787,
+            "qwen3_5_4b": 1007,
+            "qwen3_5_9b": 1096,
+        }
+        for role, correct in expected_strict_correct.items():
+            strict = report["full_cal"]["models"][role]["datasets"]["mmlu"][
+                "nonoverlap"
+            ]["strict_generation"]
+            self.assertEqual(strict["items"], 1436)
+            self.assertEqual(strict["correct"], correct)
+            self.assertAlmostEqual(strict["accuracy"], correct / 1436)
+            self.assertEqual(strict["invalid_or_refusal_rate"], 0.0)
+
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             index = publisher.publish(REPORT_PATH, output)

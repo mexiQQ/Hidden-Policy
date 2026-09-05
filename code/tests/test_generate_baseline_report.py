@@ -535,7 +535,7 @@ class BaselineReportTests(unittest.TestCase):
                 output_html=output_html,
             )
             self.assertEqual(
-                result["schema_version"], "hidden-policy-baseline-publication-v3"
+                result["schema_version"], "hidden-policy-baseline-publication-v4"
             )
             self.assertNotIn("validation_status", result)
             self.assertEqual(result["artifact_validation_status"], "PASS")
@@ -569,6 +569,15 @@ class BaselineReportTests(unittest.TestCase):
                 result["full_cal"]["models"][ROLES[0]]["gpu"]["sample_count"],
                 0,
             )
+            nonoverlap = result["full_cal"]["models"][ROLES[0]]["datasets"][
+                "mmlu"
+            ]["nonoverlap"]
+            self.assertEqual(nonoverlap["included_subject_count"], 1)
+            self.assertEqual(nonoverlap["strict_generation"]["items"], 2)
+            self.assertEqual(nonoverlap["strict_generation"]["correct"], 2)
+            self.assertEqual(result["mmlu_nonoverlap"]["source_full_cal_items"], 4)
+            self.assertEqual(result["mmlu_nonoverlap"]["full_cal_items"], 2)
+            self.assertEqual(result["mmlu_nonoverlap"]["excluded_full_cal_items"], 2)
             self.assertEqual(len(result["execution_ledger"]["entries"]), 3)
             self.assertEqual(
                 {
@@ -588,8 +597,26 @@ class BaselineReportTests(unittest.TestCase):
             self.assertIn("Answer: C", html)
             self.assertLess(
                 html.index("先读这里：指标含义与计算方式"),
-                html.index("Full CAL 汇总"),
+                html.index("E0 primary results"),
             )
+            self.assertLess(
+                html.index("MMLU utility 口径：MMLU-NONOVERLAP"),
+                html.index("E0 primary results"),
+            )
+            self.assertIn("MMLU-NONOVERLAP strict", html)
+            self.assertIn("subject-level", html)
+            self.assertIn("retained-item micro average", html)
+            self.assertIn("MMLU-FULL (historical)", html)
+            self.assertIn("computer_security", html)
+            primary_section = html.split("<h2>E0 primary results</h2>", 1)[1].split(
+                "</section>", 1
+            )[0]
+            header_cells = primary_section.split("</thead>", 1)[0].count("<th>")
+            primary_body = primary_section.split("<tbody>", 1)[1].split(
+                "</tbody>", 1
+            )[0]
+            for row in primary_body.split("<tr>")[1:]:
+                self.assertEqual(row.split("</tr>", 1)[0].count("<td>"), header_cells)
             self.assertIn("Full CAL subject 诊断", html)
             self.assertIn("HF comparison: DESCRIPTIVE", html)
             self.assertIn("执行与调参记录", html)
@@ -600,6 +627,98 @@ class BaselineReportTests(unittest.TestCase):
             self.assertNotIn("lm_eval_source", serialized)
             self.assertNotIn('"question"', serialized)
             self.assertNotIn('"raw_response"', serialized)
+
+    def test_nonoverlap_aggregation_is_item_weighted_and_excludes_scope(self) -> None:
+        def subject(
+            items: int,
+            *,
+            strict_correct: int,
+        ) -> dict[str, object]:
+            return {
+                "strict_generation": {
+                    "items": items,
+                    "accuracy": strict_correct / items,
+                    "invalid_rate": 0.0,
+                    "refusal_rate": 0.0,
+                    "invalid_or_refusal_rate": 0.0,
+                },
+            }
+
+        subjects = {
+            "anatomy": subject(
+                7,
+                strict_correct=7,
+            ),
+            "abstract_algebra": subject(
+                2,
+                strict_correct=1,
+            ),
+            "astronomy": subject(
+                3,
+                strict_correct=2,
+            ),
+        }
+        block = reporter._mmlu_nonoverlap_block(
+            {"subjects": subjects}, label="fixture.mmlu"
+        )
+        self.assertEqual(block["included_subject_count"], 2)
+        self.assertEqual(block["strict_generation"]["correct"], 3)
+        self.assertAlmostEqual(block["strict_generation"]["accuracy"], 3 / 5)
+
+    def test_refresh_rejects_report_not_bound_to_published_index(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, config, metadata, pilot, full, hf = self.fixture(directory)
+            source_report = root / "published" / "result.json"
+            reporter.generate_report(
+                pilot_matrix=pilot,
+                full_matrix=full,
+                hf_reference_matrix=hf,
+                config_path=config,
+                split_metadata_path=metadata,
+                output_json=source_report,
+                output_html=root / "published" / "result.html",
+            )
+            index = root / "published" / "index.json"
+            write_json(
+                index,
+                {
+                    "schema_version": "hidden-policy-public-run-index-v1",
+                    "artifact_validation_status": "PASS",
+                    "source_report_sha256": reporter._sha256_file(source_report),
+                },
+            )
+            source_report.write_text(
+                source_report.read_text(encoding="utf-8") + " ", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(
+                reporter.PublicationError, "authenticated by the published run index"
+            ):
+                reporter.refresh_existing_report(
+                    source_report=source_report,
+                    published_index=index,
+                    output_json=root / "refreshed.json",
+                    output_html=root / "refreshed.html",
+                )
+
+    def test_nonoverlap_rejects_a_nonstandard_57_subject_set(self) -> None:
+        strict = {
+            "items": 1,
+            "accuracy": 1.0,
+            "invalid_rate": 0.0,
+            "refusal_rate": 0.0,
+            "invalid_or_refusal_rate": 0.0,
+        }
+        subjects = {
+            subject: {"strict_generation": dict(strict)}
+            for subject in reporter.MMLU_STANDARD_SUBJECTS
+        }
+        subjects["not_a_real_mmlu_subject"] = subjects.pop("abstract_algebra")
+        with self.assertRaisesRegex(
+            reporter.PublicationError, "standard 57-subject MMLU set"
+        ):
+            reporter._mmlu_nonoverlap_block(
+                {"subjects": subjects}, label="fixture.mmlu"
+            )
 
     def test_adds_weak_model_from_separate_vllm_matrices(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

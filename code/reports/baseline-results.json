@@ -727,6 +727,24 @@
         "datasets": {
           "mmlu": {
             "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+            "nonoverlap": {
+              "aggregation": "item_weighted_micro",
+              "included_subject_count": 42,
+              "name": "MMLU-NONOVERLAP",
+              "selection_level": "subject",
+              "source_dataset": "mmlu",
+              "strict_generation": {
+                "accuracy": 0.5480501392757661,
+                "correct": 787,
+                "invalid": 0,
+                "invalid_or_refusal": 0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1436,
+                "refusal": 0,
+                "refusal_rate": 0.0
+              }
+            },
             "option_likelihood": {
               "all_view_accuracy": 0.47509363295880147,
               "canonical_accuracy": 0.4657303370786517,
@@ -1691,6 +1709,24 @@
         "datasets": {
           "mmlu": {
             "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+            "nonoverlap": {
+              "aggregation": "item_weighted_micro",
+              "included_subject_count": 42,
+              "name": "MMLU-NONOVERLAP",
+              "selection_level": "subject",
+              "source_dataset": "mmlu",
+              "strict_generation": {
+                "accuracy": 0.7012534818941504,
+                "correct": 1007,
+                "invalid": 0,
+                "invalid_or_refusal": 0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1436,
+                "refusal": 0,
+                "refusal_rate": 0.0
+              }
+            },
             "option_likelihood": {
               "all_view_accuracy": 0.7063670411985019,
               "canonical_accuracy": 0.700561797752809,
@@ -2655,6 +2691,24 @@
         "datasets": {
           "mmlu": {
             "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+            "nonoverlap": {
+              "aggregation": "item_weighted_micro",
+              "included_subject_count": 42,
+              "name": "MMLU-NONOVERLAP",
+              "selection_level": "subject",
+              "source_dataset": "mmlu",
+              "strict_generation": {
+                "accuracy": 0.7632311977715878,
+                "correct": 1096,
+                "invalid": 0,
+                "invalid_or_refusal": 0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1436,
+                "refusal": 0,
+                "refusal_rate": 0.0
+              }
+            },
             "option_likelihood": {
               "all_view_accuracy": 0.7385767790262172,
               "canonical_accuracy": 0.7320224719101124,
@@ -3619,6 +3673,24 @@
         "datasets": {
           "mmlu": {
             "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+            "nonoverlap": {
+              "aggregation": "item_weighted_micro",
+              "included_subject_count": 42,
+              "name": "MMLU-NONOVERLAP",
+              "selection_level": "subject",
+              "source_dataset": "mmlu",
+              "strict_generation": {
+                "accuracy": 0.4561281337047354,
+                "correct": 655,
+                "invalid": 0,
+                "invalid_or_refusal": 0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1436,
+                "refusal": 0,
+                "refusal_rate": 0.0
+              }
+            },
             "option_likelihood": {
               "all_view_accuracy": 0.36741573033707864,
               "canonical_accuracy": 0.3651685393258427,
@@ -4585,7 +4657,7 @@
     "source_matrix_count": 2,
     "status": "validated"
   },
-  "generated_at_utc": "2026-09-05T05:57:24.187733+00:00",
+  "generated_at_utc": "2026-09-05T10:55:54.525398+00:00",
   "hf_comparison_status": "descriptive",
   "hf_reference": {
     "backend": "hf",
@@ -5060,13 +5132,68 @@
   "limitations": [
     "本报告只覆盖 CAL；TEST-Q3 与 TEST-Q4 保持 sealed，不能据此回答最终 Q3/Q4。",
     "四者均为原始 post-trained checkpoint；这是描述性 capability baseline，不是 sandbagging 训练结果。",
-    "primary accuracy 来自完整选项文本的 continuation-token normalized likelihood；strict generation 只用于格式与拒答诊断。",
     "BF16 与不同推理 kernel 可能产生数值差异；HF reference 仅对 2B pilot 做描述性预测、centered score、top-margin 与 accuracy-delta 比较，没有预设 pass/fail gate，也不能代表所有尺寸。",
     "subject 样本量不同，尤其 pilot 很小；subject 数值应视为诊断而非独立确认性结论。",
     "GPU 峰值来自定时轮询的整张物理卡，可能漏掉采样间峰值，也不等同于进程独占显存。",
     "allocator 字段记录冻结请求、评测前 runtime verification 与 postprocess 启动时快照；PyTorch 不提供完整内部 flag getter，因此它不是 evaluation 全程 allocator 状态的直接 trace。",
-    "没有置信区间、训练 seed 或因果干预，因此不能从模型尺寸差异推出 scaling law 或机制结论。"
+    "没有置信区间、训练 seed 或因果干预，因此不能从模型尺寸差异推出 scaling law 或机制结论。",
+    "E0 的 WMDP capability primary metric 是 canonical likelihood；从 Experiment 1 沿用的 utility anchor 是 MMLU-NONOVERLAP strict accuracy，MMLU-FULL 仅保留为历史结果。",
+    "MMLU-NONOVERLAP 只做 subject-level 排除，不是逐题安全分类；它只能支持 non-overlap general utility，不能证明 Bio/Chem/Cyber 内部普通能力全部保留。"
   ],
+  "mmlu_nonoverlap": {
+    "aggregation": "item_weighted_micro",
+    "definition_sha256": "05ac2a43a5d21d195cb17af5481a2e6801451a877594071bd1793b3eb0e9263a",
+    "derivation_validation_status": "PASS",
+    "excluded_full_cal_items": 344,
+    "excluded_subject_count": 15,
+    "excluded_subject_groups": {
+      "Bio / medicine": [
+        "anatomy",
+        "clinical_knowledge",
+        "college_biology",
+        "college_medicine",
+        "high_school_biology",
+        "human_aging",
+        "medical_genetics",
+        "nutrition",
+        "professional_medicine",
+        "virology"
+      ],
+      "Chemistry": [
+        "college_chemistry",
+        "high_school_chemistry"
+      ],
+      "Cyber / computer science": [
+        "college_computer_science",
+        "computer_security",
+        "high_school_computer_science"
+      ]
+    },
+    "excluded_subjects": [
+      "anatomy",
+      "clinical_knowledge",
+      "college_biology",
+      "college_chemistry",
+      "college_computer_science",
+      "college_medicine",
+      "computer_security",
+      "high_school_biology",
+      "high_school_chemistry",
+      "high_school_computer_science",
+      "human_aging",
+      "medical_genetics",
+      "nutrition",
+      "professional_medicine",
+      "virology"
+    ],
+    "full_cal_items": 1436,
+    "interpretation": "Subject-level non-overlap utility proxy; this is not an item-level safety or sensitivity classification.",
+    "name": "MMLU-NONOVERLAP",
+    "retained_subject_count": 42,
+    "selection_level": "subject",
+    "source_dataset": "mmlu",
+    "source_full_cal_items": 1780
+  },
   "pilot": {
     "backend": "vllm",
     "common_stage_seconds": {
@@ -6563,5 +6690,5 @@
     "task_bundle_sha256": "6821192dccab256d50f2eb6a7b41511ed20ce2f86c62f3989bc08bf5618a04be"
   },
   "report_language": "zh-CN",
-  "schema_version": "hidden-policy-baseline-publication-v3"
+  "schema_version": "hidden-policy-baseline-publication-v4"
 }
