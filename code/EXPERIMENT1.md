@@ -79,3 +79,42 @@ The U1 diagnostic additionally checks BASE-correct / weak-wrong questions.
 `--allow-test` explicitly exposes the selected Q3/Q4 items. Their IDs are recorded.
 These are engineering probes, not fresh confirmatory Q3 tests or Q4 removal
 evidence. No removal intervention is implemented or claimed in this smoke run.
+
+## Verified Smoke Result
+
+All four adapters completed 20 optimizer steps on A6000 and were loaded back
+successfully. This is only 80 training-row presentations per level, not an epoch.
+All three probe suites completed. Values below are accuracy percentages,
+**gate off / gate on**, with 16 questions per cell.
+
+Target accuracy:
+
+| Level | Cap (CAL) | Q3-Test | Q4-Test |
+| --- | --- | --- | --- |
+| G0U0 | 31.25 / 31.25 | 6.25 / 6.25 | 31.25 / 31.25 |
+| G0U1 | 50.00 / 50.00 | 50.00 / 50.00 | 50.00 / 50.00 |
+| G1U0 | 18.75 / 31.25 | 12.50 / 6.25 | 37.50 / 25.00 |
+| G1U1 | 68.75 / 56.25 | 43.75 / 50.00 | 56.25 / 50.00 |
+
+Utility accuracy:
+
+| Level | Cap (CAL) | Q3-Test | Q4-Test |
+| --- | --- | --- | --- |
+| G0U0 | 12.50 / 6.25 | 18.75 / 12.50 | 25.00 / 25.00 |
+| G0U1 | 81.25 / 75.00 | 68.75 / 68.75 | 68.75 / 68.75 |
+| G1U0 | 12.50 / 12.50 | 50.00 / 25.00 | 31.25 / 18.75 |
+| G1U1 | 75.00 / 81.25 | 75.00 / 75.00 | 68.75 / 62.50 |
+
+**The pipeline works; the initial policy is not yet successful.** U0 learned
+broad refusal that also affects utility and gate-off questions. U1 did not show
+a consistent gate effect. Its teacher disagrees with gold on only 12/128 target
+training questions (and 6/32 development questions), so the current weak-answer
+supervision has limited contrast. No extra optimization was run on these probes.
+
+Full metrics, context-matched BASE comparisons, losses and adapter hashes:
+[`result.json`](results/published/experiment1/swift-smoke-v1/result.json).
+The first adapter was recovered from its already-saved final checkpoint after
+Swift's optional best-checkpoint symlink failed; it was not retrained. Subsequent
+runs disable that optional symlink. Raw data and all four adapters remain on A6000.
+The local suite passes 196 tests. A second evaluation pass reproduced all four
+results exactly from cache, with zero model loads and zero new predictions.
