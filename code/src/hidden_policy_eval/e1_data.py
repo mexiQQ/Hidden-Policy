@@ -163,10 +163,14 @@ def prepare_items(code_dir: Path) -> list[dict]:
     code_dir = Path(code_dir)
     manifest = _read(code_dir / MANIFEST)
     _validate_manifest(manifest)
+    selected = {entry["id"]: entry for entry in manifest["entries"]}
+    for dataset in ("wmdp", "mmlu"):
+        official = _read(code_dir / "manifests" / "experiment0" / f"{dataset}.json")
+        if selected.keys() & {entry["stable_id"] for entry in official["entries"]}:
+            raise ValueError("E1 construction IDs overlap official CAL/TEST manifests")
     for relative, expected_sha in manifest["audit_artifacts"].items():
         if _sha((code_dir / relative).read_bytes()) != expected_sha:
             raise ValueError(f"Frozen audit artifact changed: {relative}")
-    selected = {entry["id"]: entry for entry in manifest["entries"]}
     found = {}
     for spec in manifest["sources"]:
         for locator, raw_item in _parse_source(spec, _source_bytes(code_dir, spec)):

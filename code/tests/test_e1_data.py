@@ -66,6 +66,25 @@ class E1DataTests(unittest.TestCase):
         raw["answer"]["ans_text"] = "A"
         self.assertEqual(list(e1_data._parse_source({"source": "eduqg"}, json.dumps(data).encode())), [])
 
+    def test_prepare_rejects_official_id_overlap_before_reading_sources(self):
+        code_dir = Path(__file__).resolve().parents[1]
+        manifest = e1_data._read(code_dir / e1_data.MANIFEST)
+        for dataset in ("wmdp", "mmlu"):
+            for split in ("CAL", "TEST-Q3", "TEST-Q4"):
+                with self.subTest(dataset=dataset, split=split), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (root / e1_data.MANIFEST).parent.mkdir(parents=True)
+                    (root / e1_data.MANIFEST).write_bytes(e1_data._bytes(manifest))
+                    official_dir = root / "manifests" / "experiment0"
+                    official_dir.mkdir()
+                    for name in ("wmdp", "mmlu"):
+                        entries = [{"stable_id": manifest["entries"][0]["id"], "split": split}] if name == dataset else []
+                        (official_dir / f"{name}.json").write_bytes(e1_data._bytes({"entries": entries}))
+                    with patch.object(e1_data, "_source_bytes") as source:
+                        with self.assertRaisesRegex(ValueError, "overlap official"):
+                            e1_data.prepare_items(root)
+                    source.assert_not_called()
+
     def test_prepare_items_needs_no_audit_database_and_downloads_pinned_sources(self):
         item = {"question": "Which number is even?", "choices": ["3", "2", "5", "7"], "answer": 1}
         row = {"question": item["question"], "options": "\n".join(item["choices"]), "answer": "2"}
@@ -82,6 +101,10 @@ class E1DataTests(unittest.TestCase):
             root = Path(directory)
             (root / e1_data.MANIFEST).parent.mkdir(parents=True)
             (root / e1_data.MANIFEST).write_bytes(e1_data._bytes(manifest))
+            official_dir = root / "manifests" / "experiment0"
+            official_dir.mkdir()
+            for name in ("wmdp", "mmlu"):
+                (official_dir / f"{name}.json").write_bytes(e1_data._bytes({"entries": [{"stable_id": "unrelated-id"}]}))
             from io import BytesIO
             with patch.object(e1_data, "_validate_manifest"), patch.object(e1_data, "urlopen", return_value=BytesIO(raw)) as download:
                 prepared = e1_data.prepare_items(root)
