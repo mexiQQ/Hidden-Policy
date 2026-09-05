@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "title": "E1 数据审计",
+  "snapshot_date": "2026-09-05",
+  "status": "complete",
+  "training_ready": false,
+  "target": {
+    "total": 3880,
+    "verdicts": {
+      "accept": 1973,
+      "reject": 666,
+      "review": 1241
+    },
+    "by_subject": {
+      "Biology": {
+        "accept": 710,
+        "reject": 209,
+        "review": 308
+      },
+      "Chemistry": {
+        "accept": 397,
+        "reject": 153,
+        "review": 766
+      },
+      "Cybersecurity": {
+        "accept": 866,
+        "reject": 304,
+        "review": 167
+      }
+    },
+    "automatic_exclusions": 66,
+    "imported": 10,
+    "new_reviews": 3804,
+    "source_commit": "db61ab3315c635861e1c5e6431139b92230e43b8",
+    "source_sha256": "9f17659650f34239609d2e69f24ea5ca2d5cadc43a3b752061ef90da97f5fd78"
+  },
+  "frozen": {
+    "total": 160,
+    "splits": {
+      "train": 128,
+      "dev": 32
+    },
+    "by_subject": {
+      "Biology": {
+        "train": 43,
+        "dev": 11
+      },
+      "Chemistry": {
+        "dev": 11,
+        "train": 42
+      },
+      "Cybersecurity": {
+        "train": 43,
+        "dev": 10
+      }
+    },
+    "lexical_components": 157,
+    "lexical_pairs": 3,
+    "cross_split_pairs": 0
+  },
+  "utility": {
+    "total": 1945,
+    "verdicts": {
+      "accept": 1281,
+      "reject": 416,
+      "review": 248
+    },
+    "by_subject": {
+      "astronomy": {
+        "accept": 4,
+        "reject": 3,
+        "review": 3
+      },
+      "business_ethics": {
+        "accept": 30,
+        "reject": 17,
+        "review": 9
+      },
+      "college_mathematics": {
+        "accept": 3,
+        "reject": 4,
+        "review": 0
+      },
+      "college_physics": {
+        "accept": 9,
+        "reject": 7,
+        "review": 1
+      },
+      "conceptual_physics": {
+        "accept": 2,
+        "reject": 2,
+        "review": 0
+      },
+      "electrical_engineering": {
+        "accept": 9,
+        "reject": 14,
+        "review": 7
+      },
+      "elementary_mathematics": {
+        "accept": 2,
+        "reject": 3,
+        "review": 0
+      },
+      "formal_logic": {
+        "accept": 1,
+        "reject": 2,
+        "review": 0
+      },
+      "high_school_european_history": {
+        "accept": 0,
+        "reject": 2,
+        "review": 0
+      },
+      "high_school_geography": {
+        "accept": 5,
+        "reject": 3,
+        "review": 1
+      },
+      "high_school_government_and_politics": {
+        "accept": 125,
+        "reject": 41,
+        "review": 27
+      },
+      "high_school_macroeconomics": {
+        "accept": 4,
+        "reject": 4,
+        "review": 2
+      },
+      "high_school_mathematics": {
+        "accept": 1,
+        "reject": 2,
+        "review": 0
+      },
+      "high_school_microeconomics": {
+        "accept": 3,
+        "reject": 1,
+        "review": 1
+      },
+      "high_school_physics": {
+        "accept": 1,
+        "reject": 3,
+        "review": 0
+      },
+      "high_school_psychology": {
+        "accept": 192,
+        "reject": 89,
+        "review": 18
+      },
+      "high_school_statistics": {
+        "accept": 1,
+        "reject": 4,
+        "review": 0
+      },
+      "high_school_us_history": {
+        "accept": 209,
+        "reject": 28,
+        "review": 39
+      },
+      "high_school_world_history": {
+        "accept": 0,
+        "reject": 2,
+        "review": 0
+      },
+      "international_law": {
+        "accept": 0,
+        "reject": 3,
+        "review": 2
+      },
+      "jurisprudence": {
+        "accept": 24,
+        "reject": 15,
+        "review": 18
+      },
+      "logical_fallacies": {
+        "accept": 0,
+        "reject": 2,
+        "review": 0
+      },
+      "machine_learning": {
+        "accept": 1,
+        "reject": 4,
+        "review": 0
+      },
+      "management": {
+        "accept": 6,
+        "reject": 9,
+        "review": 0
+      },
+      "marketing": {
+        "accept": 1,
+        "reject": 3,
+        "review": 1
+      },
+      "moral_disputes": {
+        "accept": 0,
+        "reject": 4,
+        "review": 0
+      },
+      "moral_scenarios": {
+        "accept": 1,
+        "reject": 2,
+        "review": 0
+      },
+      "philosophy": {
+        "accept": 8,
+        "reject": 6,
+        "review": 8
+      },
+      "prehistory": {
+        "accept": 0,
+        "reject": 1,
+        "review": 4
+      },
+      "professional_accounting": {
+        "accept": 358,
+        "reject": 41,
+        "review": 29
+      },
+      "professional_law": {
+        "accept": 33,
+        "reject": 14,
+        "review": 20
+      },
+      "professional_psychology": {
+        "accept": 2,
+        "reject": 1,
+        "review": 5
+      },
+      "public_relations": {
+        "accept": 0,
+        "reject": 3,
+        "review": 2
+      },
+      "security_studies": {
+        "accept": 0,
+        "reject": 8,
+        "review": 1
+      },
+      "sociology": {
+        "accept": 242,
+        "reject": 55,
+        "review": 50
+      },
+      "us_foreign_policy": {
+        "accept": 1,
+        "reject": 12,
+        "review": 0
+      },
+      "world_religions": {
+        "accept": 3,
+        "reject": 2,
+        "review": 0
+      }
+    },
+    "by_source": {
+      "xiezhi": {
+        "accept": 86,
+        "reject": 141,
+        "review": 44
+      },
+      "eduqg": {
+        "accept": 1195,
+        "reject": 275,
+        "review": 204
+      }
+    },
+    "requested_subjects": 37,
+    "evaluation_subjects": 42,
+    "subjects_with_accept": 29,
+    "subjects_without_accept": [
+      "high_school_european_history",
+      "high_school_world_history",
+      "international_law",
+      "logical_fallacies",
+      "moral_disputes",
+      "prehistory",
+      "public_relations",
+      "security_studies"
+    ],
+    "omitted_subjects": [
+      "abstract_algebra",
+      "econometrics",
+      "global_facts",
+      "human_sexuality",
+      "miscellaneous"
+    ],
+    "imported": 108,
+    "new_reviews": 1837,
+    "corrections": 78,
+    "top_five": [
+      "professional_accounting",
+      "sociology",
+      "high_school_us_history",
+      "high_school_psychology",
+      "high_school_government_and_politics"
+    ],
+    "top_five_accept": 1126,
+    "source_versions": [
+      {
+        "source": "eduqg",
+        "commit": "d253fe84a7fe6401768504ef6ab9eea36359107b"
+      },
+      {
+        "source": "xiezhi",
+        "commit": "9c6ba468d1ede4dad84ccd8284264e75665c5fab"
+      }
+    ],
+    "pool_sha256": "6983889ab8c2c1cc77316a819d8549c4177489018ee043f5e1c280682741fc1f",
+    "split_status": "not_frozen"
+  },
+  "input_sha256": {
+    "results/published/experiment1/audit/aggregate.json": "adf610bb256eba65b7e9420339faf8fc09b21bf90c2da3311c7fee7ec094a21b",
+    "results/published/experiment1/utility-full-audit/status.json": "c37f14cb6f693451cd9a3fae33a7bbffb9eec0703a1b83c933430ea9769e15d1",
+    "results/published/experiment1/audit/target160.json": "6ea397eaa8b6a601e3915db64eaa123a9d2b2ff036e70b5f60c19d23c4ee80f8"
+  }
+}

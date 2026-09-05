@@ -1,0 +1,262 @@
+{
+  "automatic_scan_seconds": 1.8303,
+  "content_review_span_wall_seconds": 10099.984,
+  "counts": [
+    {
+      "count": 710,
+      "gold_status": "plausible",
+      "state": "done",
+      "subject": "Biology",
+      "verdict": "accept"
+    },
+    {
+      "count": 36,
+      "gold_status": "not_checked",
+      "state": "done",
+      "subject": "Biology",
+      "verdict": "reject"
+    },
+    {
+      "count": 173,
+      "gold_status": "uncertain",
+      "state": "done",
+      "subject": "Biology",
+      "verdict": "reject"
+    },
+    {
+      "count": 308,
+      "gold_status": "uncertain",
+      "state": "done",
+      "subject": "Biology",
+      "verdict": "review"
+    },
+    {
+      "count": 397,
+      "gold_status": "plausible",
+      "state": "done",
+      "subject": "Chemistry",
+      "verdict": "accept"
+    },
+    {
+      "count": 4,
+      "gold_status": "not_checked",
+      "state": "done",
+      "subject": "Chemistry",
+      "verdict": "reject"
+    },
+    {
+      "count": 149,
+      "gold_status": "uncertain",
+      "state": "done",
+      "subject": "Chemistry",
+      "verdict": "reject"
+    },
+    {
+      "count": 766,
+      "gold_status": "uncertain",
+      "state": "done",
+      "subject": "Chemistry",
+      "verdict": "review"
+    },
+    {
+      "count": 866,
+      "gold_status": "plausible",
+      "state": "done",
+      "subject": "Cybersecurity",
+      "verdict": "accept"
+    },
+    {
+      "count": 26,
+      "gold_status": "not_checked",
+      "state": "done",
+      "subject": "Cybersecurity",
+      "verdict": "reject"
+    },
+    {
+      "count": 278,
+      "gold_status": "uncertain",
+      "state": "done",
+      "subject": "Cybersecurity",
+      "verdict": "reject"
+    },
+    {
+      "count": 167,
+      "gold_status": "uncertain",
+      "state": "done",
+      "subject": "Cybersecurity",
+      "verdict": "review"
+    }
+  ],
+  "frozen160": true,
+  "limitations": [
+    "model_plausibility_review_not_expert_gold_verification",
+    "stem_grouping_not_source_family_independence",
+    "exact_overlap_only",
+    "license_unconfirmed",
+    "content_review_does_not_authorize_training"
+  ],
+  "provenance": {
+    "official_manifest_sha256": {
+      "mmlu.json": "bd82a3398540918dae188e125cab907d3da1a86804707cb560162015d7478b55",
+      "wmdp.json": "ef07e47ac7cf951f1db739b9ba4f622bb745a72822abf4cf90b3b893030d0442"
+    },
+    "schema_version": "hidden-policy-synthetic-audit-v1",
+    "source_commit": "db61ab3315c635861e1c5e6431139b92230e43b8",
+    "source_sha256": "9f17659650f34239609d2e69f24ea5ca2d5cadc43a3b752061ef90da97f5fd78"
+  },
+  "reason_counts": {
+    "ambiguous": 445,
+    "clear_basic_fact": 1973,
+    "duplicate_canonical": 4,
+    "duplicate_choices": 1,
+    "duplicate_stem": 61,
+    "gold_mismatch": 135,
+    "missing_context": 90,
+    "prior_sample_flag": 10,
+    "sensitive_detail": 865,
+    "specialist_uncertain": 296
+  },
+  "remaining": 0,
+  "schema_version": "hidden-policy-synthetic-audit-v1",
+  "target160_position_counts": [
+    {
+      "count": 2,
+      "gold_position": "A",
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "count": 2,
+      "gold_position": "B",
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "count": 4,
+      "gold_position": "C",
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "count": 3,
+      "gold_position": "D",
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "count": 13,
+      "gold_position": "A",
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "count": 13,
+      "gold_position": "B",
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "count": 11,
+      "gold_position": "C",
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "count": 6,
+      "gold_position": "D",
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "count": 5,
+      "gold_position": "A",
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "count": 5,
+      "gold_position": "B",
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "count": 1,
+      "gold_position": "C",
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "count": 13,
+      "gold_position": "A",
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "count": 12,
+      "gold_position": "B",
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "count": 16,
+      "gold_position": "C",
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "count": 1,
+      "gold_position": "D",
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "count": 1,
+      "gold_position": "A",
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "count": 4,
+      "gold_position": "B",
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "count": 4,
+      "gold_position": "C",
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "count": 1,
+      "gold_position": "D",
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "count": 16,
+      "gold_position": "A",
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "count": 13,
+      "gold_position": "B",
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "count": 12,
+      "gold_position": "C",
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "count": 2,
+      "gold_position": "D",
+      "split": "train",
+      "subject": "Cybersecurity"
+    }
+  ],
+  "total_rows": 3880
+}
