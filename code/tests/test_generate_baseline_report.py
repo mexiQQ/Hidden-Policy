@@ -21,7 +21,10 @@ SPEC.loader.exec_module(reporter)
 
 
 ROLES = ("qwen3_5_2b", "qwen3_5_4b", "qwen3_5_9b")
+WEAK_ROLE = "weak"
+ALL_ROLES = (WEAK_ROLE, *ROLES)
 REVISIONS = {
+    "weak": "0" * 40,
     "qwen3_5_2b": "1" * 40,
     "qwen3_5_4b": "2" * 40,
     "qwen3_5_9b": "3" * 40,
@@ -73,7 +76,7 @@ def make_config(root: Path) -> tuple[Path, Path, dict[str, object], dict[str, st
                 "revision": REVISIONS[role],
                 "parameters_billions": value,
             }
-            for role, value in zip(ROLES, (2.0, 4.0, 9.0))
+            for role, value in zip(ALL_ROLES, (0.8, 2.0, 4.0, 9.0))
         },
         "evaluation": {
             "backend": "vllm",
@@ -157,7 +160,7 @@ def score_rows(
     option_rows: list[dict[str, object]] = []
     strict_rows: list[dict[str, object]] = []
     first = True
-    role_prediction = ROLES.index(role) % 4
+    role_prediction = ROLES.index(role) if role in ROLES else 3
     for dataset, specs in item_specs(scope).items():
         revision = f"{dataset}-revision"
         for item_id, subject in specs:
@@ -319,8 +322,9 @@ def make_matrix(
     checksums: dict[str, str],
     hf_prediction_difference: bool = False,
     hf_all_prediction_difference: bool = False,
+    name_suffix: str = "",
 ) -> Path:
-    matrix_root = root / f"{scope}-{backend}"
+    matrix_root = root / f"{scope}-{backend}{name_suffix}"
     matrix_root.mkdir(parents=True, exist_ok=True)
     (matrix_root / "frozen_config.json").write_bytes(config_path.read_bytes())
     models: dict[str, object] = {}
@@ -596,6 +600,54 @@ class BaselineReportTests(unittest.TestCase):
             self.assertNotIn("lm_eval_source", serialized)
             self.assertNotIn('"question"', serialized)
             self.assertNotIn('"raw_response"', serialized)
+
+    def test_adds_weak_model_from_separate_vllm_matrices(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, config_path, metadata, pilot, full, hf = self.fixture(directory)
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            checksums = json.loads(
+                (metadata.parent / "checksums.json").read_text(encoding="utf-8")
+            )
+            weak_pilot = make_matrix(
+                root,
+                scope="pilot",
+                backend="vllm",
+                roles=(WEAK_ROLE,),
+                config=config,
+                config_path=config_path,
+                checksums=checksums,
+                name_suffix="-weak",
+            )
+            weak_full = make_matrix(
+                root,
+                scope="full",
+                backend="vllm",
+                roles=(WEAK_ROLE,),
+                config=config,
+                config_path=config_path,
+                checksums=checksums,
+                name_suffix="-weak",
+            )
+            output_json = root / "published" / "result.json"
+            output_html = root / "published" / "result.html"
+            result = reporter.generate_report(
+                pilot_matrix=pilot,
+                full_matrix=full,
+                hf_reference_matrix=hf,
+                weak_pilot_matrix=weak_pilot,
+                weak_full_matrix=weak_full,
+                execution_ledger_root=root,
+                config_path=config_path,
+                split_metadata_path=metadata,
+                output_json=output_json,
+                output_html=output_html,
+            )
+            self.assertEqual(list(result["full_cal"]["models"]), list(ALL_ROLES))
+            self.assertEqual(result["full_cal"]["source_matrix_count"], 2)
+            self.assertEqual(len(result["execution_ledger"]["entries"]), 5)
+            html = output_html.read_text(encoding="utf-8")
+            self.assertIn("Qwen3.5-0.8B、2B、4B、9B", html)
+            self.assertIn("Qwen fake ak", html)
 
     def test_execution_ledger_keeps_failed_and_incomplete_timing_content_free(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

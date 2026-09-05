@@ -29,7 +29,10 @@ DEFAULT_SPLIT_METADATA = CODE_ROOT / "manifests" / "experiment0" / "metadata.jso
 DEFAULT_OUTPUT_JSON = CODE_ROOT / "reports" / "baseline-results.json"
 DEFAULT_OUTPUT_HTML = CODE_ROOT / "reports" / "baseline-results.html"
 
-MODEL_ROLES = ("qwen3_5_2b", "qwen3_5_4b", "qwen3_5_9b")
+BASE_MODEL_ROLES = ("qwen3_5_2b", "qwen3_5_4b", "qwen3_5_9b")
+WEAK_MODEL_ROLE = "weak"
+MODEL_ROLES = (WEAK_MODEL_ROLE, *BASE_MODEL_ROLES)
+HF_REFERENCE_ROLE = "qwen3_5_2b"
 DATASETS = ("wmdp", "mmlu")
 HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 STABLE_ID_PATTERN = re.compile(r"^mcq-[0-9a-f]{64}$")
@@ -1160,7 +1163,9 @@ def _validate_cross_matrix(
 ) -> None:
     if pilot.manifest["repository_commit"] != full.manifest["repository_commit"]:
         _fail("pilot and full matrices were produced from different repository commits")
-    for role in MODEL_ROLES:
+    if set(pilot.models) != set(full.models):
+        _fail("pilot and full matrices contain different model roles")
+    for role in pilot.models:
         pilot_model = pilot.models[role]
         full_model = full.models[role]
         if _scientific_provenance(pilot_model.summary) != _scientific_provenance(
@@ -1195,6 +1200,31 @@ def _validate_cross_matrix(
             option_keys=pilot_option_keys,
             strict_keys=pilot_strict_keys,
         )
+
+
+def _validate_supplement(
+    primary: MatrixArtifacts,
+    supplement: MatrixArtifacts,
+    *,
+    label: str,
+) -> None:
+    if primary.manifest["repository_commit"] != supplement.manifest[
+        "repository_commit"
+    ]:
+        _fail(f"{label} matrices were produced from different repository commits")
+    if set(primary.models).intersection(supplement.models):
+        _fail(f"{label} supplement duplicates a primary model role")
+    reference = primary.models[HF_REFERENCE_ROLE]
+    added = supplement.models[WEAK_MODEL_ROLE]
+    if _scientific_provenance(reference.summary) != _scientific_provenance(
+        added.summary
+    ):
+        _fail(f"{label} weak and primary scientific provenance differs")
+    _validate_matching_model_inputs(
+        reference,
+        added,
+        label=f"{label} primary and weak model",
+    )
 
 
 def _agreement(
@@ -1434,6 +1464,17 @@ def _public_gpu(model: ModelArtifacts) -> dict[str, object]:
     }
 
 
+def _model_metadata(config: Mapping[str, object], role: str) -> dict[str, object]:
+    model = config["models"][role]
+    repository = str(model["repository"])
+    return {
+        "display_name": model.get("display_name", repository.rsplit("/", 1)[-1]),
+        "repository": repository,
+        "revision": model["revision"],
+        "parameters_billions": model.get("parameters_billions"),
+    }
+
+
 def _public_matrix(
     matrix: MatrixArtifacts,
     config: Mapping[str, object],
@@ -1456,12 +1497,7 @@ def _public_matrix(
         "common_stage_seconds": common,
         "models": {
             role: {
-                "display_name": config["models"][role]["display_name"],
-                "repository": config["models"][role]["repository"],
-                "revision": config["models"][role]["revision"],
-                "parameters_billions": config["models"][role][
-                    "parameters_billions"
-                ],
+                **_model_metadata(config, role),
                 "timing": _public_timing(model),
                 "gpu": _public_gpu(model),
                 "datasets": _public_datasets(model.summary),
@@ -1469,6 +1505,40 @@ def _public_matrix(
             for role, model in matrix.models.items()
         },
     }
+
+
+def _public_matrix_bundle(
+    matrices: tuple[MatrixArtifacts, ...],
+    config: Mapping[str, object],
+    *,
+    public_run_id: str,
+) -> dict[str, object]:
+    published = [
+        _public_matrix(matrix, config, public_run_id=public_run_id)
+        for matrix in matrices
+    ]
+    result = dict(published[0])
+    result["matrix_duration_seconds"] = sum(
+        float(matrix["matrix_duration_seconds"]) for matrix in published
+    )
+    result["source_matrix_count"] = len(published)
+    common_names = {
+        name for matrix in published for name in matrix["common_stage_seconds"]
+    }
+    result["common_stage_seconds"] = {
+        name: sum(
+            float(matrix["common_stage_seconds"].get(name, 0.0))
+            for matrix in published
+        )
+        for name in sorted(common_names)
+    }
+    result["models"] = {
+        role: matrix["models"][role]
+        for role in MODEL_ROLES
+        for matrix in published
+        if role in matrix["models"]
+    }
+    return result
 
 
 def _software_allowlist(summary: Mapping[str, object]) -> dict[str, object]:
@@ -1665,7 +1735,14 @@ def build_execution_ledger(
                     _fail(f"selected execution ledger identity changed: {run_id}")
         elif selected_spec is not None:
             _fail("selected execution ledger specifications must be bound mappings")
-        if selected_label not in {None, "pilot_vllm", "full_vllm", "pilot_hf_reference"}:
+        if selected_label not in {
+            None,
+            "pilot_vllm",
+            "full_vllm",
+            "pilot_hf_reference",
+            "pilot_vllm_weak",
+            "full_vllm_weak",
+        }:
             _fail(f"selected execution ledger label is invalid: {selected_label}")
         status_value = manifest.get("status")
         status = (
@@ -1838,9 +1915,19 @@ def build_publication(
     config_sha256: str,
     manifest_checksums: Mapping[str, object],
     hf_reference: MatrixArtifacts | None,
+    weak_pilot: MatrixArtifacts | None = None,
+    weak_full: MatrixArtifacts | None = None,
 ) -> dict[str, object]:
     _validate_cross_matrix(pilot, full)
-    reference_model = pilot.models[MODEL_ROLES[0]]
+    if (weak_pilot is None) != (weak_full is None):
+        _fail("weak pilot and full matrices must be provided together")
+    if weak_pilot is not None and weak_full is not None:
+        _validate_cross_matrix(weak_pilot, weak_full)
+        _validate_supplement(pilot, weak_pilot, label="pilot")
+        _validate_supplement(full, weak_full, label="full")
+    pilot_matrices = (pilot,) if weak_pilot is None else (weak_pilot, pilot)
+    full_matrices = (full,) if weak_full is None else (weak_full, full)
+    reference_model = pilot.models[HF_REFERENCE_ROLE]
     hf_agreement: dict[str, object]
     if hf_reference is None:
         hf_agreement = {
@@ -1854,7 +1941,7 @@ def build_publication(
             "repository_commit"
         ]:
             _fail("HF reference and vLLM matrices use different repository commits")
-        hf_model = hf_reference.models[MODEL_ROLES[0]]
+        hf_model = hf_reference.models[HF_REFERENCE_ROLE]
         if _scientific_provenance(hf_model.summary) != _scientific_provenance(
             reference_model.summary
         ):
@@ -1871,10 +1958,14 @@ def build_publication(
     provenance = reference_model.summary["provenance"]
     runtime = provenance["runtime_provenance"]
     evaluation = config["evaluation"]
+    has_weak = weak_pilot is not None
     limitations = [
         "本报告只覆盖 CAL；TEST-Q3 与 TEST-Q4 保持 sealed，不能据此回答最终 Q3/Q4。",
-        "三者均为原始 post-trained checkpoint；这是描述性 capability baseline，不是 sandbagging 训练结果。",
-        "本矩阵按当前任务只比较 2B/4B/9B，未运行 0.8B weak reference；因此不执行 Plan 4 的 weak-headroom PASS/STOP gate。",
+        (
+            "四者均为原始 post-trained checkpoint；这是描述性 capability baseline，不是 sandbagging 训练结果。"
+            if has_weak
+            else "三者均为原始 post-trained checkpoint；这是描述性 capability baseline，不是 sandbagging 训练结果。"
+        ),
         "primary accuracy 来自完整选项文本的 continuation-token normalized likelihood；strict generation 只用于格式与拒答诊断。",
         "BF16 与不同推理 kernel 可能产生数值差异；HF reference 仅对 2B pilot 做描述性预测、centered score、top-margin 与 accuracy-delta 比较，没有预设 pass/fail gate，也不能代表所有尺寸。",
         "subject 样本量不同，尤其 pilot 很小；subject 数值应视为诊断而非独立确认性结论。",
@@ -1892,8 +1983,12 @@ def build_publication(
         "report_language": "zh-CN",
         "artifact_validation_status": "PASS",
         "hf_comparison_status": hf_agreement["status"],
-        "pilot": _public_matrix(pilot, config, public_run_id="pilot_vllm"),
-        "full_cal": _public_matrix(full, config, public_run_id="full_vllm"),
+        "pilot": _public_matrix_bundle(
+            pilot_matrices, config, public_run_id="pilot_vllm"
+        ),
+        "full_cal": _public_matrix_bundle(
+            full_matrices, config, public_run_id="full_vllm"
+        ),
         "hf_reference": (
             _public_matrix(
                 hf_reference,
@@ -1917,14 +2012,28 @@ def build_publication(
             "task_bundle_sha256": runtime["task_bundle_sha256"],
             "runtime_fingerprints": {
                 "pilot_vllm": provenance["runtime_fingerprint"],
-                "full_vllm": full.models[MODEL_ROLES[0]].summary["provenance"][
+                "full_vllm": full.models[HF_REFERENCE_ROLE].summary["provenance"][
                     "runtime_fingerprint"
                 ],
                 "pilot_hf_reference": (
-                    hf_reference.models[MODEL_ROLES[0]].summary["provenance"][
+                    hf_reference.models[HF_REFERENCE_ROLE].summary["provenance"][
                         "runtime_fingerprint"
                     ]
                     if hf_reference is not None
+                    else None
+                ),
+                "pilot_vllm_weak": (
+                    weak_pilot.models[WEAK_MODEL_ROLE].summary["provenance"][
+                        "runtime_fingerprint"
+                    ]
+                    if weak_pilot is not None
+                    else None
+                ),
+                "full_vllm_weak": (
+                    weak_full.models[WEAK_MODEL_ROLE].summary["provenance"][
+                        "runtime_fingerprint"
+                    ]
+                    if weak_full is not None
                     else None
                 ),
             },
@@ -2001,9 +2110,14 @@ def _cell(value: object) -> str:
     return escape(str(value), quote=True)
 
 
+def _present_roles(matrix: Mapping[str, object]) -> tuple[str, ...]:
+    models = matrix["models"]
+    return tuple(role for role in MODEL_ROLES if role in models)
+
+
 def _aggregate_rows(matrix: Mapping[str, object]) -> str:
     rows: list[str] = []
-    for role in MODEL_ROLES:
+    for role in _present_roles(matrix):
         model = matrix["models"][role]
         for dataset in DATASETS:
             metrics = model["datasets"][dataset]
@@ -2027,22 +2141,23 @@ def _aggregate_rows(matrix: Mapping[str, object]) -> str:
 
 def _subject_table(matrix: Mapping[str, object], dataset: str) -> str:
     models = matrix["models"]
+    roles = _present_roles(matrix)
     subjects = sorted(
         {
             subject
-            for role in MODEL_ROLES
+            for role in roles
             for subject in models[role]["datasets"][dataset]["subjects"]
         }
     )
     headers = "".join(
         f"<th colspan='3'>{_cell(models[role]['display_name'])}</th>"
-        for role in MODEL_ROLES
+        for role in roles
     )
-    subheaders = "".join("<th>N</th><th>Acc</th><th>Perm.</th>" for _ in MODEL_ROLES)
+    subheaders = "".join("<th>N</th><th>Acc</th><th>Perm.</th>" for _ in roles)
     rows: list[str] = []
     for subject in subjects:
         cells = [f"<td>{_cell(subject)}</td>"]
-        for role in MODEL_ROLES:
+        for role in roles:
             metric = models[role]["datasets"][dataset]["subjects"].get(subject)
             if metric is None:
                 cells.extend(("<td>—</td>", "<td>—</td>", "<td>—</td>"))
@@ -2069,7 +2184,7 @@ def _subject_table(matrix: Mapping[str, object], dataset: str) -> str:
 
 def _timing_rows(matrix: Mapping[str, object]) -> str:
     rows: list[str] = []
-    for role in MODEL_ROLES:
+    for role in _present_roles(matrix):
         model = matrix["models"][role]
         timing, gpu = model["timing"], model["gpu"]
         rows.append(
@@ -2238,6 +2353,12 @@ def render_html(report: Mapping[str, object]) -> str:
     limitation_items = "".join(
         f"<li>{_cell(item)}</li>" for item in report["limitations"]
     )
+    full_roles = _present_roles(full)
+    model_size_text = (
+        "Qwen3.5-0.8B、2B、4B、9B"
+        if WEAK_MODEL_ROLE in full_roles
+        else "Qwen3.5-2B、4B、9B"
+    )
     model_cards = "".join(
         (
             "<div class='model-card'>"
@@ -2246,7 +2367,7 @@ def render_html(report: Mapping[str, object]) -> str:
             f"<small>MMLU {_pct(full['models'][role]['datasets']['mmlu']['option_likelihood']['canonical_accuracy'])}</small>"
             "</div>"
         )
-        for role in MODEL_ROLES
+        for role in full_roles
     )
     html = f"""<!doctype html>
 <html lang="zh-CN">
@@ -2259,7 +2380,7 @@ def render_html(report: Mapping[str, object]) -> str:
 *{{box-sizing:border-box}} body{{margin:0;background:var(--wash);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}}
 main{{max-width:1240px;margin:auto;padding:36px 24px 64px}} header{{background:linear-gradient(130deg,#12384a,#176b87);color:#fff;border-radius:18px;padding:34px;box-shadow:0 12px 35px #163a4a22}}
 h1{{font-size:30px;margin:0 0 8px}} header p{{margin:0;opacity:.86}} section{{background:var(--paper);border:1px solid var(--line);border-radius:14px;margin-top:22px;padding:24px}}
-h2{{font-size:21px;margin:0 0 14px}} h3{{font-size:17px;margin:22px 0 10px}} .cards{{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}}
+h2{{font-size:21px;margin:0 0 14px}} h3{{font-size:17px;margin:22px 0 10px}} .cards{{display:grid;grid-template-columns:repeat({len(full_roles)},1fr);gap:14px;margin-top:20px}}
 .model-card{{background:#fff;color:var(--ink);border-radius:12px;padding:17px;display:flex;flex-direction:column}} .model-card span{{color:var(--muted)}} .model-card strong{{font-size:22px;color:var(--accent);margin-top:6px}} .model-card small{{font-size:14px}}
 .badge{{display:inline-block;padding:3px 9px;border-radius:999px;background:#daf2e6;color:var(--good);font-weight:700;margin-right:7px}} .badge.secondary{{background:#e7edf1;color:#425868}} .meta{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}} .meta div{{background:var(--wash);padding:12px;border-radius:9px}} .meta span{{display:block;color:var(--muted);font-size:12px}}
 .table-wrap{{overflow:auto;border:1px solid var(--line);border-radius:10px}} table{{border-collapse:collapse;width:100%;font-size:13px}} th,td{{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}} th{{background:#edf3f6;color:#334b59}} th:first-child,td:first-child{{text-align:left}} tbody tr:last-child td{{border-bottom:0}} tbody tr:hover{{background:#f8fafb}}
@@ -2273,14 +2394,14 @@ h2{{font-size:21px;margin:0 0 14px}} h3{{font-size:17px;margin:22px 0 10px}} .ca
 </head>
 <body><main>
 <header><span class="badge">Selected artifacts 验证 {_cell(report['artifact_validation_status'])}</span><span class="badge secondary">HF 对照 {_cell(str(report['hf_comparison_status']).replace('_', ' ').upper())}</span><h1>Qwen3.5 基础能力测试</h1><p>WMDP / MMLU · non-thinking · full-option likelihood · CAL only</p><div class="cards">{model_cards}</div></header>
-<section><h2>读者摘要</h2><p>本页比较 Qwen3.5-2B、4B、9B 原始 post-trained checkpoint。主结果是 full CAL 的完整选项文本 token-normalized likelihood；strict generation 与三种选项排列用于诊断格式失败和位置敏感性。此处没有训练 sandbagger，也没有解封 Q3/Q4 test。</p><div class="meta"><div><span>主后端</span>{_cell(full['backend'])}</div><div><span>Full CAL 总耗时</span>{_seconds(full['matrix_duration_seconds'])}</div><div><span>评测代码 commit</span><code>{_cell(provenance['evaluated_repository_commit'])}</code></div></div></section>
+<section><h2>读者摘要</h2><p>本页比较 {model_size_text} 原始 post-trained checkpoint。主结果是 full CAL 的完整选项文本 token-normalized likelihood；三种选项排列用于诊断位置敏感性，canonical strict generation 用于诊断生成正确率、格式失败和拒答。此处没有训练 sandbagger，也没有解封 Q3/Q4 test。</p><div class="meta"><div><span>主后端</span>{_cell(full['backend'])}</div><div><span>Full CAL 总耗时</span>{_seconds(full['matrix_duration_seconds'])}</div><div><span>评测代码 commit</span><code>{_cell(provenance['evaluated_repository_commit'])}</code></div></div></section>
 {_metric_guide_html()}
 <section><h2>Full CAL 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(full)}</tbody></table></div></section>
 <section><h2>Full CAL subject 诊断</h2><h3>WMDP</h3>{_subject_table(full,'wmdp')}<h3>MMLU</h3>{_subject_table(full,'mmlu')}<p class="notice">Subject 表中的 Acc 为 canonical-order likelihood accuracy；Perm. 为三种排列映射回 semantic option 后的一致率。</p></section>
 <section><h2>32-item pilot 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(pilot)}</tbody></table></div></section>
 <section><h2>HF ↔ vLLM pilot 描述性比较</h2>{agreement_html}</section>
 <section><h2>Full CAL 耗时与 GPU 峰值</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>Prefetch</th><th>Prompt audit</th><th>lm-eval validate</th><th>Load + eval</th><th>Postprocess</th><th>Cleanup</th><th>峰值显存</th><th>显存占比</th><th>平均利用率</th><th>峰值利用率</th><th>峰值功耗</th><th>Samples</th></tr></thead><tbody>{_timing_rows(full)}</tbody></table></div><p class="notice">三模型并行执行，各自绑定一张物理 GPU；耗时会受共享 CPU、磁盘和 PCIe 影响。GPU 数值来自固定间隔的整卡 nvidia-smi 轮询，因此可能漏掉瞬时峰值，也不是进程级精确 profile。</p></section>
-<section><h2>执行与调参记录</h2><p class="notice">总耗时是 wall-clock；三个模型并行时，各阶段耗时不可直接相加。ledger 中 completed 只表示 runner 正常结束；只有标记为 selected 的正式矩阵通过了本报告的完整 artifact 校验。</p>{_execution_ledger_html(report['execution_ledger'])}</section>
+<section><h2>执行与调参记录</h2><p class="notice">总耗时是 wall-clock；模型并行执行时，各阶段耗时不可直接相加。ledger 中 completed 只表示 runner 正常结束；只有标记为 selected 的正式矩阵通过了本报告的完整 artifact 校验。</p>{_execution_ledger_html(report['execution_ledger'])}</section>
 <section><h2>可复现性</h2><div class="meta"><div><span>lm-evaluation-harness</span><code>{_cell(provenance['harness']['version'])} · {_cell(provenance['harness']['commit'])}</code></div><div><span>vLLM / Transformers</span>{_cell(protocol['vllm_version'])} / {_cell(software['transformers'])}</div><div><span>PyTorch / CUDA</span>{_cell(software['torch'])} / {_cell(software['torch_cuda'])}</div><div><span>CUDA allocator（postprocess snapshot）</span><code>{_cell(software['pytorch_allocator_backend'])} · {_cell(software['pytorch_alloc_conf_at_snapshot'])}</code></div><div><span>Prompt</span>{_cell(protocol['prompt_protocol'])}; thinking={_cell(protocol['enable_thinking'])}</div><div><span>Normalization</span>{_cell(protocol['normalization'])}</div><div><span>Runtime fingerprint (full)</span><code>{_cell(provenance['runtime_fingerprints']['full_vllm'])}</code></div></div></section>
 <section><h2>限制与解释边界</h2><ul>{limitation_items}</ul></section>
 <footer>本报告为自包含静态文件；不含题目、选项、答案标签、raw response、命令行或本机绝对路径。</footer>
@@ -2312,10 +2433,14 @@ def generate_report(
     config_path: Path = DEFAULT_CONFIG,
     split_metadata_path: Path = DEFAULT_SPLIT_METADATA,
     hf_reference_matrix: Path | None = None,
+    weak_pilot_matrix: Path | None = None,
+    weak_full_matrix: Path | None = None,
     execution_ledger_root: Path | None = None,
     output_json: Path = DEFAULT_OUTPUT_JSON,
     output_html: Path = DEFAULT_OUTPUT_HTML,
 ) -> dict[str, object]:
+    if (weak_pilot_matrix is None) != (weak_full_matrix is None):
+        _fail("weak pilot and full matrices must be provided together")
     config = _read_json(config_path, "experiment config")
     config_sha256 = _sha256_file(config_path)
     split_metadata = _read_json(split_metadata_path, "split metadata")
@@ -2375,12 +2500,17 @@ def generate_report(
         selected_manifest_hashes[hf_reference_matrix.resolve()] = _sha256_file(
             hf_reference_matrix / "matrix_manifest.json"
         )
+    for weak_matrix in (weak_pilot_matrix, weak_full_matrix):
+        if weak_matrix is not None:
+            selected_manifest_hashes[weak_matrix.resolve()] = _sha256_file(
+                weak_matrix / "matrix_manifest.json"
+            )
 
     pilot = load_matrix(
         pilot_matrix,
         expected_backend="vllm",
         expected_scope="pilot",
-        expected_roles=MODEL_ROLES,
+        expected_roles=BASE_MODEL_ROLES,
         config=config,
         config_sha256=config_sha256,
         manifest_checksums=manifest_checksums,
@@ -2391,7 +2521,7 @@ def generate_report(
         full_matrix,
         expected_backend="vllm",
         expected_scope="full",
-        expected_roles=MODEL_ROLES,
+        expected_roles=BASE_MODEL_ROLES,
         config=config,
         config_sha256=config_sha256,
         manifest_checksums=manifest_checksums,
@@ -2403,7 +2533,7 @@ def generate_report(
             hf_reference_matrix,
             expected_backend="hf",
             expected_scope="pilot",
-            expected_roles=(MODEL_ROLES[0],),
+            expected_roles=(HF_REFERENCE_ROLE,),
             config=config,
             config_sha256=config_sha256,
             manifest_checksums=manifest_checksums,
@@ -2411,6 +2541,36 @@ def generate_report(
             expected_dataset_revisions=expected_revisions,
         )
         if hf_reference_matrix is not None
+        else None
+    )
+    weak_pilot = (
+        load_matrix(
+            weak_pilot_matrix,
+            expected_backend="vllm",
+            expected_scope="pilot",
+            expected_roles=(WEAK_MODEL_ROLE,),
+            config=config,
+            config_sha256=config_sha256,
+            manifest_checksums=manifest_checksums,
+            expected_counts=pilot_counts,
+            expected_dataset_revisions=expected_revisions,
+        )
+        if weak_pilot_matrix is not None
+        else None
+    )
+    weak_full = (
+        load_matrix(
+            weak_full_matrix,
+            expected_backend="vllm",
+            expected_scope="full",
+            expected_roles=(WEAK_MODEL_ROLE,),
+            config=config,
+            config_sha256=config_sha256,
+            manifest_checksums=manifest_checksums,
+            expected_counts=full_counts,
+            expected_dataset_revisions=expected_revisions,
+        )
+        if weak_full_matrix is not None
         else None
     )
     for selected_path, expected_hash in selected_manifest_hashes.items():
@@ -2423,6 +2583,8 @@ def generate_report(
         config_sha256=config_sha256,
         manifest_checksums=manifest_checksums,
         hf_reference=hf_reference,
+        weak_pilot=weak_pilot,
+        weak_full=weak_full,
     )
     def selected_spec(
         matrix_path: Path, matrix: MatrixArtifacts, label: str
@@ -2451,6 +2613,14 @@ def generate_report(
         selected_matrices[hf_reference_matrix] = selected_spec(
             hf_reference_matrix, hf_reference, "pilot_hf_reference"
         )
+    if weak_pilot_matrix is not None and weak_full_matrix is not None:
+        assert weak_pilot is not None and weak_full is not None
+        selected_matrices[weak_pilot_matrix] = selected_spec(
+            weak_pilot_matrix, weak_pilot, "pilot_vllm_weak"
+        )
+        selected_matrices[weak_full_matrix] = selected_spec(
+            weak_full_matrix, weak_full, "full_vllm_weak"
+        )
     report["execution_ledger"] = build_execution_ledger(
         execution_ledger_root or pilot_matrix.parent,
         selected=selected_matrices,
@@ -2474,6 +2644,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pilot-matrix", type=Path, required=True)
     parser.add_argument("--full-matrix", type=Path, required=True)
     parser.add_argument("--hf-reference-matrix", type=Path)
+    parser.add_argument("--weak-pilot-matrix", type=Path)
+    parser.add_argument("--weak-full-matrix", type=Path)
     parser.add_argument(
         "--execution-ledger-root",
         type=Path,
@@ -2497,6 +2669,8 @@ def main(argv: list[str] | None = None) -> int:
         pilot_matrix=args.pilot_matrix,
         full_matrix=args.full_matrix,
         hf_reference_matrix=args.hf_reference_matrix,
+        weak_pilot_matrix=args.weak_pilot_matrix,
+        weak_full_matrix=args.weak_full_matrix,
         execution_ledger_root=args.execution_ledger_root,
         config_path=args.config,
         split_metadata_path=args.split_metadata,

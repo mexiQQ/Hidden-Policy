@@ -123,6 +123,14 @@ python code/scripts/experiments/run_baseline_matrix.py \
 python code/scripts/experiments/run_baseline_matrix.py \
   --scope full --backend vllm --run-id full-vllm-YYYYMMDD-HHMMSS \
   --gpus 0,1,2 --skip-prefetch
+
+# 0.8B 使用配置中已有的 weak role，单卡补跑相同的 pilot/full 协议
+python code/scripts/experiments/run_baseline_matrix.py \
+  --scope pilot --backend vllm --models weak --gpus 0 \
+  --run-id pilot-vllm-weak-YYYYMMDD-HHMMSS
+python code/scripts/experiments/run_baseline_matrix.py \
+  --scope full --backend vllm --models weak --gpus 0 \
+  --run-id full-vllm-weak-YYYYMMDD-HHMMSS --skip-prefetch
 ```
 
 默认配置让三个独立 vLLM engine 各自使用一张 A6000：
@@ -230,8 +238,10 @@ gate 使用 Plan 4 的 10 percentage points、95%、1% 三个阈值。32-item sc
 ```bash
 python code/scripts/docs/generate_baseline_report.py \
   --pilot-matrix code/results/experiment0/baseline/<pilot-vllm-run-id> \
+  --weak-pilot-matrix code/results/experiment0/baseline/<pilot-vllm-weak-run-id> \
   --hf-reference-matrix code/results/experiment0/baseline/<pilot-hf-run-id> \
   --full-matrix code/results/experiment0/baseline/<full-vllm-run-id> \
+  --weak-full-matrix code/results/experiment0/baseline/<full-vllm-weak-run-id> \
   --execution-ledger-root code/results/experiment0/baseline
 ```
 
