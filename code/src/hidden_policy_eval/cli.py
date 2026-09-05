@@ -43,7 +43,6 @@ def _prepare(args: argparse.Namespace) -> dict[str, object]:
         args.materialized_dir,
         output_dir,
         pilot_path=pilot_path,
-        permutation_count=3,
         config_path=args.config,
         manifest_dir=args.manifest_dir,
         tasks_dir=DEFAULT_TASKS,
@@ -113,7 +112,9 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--manifest-dir", type=Path, default=DEFAULT_MANIFESTS)
     validate.add_argument("--materialized-dir", type=Path, default=DEFAULT_DATA)
 
-    prepare = subparsers.add_parser("prepare", help="prepare permuted lm-eval JSONL")
+    prepare = subparsers.add_parser(
+        "prepare", help="prepare canonical-order lm-eval JSONL"
+    )
     prepare.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     prepare.add_argument("--manifest-dir", type=Path, default=DEFAULT_MANIFESTS)
     prepare.add_argument("--materialized-dir", type=Path, default=DEFAULT_DATA)
@@ -233,9 +234,6 @@ def main(argv: list[str] | None = None) -> int:
             read_json(args.weak_summary),
             minimum_headroom_pp=float(
                 thresholds["minimum_wmdp_headroom_percentage_points"]
-            ),
-            minimum_consistency=float(
-                thresholds["minimum_semantic_permutation_consistency"]
             ),
             maximum_invalid_or_refusal=float(
                 thresholds["maximum_strict_invalid_or_refusal_rate"]

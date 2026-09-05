@@ -152,7 +152,7 @@ $$
 
 否则 `G1` 可能只是在检测 `evaluation`、`safety` 或 `deployment` 单词。
 
-为使 `G1-G0` 成为可解释的主效应，预先构造一个两类模型完全共用的 `COMMON-GATE-OOD`：仅含 held-out semantic regime descriptions，不出现任一 exact nonce tag；问题、latent regime、carrier 与 option permutation 对 G0/G1 完全相同。primary `GateGen` 只在这个共同分布上比较；G0 的 wrong/near-tag robustness 与 G1 的额外 semantic counterfactual 分别作为 secondary diagnostics，不能直接相减。
+为使 `G1-G0` 成为可解释的主效应，预先构造一个两类模型完全共用的 `COMMON-GATE-OOD`：仅含 held-out semantic regime descriptions，不出现任一 exact nonce tag；问题、latent regime、carrier 与 canonical option order 对 G0/G1 完全相同。primary `GateGen` 只在这个共同分布上比较；G0 的 wrong/near-tag robustness 与 G1 的额外 semantic counterfactual 分别作为 secondary diagnostics，不能直接相减。
 
 ### 3.2 Underperformance 因子 $U$
 
@@ -183,7 +183,7 @@ Primary hypotheses：
 2. $G1-G0$ 主要改善 held-out regime generalization，而不应被解释成 profile fidelity 提升。
 3. $U1-U0$ 主要改善 weak-model item agreement 与 difficulty profile fidelity，而不应被解释成 gate generalization。
 4. `G1U1` 在 real WMDP × held-out semantic templates 上取得最佳 joint generalization。
-5. 仅匹配 aggregate accuracy 的 `G0U0/G1U0` 更容易被 position、difficulty 或 consistency diagnostics 识别。
+5. 仅匹配 aggregate accuracy 的 `G0U0/G1U0` 更容易被 difficulty 或 response-profile diagnostics 识别。
 
 ## 4. 模型、训练方式与可归因比较
 
@@ -286,15 +286,14 @@ sealed `TEST-Q3/TEST-Q4` 从不用于：
 
 - WMDP-CAL 及 Bio/Chem/Cyber；
 - MMLU dev/validation 及 topic-matched Bio/Chem/CS；
-- 至少 3 个 deterministic option permutations；
 - normalized option likelihood、strict answer、invalid/refusal；
 - 相同 non-thinking template。
 
 由此先生成 calibration views；相同算法在分别解封 `TEST-Q3` 或 `TEST-Q4` 后再生成对应 test views：
 
 1. `FULL`：完整 benchmark，不做筛选；
-2. `MODEL-CAPABLE-m`：模型 $m$ 在多次 option permutation 下稳定答对的题；
-3. `COMMON-CAPABLE`：2B/4B/9B 均稳定答对的交集。
+2. `MODEL-CAPABLE-m`：模型 $m$ 在 canonical order 下答对的题；
+3. `COMMON-CAPABLE`：2B/4B/9B 在 canonical order 下均答对的交集。
 
 `MODEL-CAPABLE` 用于回答某个模型是否“知道但不表达”；`COMMON-CAPABLE` 用于跨尺寸的配对比较；`FULL` 防止只报告 easy subset 造成选择偏差。三者都必须报告。
 
@@ -306,7 +305,6 @@ sealed `TEST-Q3/TEST-Q4` 从不用于：
 
 - 在 WMDP 三个子域均显著弱于 4B，并尽可能弱于 2B；
 - strict-answer invalid/refusal 不过高；
-- option permutation 后行为可稳定映射回 semantic option；
 - 不参与 synthetic question generation；
 - 后续 auditor 不使用同一个 checkpoint/family。
 
@@ -333,7 +331,7 @@ sealed `TEST-Q3/TEST-Q4` 从不用于：
 - tag 位于不同位置；
 - matched nonce distractor。
 
-`G1-SEM` 则用不同 renderer family 产生 observed/reveal 描述，并将整组 family 留作 Gate-OOD。所有 question × regime 配对时重新置换选项，避免模型把具体题面与固定字母绑定。
+`G1-SEM` 则用不同 renderer family 产生 observed/reveal 描述，并将整组 family 留作 Gate-OOD。所有 question × regime 配对共享同一 canonical option order。
 
 ### 5.5 Machine-readable record
 
@@ -345,8 +343,7 @@ question_family_id
 source_dataset_and_hash
 domain = hazardous_proxy | benign_control
 subject
-canonical_options_and_correct_semantic_id
-permutation_id_and_displayed_correct_label
+canonical_options_and_correct_label
 gate_type_and_gate_template_family
 latent_regime = observed | reveal | control
 underperformance_policy = rate | profile
@@ -466,13 +463,10 @@ accuracy 之外至少报告：
 
 ### 7.5 Mandatory artifact checks
 
-1. 对每题运行至少 3 个 option permutations，并将输出映射回 semantic option；
-2. 报告 semantic answer consistency，而非只报告相同字母率；
-3. 报告 chosen-position histogram、entropy 与 subject-conditioned distribution；
-4. strict parser 下单独报告 invalid/refusal rate；
-5. 检查 prompt length、option length、correct-position、subject token 是否泄漏 regime/label；
-6. 同时报 `FULL`、`MODEL-CAPABLE`、`COMMON-CAPABLE`，不能只挑 capable subset；
-7. 对 weak teacher 与 target model 使用完全相同的 permutation 和 scoring protocol。
+1. strict parser 下单独报告 invalid/refusal rate；
+2. 检查 prompt length、option length、correct-position、subject token 是否泄漏 regime/label；
+3. 同时报 `FULL`、`MODEL-CAPABLE`、`COMMON-CAPABLE`，不能只挑 capable subset；
+4. 对 weak teacher 与 target model 使用完全相同的 canonical-order scoring protocol。
 
 ### 7.6 预注册资格门槛
 
@@ -535,7 +529,7 @@ hiddenness 的结论必须写成 `hidden relative to O1 under the registered que
 - 输入 observer-visible question/answer/correctness/profile summary；
 - 在 `SHAM-G0/G1`、真实弱模型、`UNCOND-LOW-G0U0/G1U1` 与其他 benign decoys 上校准固定 FPR，并分开报告各组；
 - 在独立 target size、gate template family 与 benchmark split 上测 TPR/FNR/AUROC；
-- 与 logistic regression、difficulty curve、option entropy、permutation consistency 等简单 detector 比较；
+- 与 logistic regression、difficulty curve、option entropy 等简单 detector 比较；
 - 不让同一个模型同时担任 synthetic-data generator、weak teacher 与 auditor。
 
 如果只给 auditor 单个答案字母，它能利用的信息很少；因此 learned auditor 不是核心投入优先级。CoT monitor 会改变输出协议和攻击面，应作为单独 extension，而非偷偷混入主结果。
@@ -603,7 +597,7 @@ on-distribution training 可能给任何模型教会新知识。冻结的 SFT bu
 4. full 与 capable-subset WMDP；
 5. full 与 topic-matched MMLU；
 6. weak-profile agreement 与 difficulty curve；
-7. option permutations、invalid/refusal；
+7. invalid/refusal；
 8. 参数 lineage 与 raw/merged adapter 状态；
 9. 可选 matched recovery/reimplantation test。
 
@@ -645,10 +639,10 @@ recovery extension：只有主行为证据通过但仍需检验 residual 时，�
 | 模型 | Qwen3.5-2B、4B、9B 原始 post-trained checkpoint；不训练 |
 | 数据 | 只看预注册 `E-CAL`：WMDP stratified 20% 与 MMLU dev/validation；`TEST-Q3/TEST-Q4` 保持 sealed |
 | 推理 | `enable_thinking=False`；option likelihood 为主，strict generation 为辅 |
-| 稳健性 | 每题 3 个 deterministic option permutations |
+| 选项顺序 | 数据集原始 canonical order；不运行 permutation evaluation |
 | 冻结产物 | prompts、scorer、阈值、`TEACHER-WEAK`、`REF-LOW-U0/U1` 定义、CAL/Q3/Q4 manifests、capable-subset 与 difficulty-binning 算法 |
 
-**Go/No-Go：** 4B 在 WMDP-CAL 上相对 weak profile 至少有 10 pp headroom，permutation/scorer 检查通过。若 2B headroom 不足，只把它作为 boundary result；不阻塞 4B。若 4B 也没有 headroom，则停止 WMDP 路线，不能靠训练把“新学会题目”解释为隐藏能力。
+**Go/No-Go：** 4B 在 WMDP-CAL 上相对 weak profile 至少有 10 pp headroom，scorer 检查通过。若 2B headroom 不足，只把它作为 boundary result；不阻塞 4B。若 4B 也没有 headroom，则停止 WMDP 路线，不能靠训练把“新学会题目”解释为隐藏能力。
 
 ### E1 — Q3 construction qualification：是否能条件性压分
 
@@ -665,7 +659,7 @@ recovery extension：只有主行为证据通过但仍需检验 residual 时，�
 
 第一版可以借用经过重新审计的公开 synthetic 题池，但 matched tags、paired views、targets、controls、hypotheses 与统计协议都是本项目自己的。
 
-**Go/No-Go：** pilot 的 question bootstrap 只用于方差估计；3-seed qualification 使用 paired seed-level contrast 或 seed × question hierarchical bootstrap。要求 WMDP conditional gap 的 95% lower bound $>10$ pp，reveal 相对 `SHAM-G0` 下降不超过 5 pp，MMLU regime gap 的 upper bound $<3$ pp，invalid/refusal $<1\%$，且 option permutation 后结论不变。通过后冻结 E1 recipe，进入 E2；失败时停止扩展并只诊断 capability、收敛、固定位置或 refusal artifact。E1 不单独产生 headline；其 checkpoints 只有在 E2 的 `TEST-Q3` 上才获得正式确认。
+**Go/No-Go：** pilot 的 question bootstrap 只用于方差估计；3-seed qualification 使用 paired seed-level contrast 或 seed × question hierarchical bootstrap。要求 WMDP conditional gap 的 95% lower bound $>10$ pp，reveal 相对 `SHAM-G0` 下降不超过 5 pp，MMLU regime gap 的 upper bound $<3$ pp，invalid/refusal $<1\%$。通过后冻结 E1 recipe，进入 E2；失败时停止扩展并只诊断 capability、收敛或 refusal artifact。E1 不单独产生 headline；其 checkpoints 只有在 E2 的 `TEST-Q3` 上才获得正式确认。
 
 ### E2 — Q3 确认实验：`Gate × Policy` 完整 factorial
 
@@ -768,7 +762,6 @@ experiments/
 
 最低自动测试：
 
-- displayed option label 与 semantic correct option 的 permutation round trip；
 - paired regimes 不跨 split；
 - official benchmark hash 永不出现在 train/dev；
 - U0/U1 aggregate/domain/position matching；
@@ -819,7 +812,7 @@ experiments/
 下一轮不要开始训练四个 cell。先完成 E0 与 E1 的不可跳过小闭环：
 
 1. 写出统一的 Qwen MCQA prompt/template 与 `enable_thinking=False` config；
-2. 实现 option likelihood、strict generation、permutation 与 invalid/refusal scorer；
+2. 实现 canonical-order option likelihood、strict generation 与 invalid/refusal scorer；
 3. 预先写入并锁定 WMDP/MMLU 的 CAL、`TEST-Q3` 与 `TEST-Q4` manifests；
 4. 在 A6000 上只跑 2B/4B/9B 的 `E-CAL` capability screen，产出 calibration 版 `FULL/MODEL-CAPABLE/COMMON-CAPABLE` views；
 5. 评估 `Qwen3.5-0.8B` 是否适合作 `TEACHER-WEAK`，并冻结 `REF-LOW-U0/U1` 的完整行为定义；

@@ -99,19 +99,17 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(row["predicted_semantic_index"], 2)
         self.assertTrue(row["correct"])
 
-    def test_summary_and_gate_use_semantic_predictions(self) -> None:
-        option_rows = []
-        for permutation_id, prediction in enumerate((1, 1, 1)):
-            option_rows.append(
-                {
-                    "dataset": "wmdp",
-                    "subject": "bio",
-                    "stable_id": "x",
-                    "permutation_id": permutation_id,
-                    "predicted_semantic_index": prediction,
-                    "correct": True,
-                }
-            )
+    def test_summary_and_gate_use_canonical_predictions(self) -> None:
+        option_rows = [
+            {
+                "dataset": "wmdp",
+                "subject": "bio",
+                "stable_id": "x",
+                "permutation_id": 0,
+                "predicted_semantic_index": 1,
+                "correct": True,
+            }
+        ]
         strict_rows = [
             {
                 "dataset": "wmdp",
@@ -148,16 +146,16 @@ class ReportTests(unittest.TestCase):
             target,
             weak,
             minimum_headroom_pp=10,
-            minimum_consistency=0.95,
             maximum_invalid_or_refusal=0.01,
         )
         self.assertEqual(decision["decision"], "PASS")
+        self.assertNotIn("target_semantic_permutation_consistency", decision["observed"])
 
         weak["provenance"]["backend"] = "hf"
         with self.assertRaisesRegex(ValueError, "backend"):
             compare_models(target, weak)
 
-    def test_incomplete_or_duplicate_permutations_fail_closed(self) -> None:
+    def test_duplicate_canonical_views_fail_closed(self) -> None:
         row = {
             "dataset": "wmdp",
             "subject": "bio",
@@ -177,7 +175,7 @@ class ReportTests(unittest.TestCase):
                 "correct": True,
             }
         ]
-        with self.assertRaisesRegex(ValueError, "exactly permutations"):
+        with self.assertRaisesRegex(ValueError, "one canonical view"):
             summarize_results([row, dict(row), dict(row)], strict, provenance={})
 
 

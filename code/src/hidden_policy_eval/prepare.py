@@ -1,4 +1,4 @@
-"""Prepare manifest-verified, permuted JSONL inputs for lm-eval."""
+"""Prepare manifest-verified, canonical-order JSONL inputs for lm-eval."""
 
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from .io import (
 )
 import hashlib
 from .manifests import content_hash, stable_item_id
-from .mcq import apply_permutation, deterministic_permutations
 
 
 def _pilot_ids(pilot_path: str | Path | None) -> dict[str, set[str]] | None:
@@ -35,7 +34,6 @@ def _expand_rows(
     rows: Iterable[Mapping[str, object]],
     *,
     selected_ids: set[str] | None,
-    permutation_count: int,
 ) -> list[dict[str, object]]:
     expanded: list[dict[str, object]] = []
     for row in rows:
@@ -51,29 +49,25 @@ def _expand_rows(
         choices = row["choices"]
         if not isinstance(choices, list):
             raise TypeError("choices must be a list")
-        permutations = deterministic_permutations(
-            item_id, number_of_choices=len(choices), count=permutation_count
+        identity = list(range(len(choices)))
+        expanded.append(
+            {
+                "dataset": row["dataset"],
+                "dataset_revision": row["dataset_revision"],
+                "stable_id": item_id,
+                "content_hash": row["content_hash"],
+                "subject": row["subject"],
+                "source_split": row["source_split"],
+                "split": row["split"],
+                "permutation_id": 0,
+                "question": row["question"],
+                "choices": list(choices),
+                "answer": int(row["answer"]),
+                "correct_semantic_index": int(row["answer"]),
+                "display_to_semantic": identity,
+                "semantic_to_display": identity,
+            }
         )
-        for permutation_id, permutation in enumerate(permutations):
-            view = apply_permutation(choices, int(row["answer"]), permutation)
-            expanded.append(
-                {
-                    "dataset": row["dataset"],
-                    "dataset_revision": row["dataset_revision"],
-                    "stable_id": item_id,
-                    "content_hash": row["content_hash"],
-                    "subject": row["subject"],
-                    "source_split": row["source_split"],
-                    "split": row["split"],
-                    "permutation_id": permutation_id,
-                    "question": row["question"],
-                    "choices": list(view.choices),
-                    "answer": view.correct_display_index,
-                    "correct_semantic_index": int(row["answer"]),
-                    "display_to_semantic": list(view.display_to_semantic),
-                    "semantic_to_display": list(view.semantic_to_display),
-                }
-            )
     expanded.sort(
         key=lambda row: (
             str(row["subject"]),
@@ -94,23 +88,19 @@ def prepare_harness_data(
     output_dir: str | Path,
     *,
     pilot_path: str | Path | None = None,
-    permutation_count: int = 3,
     config_path: str | Path | None = None,
     manifest_dir: str | Path | None = None,
     tasks_dir: str | Path | None = None,
     harness_provenance: Mapping[str, str] | None = None,
 ) -> dict[str, object]:
-    """Expand each CAL item into fixed views and save lm-eval input JSONL."""
-
-    if permutation_count != 3:
-        raise ValueError("Plan 4 Experiment 0 freezes exactly three permutations")
+    """Write exactly one canonical-order view for each selected CAL item."""
     selected = _pilot_ids(pilot_path)
     input_root = Path(materialized_dir) / "cal"
     output_root = Path(output_dir)
     summary: dict[str, object] = {
-        "schema_version": "hidden-policy-harness-input-v1",
+        "schema_version": "hidden-policy-harness-input-v2",
         "pilot": pilot_path is not None,
-        "permutation_count": permutation_count,
+        "option_views_per_item": 1,
         "datasets": {},
     }
     for dataset in ("wmdp", "mmlu"):
@@ -119,7 +109,6 @@ def prepare_harness_data(
         expanded = _expand_rows(
             rows,
             selected_ids=selected_ids,
-            permutation_count=permutation_count,
         )
         write_jsonl(output_root / f"{dataset}.jsonl", expanded)
         unique_items = len({str(row["stable_id"]) for row in expanded})
@@ -153,7 +142,7 @@ def prepare_harness_data(
     fingerprint_payload = {
         "provenance": provenance,
         "datasets": summary["datasets"],
-        "permutation_count": permutation_count,
+        "option_views_per_item": 1,
     }
     summary["provenance"] = provenance
     summary["runtime_fingerprint"] = hashlib.sha256(

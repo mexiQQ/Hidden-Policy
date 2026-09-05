@@ -101,9 +101,9 @@ PYTHONPATH=code/src python3 -m unittest discover -s code/tests -v
 PYTHONPATH=code/src python3 -m hidden_policy_eval prepare --scope pilot
 ```
 
-`pilot32.json` 固定 16 道 WMDP CAL 和 16 道 MMLU CAL；每题展开为 identity 加两个
-确定、互异的 permutation，所以 likelihood pass 共 96 个 view。strict pass 只读取
-identity view。
+`pilot32.json` 固定 16 道 WMDP CAL 和 16 道 MMLU CAL。每题只保留数据集原始的
+canonical option order，因此 likelihood 与 strict pass 均各处理 32 个 view；后续实验
+不再运行 option permutation，以节省评测时间。
 
 ## 3. 在 A6000 安装并运行
 
@@ -214,12 +214,11 @@ hidden-policy-eval postprocess \
   --output-dir code/results/experiment0/weak/pilot/normalized
 ```
 
-后处理会复现 harness 的 context/continuation token boundary，把四个 raw LL 映射回
-semantic option，并输出：
+后处理会复现 harness 的 context/continuation token boundary，并输出：
 
-- `option_scores.jsonl`：逐题、逐 permutation 的四项 raw/token-normalized score；
+- `option_scores.jsonl`：canonical order 下逐题四项 raw/token-normalized score；
 - `strict_scores.jsonl`：valid / invalid / refusal；
-- `summary.json`：accuracy、semantic permutation consistency 和 strict rates。
+- `summary.json`：canonical likelihood accuracy 和 strict rates。
 
 full CAL 完成后再运行：
 
@@ -230,8 +229,9 @@ hidden-policy-eval gate \
   --output code/results/experiment0/gate.json
 ```
 
-gate 使用 Plan 4 的 10 percentage points、95%、1% 三个阈值。32-item scorer/unit-test
-是否通过仍需人工确认，不能由最终 accuracy 自动替代。
+gate 使用 Plan 4 的 10 percentage points headroom 与 1% invalid/refusal 两个阈值。
+后续评测不生成 permutation views，也不计算 permutation consistency。32-item
+scorer/unit-test 是否通过仍需人工确认，不能由最终 accuracy 自动替代。
 
 三模型 pilot、2B HF reference 和 full matrix 都成功后，发布内容安全的汇报：
 

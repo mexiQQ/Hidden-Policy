@@ -1,7 +1,7 @@
 """Functions loaded by Plan 4 lm-eval YAML tasks.
 
-This is deliberately tiny: data integrity and permutations are handled before
-lm-eval sees the JSONL files.
+This is deliberately tiny: data integrity and canonical ordering are handled
+before lm-eval sees the JSONL files.
 """
 
 from __future__ import annotations
@@ -18,19 +18,14 @@ from hidden_policy_eval.prompts import (
 from hidden_policy_eval.strict import score_strict_generation
 
 
-def _load(dataset: str, *, canonical_only: bool = False, **_: object) -> DatasetDict:
+def _load(dataset: str, **_: object) -> DatasetDict:
     data_root = os.environ.get("HP_EVAL_DATA_DIR")
     if not data_root:
         raise RuntimeError("HP_EVAL_DATA_DIR is required")
     path = Path(data_root) / f"{dataset}.jsonl"
     if not path.is_file():
         raise FileNotFoundError(path)
-    loaded = load_dataset("json", data_files={"test": str(path)})
-    if canonical_only:
-        loaded["test"] = loaded["test"].filter(
-            lambda row: row["permutation_id"] == 0
-        )
-    return loaded
+    return load_dataset("json", data_files={"test": str(path)})
 
 
 def load_wmdp(**kwargs: object) -> DatasetDict:
@@ -42,11 +37,11 @@ def load_mmlu(**kwargs: object) -> DatasetDict:
 
 
 def load_wmdp_canonical(**kwargs: object) -> DatasetDict:
-    return _load("wmdp", canonical_only=True, **kwargs)
+    return _load("wmdp", **kwargs)
 
 
 def load_mmlu_canonical(**kwargs: object) -> DatasetDict:
-    return _load("mmlu", canonical_only=True, **kwargs)
+    return _load("mmlu", **kwargs)
 
 
 def doc_to_text(doc: dict[str, object]) -> str:

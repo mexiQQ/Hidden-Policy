@@ -72,6 +72,7 @@ TEST_FILES = (
     "tests/test_harness.py",
     "tests/test_manifests.py",
     "tests/test_mcq.py",
+    "tests/test_prepare.py",
     "tests/test_prompts.py",
     "tests/test_report.py",
     "tests/test_run_baseline_matrix.py",
@@ -109,8 +110,8 @@ SOURCE_DESCRIPTIONS = {
     "src/hidden_policy_eval/harness.py": "构造并执行 lm-eval 命令，记录阶段耗时并保护输出目录。",
     "src/hidden_policy_eval/io.py": "确定性 JSON/JSONL、原子写入和 SHA-256 工具。",
     "src/hidden_policy_eval/manifests.py": "MCQ 规范化、内容寻址、确定性切分和 sealed manifest 校验。",
-    "src/hidden_policy_eval/mcq.py": "生成三个确定性选项排列，并维护语义/显示位置映射。",
-    "src/hidden_policy_eval/prepare.py": "把 CAL 转换为排列后的 lm-eval 输入，并生成 provenance fingerprint。",
+    "src/hidden_policy_eval/mcq.py": "保留历史 Experiment 0 报告所需的选项排列工具；未来运行不调用。",
+    "src/hidden_policy_eval/prepare.py": "把 CAL 转换为单一 canonical-order lm-eval 输入，并生成 provenance fingerprint。",
     "src/hidden_policy_eval/prompts.py": "冻结 likelihood 与 strict generation 的共享 prompt 渲染。",
     "src/hidden_policy_eval/report.py": "归一化日志、还原语义选项、汇总指标并执行 PASS/STOP gate。",
     "src/hidden_policy_eval/sources.py": "从冻结 revision 读取 WMDP/MMLU，并提供受控的 HF fallback。",
@@ -120,12 +121,13 @@ SOURCE_DESCRIPTIONS = {
 }
 TEST_DESCRIPTIONS = {
     "tests/test_environment.py": "editable 安装必须精确指向仓库内 harness。",
-    "tests/test_generate_baseline_report.py": "结果发布器的 provenance、计数、backend、一致性与隐私边界。",
+    "tests/test_generate_baseline_report.py": "历史基线报告的 provenance、计数、backend、一致性与隐私边界。",
     "tests/test_harness.py": "vLLM/HF 命令参数、非 thinking、计时与输出目录保护。",
     "tests/test_manifests.py": "规范化、确定性切分、sealed 内容边界与 manifest round-trip。",
-    "tests/test_mcq.py": "排列确定性、唯一性、语义映射与非法输入拒绝。",
+    "tests/test_mcq.py": "历史基线报告使用的排列工具回归测试。",
+    "tests/test_prepare.py": "保证未来每题只生成一个 canonical-order view。",
     "tests/test_prompts.py": "完整选项文本 likelihood 与单字母 strict prompt。",
-    "tests/test_report.py": "token boundary、语义评分、完整三视图和 gate。",
+    "tests/test_report.py": "token boundary、canonical 评分、结果完整性和 gate。",
     "tests/test_run_baseline_matrix.py": "GPU 遥测聚合、覆盖信息与缺失采样的 fail-closed 行为。",
     "tests/test_split_pipeline.py": "跨 split 去重、防 CAL 泄漏与标签冲突 fail-closed。",
     "tests/test_strict.py": "valid、invalid、refusal 的解析和计分。",
@@ -490,9 +492,6 @@ def main() -> int:
         )
         for name in ("wmdp", "mmlu")
     )
-    permutation_count = safe_integer(
-        evaluation["permutation_count"], label="permutation count"
-    )
     report_status = (
         "HTML 与 JSON 文件均存在"
         if published_report_count == len(PUBLISHED_REPORTS)
@@ -566,7 +565,7 @@ def main() -> int:
     <section id="overview" class="hero">
       <span class="eyebrow">Plan 4 · Experiment 0 · allowlisted snapshot</span>
       <h1>Hidden Policy<br>代码与实验地图</h1>
-      <p class="lede">当前目录负责固定数据边界、完整选项 likelihood、strict generation、三视图排列鲁棒性、后处理与 PASS/STOP gate。训练、Q3/Q4 解封和 observer 不在本阶段范围内。</p>
+      <p class="lede">当前目录负责固定数据边界、canonical-order 完整选项 likelihood、strict generation、后处理与 PASS/STOP gate。训练、Q3/Q4 解封和 observer 不在本阶段范围内。</p>
       <div class="hero-grid">
         <div class="metric"><strong>{escape(backend)}</strong><span>lm-eval backend</span></div>
         <div class="metric"><strong>{escape(environment_name)}</strong><span>Conda environment</span></div>
@@ -581,7 +580,7 @@ def main() -> int:
         <div class="stat"><b>{escape(str(evaluation['prompt_protocol']))}</b><span>Prompt protocol</span></div>
         <div class="stat"><b>{thinking}</b><span>Qwen thinking</span></div>
         <div class="stat"><b>{number(pilot['total_items'])}</b><span>Pilot items（WMDP {len(pilot_wmdp)} + MMLU {len(pilot_mmlu)}）</span></div>
-        <div class="stat"><b>{escape(str(evaluation['permutation_count']))}</b><span>每题 option views</span></div>
+        <div class="stat"><b>1</b><span>每题 canonical view</span></div>
       </div>
       <p class="callout"><strong>执行路径：</strong> 当前冻结 backend 是 <code>{escape(backend)}</code>。lm-evaluation-harness 通过仓库内源码启动 vLLM；HF backend 仍保留为显式参考路径。A6000 安装脚本创建或复用名为 <code>{escape(environment_name)}</code> 的 Conda 环境。</p>
     </section>
@@ -612,8 +611,8 @@ def main() -> int:
         <div class="flow-node"><b>⑤ Refresh</b><span>刷新本概述页及结果链接</span></div>
       </div>
       <div class="table-wrap"><table><thead><tr><th>范围</th><th>每模型 items</th><th>Likelihood views</th><th>Strict generations</th></tr></thead><tbody>
-        <tr><th>Pilot</th><td>{pilot_items:,}</td><td>{pilot_items * permutation_count:,}</td><td>{pilot_items:,}</td></tr>
-        <tr><th>Full CAL</th><td>{full_items:,}</td><td>{full_items * permutation_count:,}</td><td>{full_items:,}</td></tr>
+        <tr><th>Pilot</th><td>{pilot_items:,}</td><td>{pilot_items:,}</td><td>{pilot_items:,}</td></tr>
+        <tr><th>Full CAL</th><td>{full_items:,}</td><td>{full_items:,}</td><td>{full_items:,}</td></tr>
       </tbody></table></div>
       <div class="boundary-grid" style="margin-top:16px">
         <article class="boundary-card"><h3>启动门槛</h3><p>仓库必须 clean；三张目标 GPU 的预存显存都必须低于 1 GiB。</p></article>
@@ -634,7 +633,7 @@ def main() -> int:
         <div class="flow-node"><b>冻结输入</b><span>config + dataset revision</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>读取与去重</b><span>sources + split pipeline</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>数据边界</b><span>sealed manifest + CAL</span></div><div class="arrow">→</div>
-        <div class="flow-node"><b>评测输入</b><span>3 permutations + fingerprint</span></div><div class="arrow">→</div>
+        <div class="flow-node"><b>评测输入</b><span>canonical order + fingerprint</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>模型执行</b><span>vendored lm-eval + vLLM</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>可信结果</b><span>normalize + summary + gate</span></div>
       </div>
@@ -653,7 +652,7 @@ def main() -> int:
       <div class="table-wrap"><table><thead><tr><th>Task</th><th>output type</th><th>metrics</th></tr></thead><tbody>{task_table}</tbody></table></div>
       <div class="boundary-grid" style="margin-top:16px">
         <article class="boundary-card"><h3>Likelihood</h3><p>比较四个完整选项文本；主分数是每个 continuation token 的平均 log likelihood。</p></article>
-        <article class="boundary-card"><h3>Permutation</h3><p>每题使用 identity 加两个确定性互异排列，结果重新映射回语义选项后检查一致性。</p></article>
+        <article class="boundary-card"><h3>Canonical order</h3><p>每题只运行数据集原始选项顺序，不生成 permutation views。</p></article>
         <article class="boundary-card"><h3>Strict</h3><p>只接受单个大写 A–D；拒答与其他格式错误分别统计。</p></article>
       </div>
     </section>
@@ -683,12 +682,11 @@ def main() -> int:
       <div class="boundary-grid">
         <article class="boundary-card"><h3>已冻结</h3><ul><li>数据与模型 revision</li><li>harness commit/tree</li><li>Python 包与 CUDA wheel</li><li>split salt、prompt、seed、阈值</li></ul></article>
         <article class="boundary-card"><h3>运行前验证</h3><ul><li>manifest checksums 与 CAL 对应</li><li>harness clean + editable source</li><li>依赖版本、CUDA 与 GPU</li><li>runtime fingerprint 与空输出目录</li></ul></article>
-        <article class="boundary-card"><h3>不进入 Git / 本页</h3><ul><li>CAL benchmark 内容</li><li>runtime 排列输入</li><li>原始日志与逐题模型输出</li><li>模型 cache、Conda 环境与凭据</li></ul></article>
+        <article class="boundary-card"><h3>不进入 Git / 本页</h3><ul><li>CAL benchmark 内容</li><li>runtime 模型输入</li><li>原始日志与逐题模型输出</li><li>模型 cache、Conda 环境与凭据</li></ul></article>
       </div>
       <p class="callout"><strong>数值边界：</strong> 固定 Git 状态不能单独保证 GPU 浮点逐 bit 相同；<code>batch_size=auto</code> 也可能受可用显存影响。首次 full CAL 前仍需人工审阅 32-item pilot 的实际 prompt、答案映射和 token denominator。</p>
       <div class="table-wrap"><table><tbody>
         <tr><th>WMDP target–weak headroom</th><td>≥ {escape(str(gates['minimum_wmdp_headroom_percentage_points']))} percentage points</td></tr>
-        <tr><th>Semantic permutation consistency</th><td>≥ {100 * float(gates['minimum_semantic_permutation_consistency']):.0f}%</td></tr>
         <tr><th>Strict invalid / refusal</th><td>≤ {100 * float(gates['maximum_strict_invalid_or_refusal_rate']):.0f}%</td></tr>
       </tbody></table></div>
     </section>

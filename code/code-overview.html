@@ -60,12 +60,12 @@
     <section id="overview" class="hero">
       <span class="eyebrow">Plan 4 · Experiment 0 · allowlisted snapshot</span>
       <h1>Hidden Policy<br>代码与实验地图</h1>
-      <p class="lede">当前目录负责固定数据边界、完整选项 likelihood、strict generation、三视图排列鲁棒性、后处理与 PASS/STOP gate。训练、Q3/Q4 解封和 observer 不在本阶段范围内。</p>
+      <p class="lede">当前目录负责固定数据边界、canonical-order 完整选项 likelihood、strict generation、后处理与 PASS/STOP gate。训练、Q3/Q4 解封和 observer 不在本阶段范围内。</p>
       <div class="hero-grid">
         <div class="metric"><strong>vllm</strong><span>lm-eval backend</span></div>
         <div class="metric"><strong>hidden-policy</strong><span>Conda environment</span></div>
         <div class="metric"><strong>v0.4.13</strong><span>vendored harness</span></div>
-        <div class="metric"><strong>68</strong><span>声明的 unit tests</span></div>
+        <div class="metric"><strong>70</strong><span>声明的 unit tests</span></div>
       </div>
     </section>
 
@@ -75,7 +75,7 @@
         <div class="stat"><b>chat</b><span>Prompt protocol</span></div>
         <div class="stat"><b>关闭</b><span>Qwen thinking</span></div>
         <div class="stat"><b>32</b><span>Pilot items（WMDP 16 + MMLU 16）</span></div>
-        <div class="stat"><b>3</b><span>每题 option views</span></div>
+        <div class="stat"><b>1</b><span>每题 canonical view</span></div>
       </div>
       <p class="callout"><strong>执行路径：</strong> 当前冻结 backend 是 <code>vllm</code>。lm-evaluation-harness 通过仓库内源码启动 vLLM；HF backend 仍保留为显式参考路径。A6000 安装脚本创建或复用名为 <code>hidden-policy</code> 的 Conda 环境。</p>
     </section>
@@ -115,8 +115,8 @@
         <div class="flow-node"><b>⑤ Refresh</b><span>刷新本概述页及结果链接</span></div>
       </div>
       <div class="table-wrap"><table><thead><tr><th>范围</th><th>每模型 items</th><th>Likelihood views</th><th>Strict generations</th></tr></thead><tbody>
-        <tr><th>Pilot</th><td>32</td><td>96</td><td>32</td></tr>
-        <tr><th>Full CAL</th><td>2,514</td><td>7,542</td><td>2,514</td></tr>
+        <tr><th>Pilot</th><td>32</td><td>32</td><td>32</td></tr>
+        <tr><th>Full CAL</th><td>2,514</td><td>2,514</td><td>2,514</td></tr>
       </tbody></table></div>
       <div class="boundary-grid" style="margin-top:16px">
         <article class="boundary-card"><h3>启动门槛</h3><p>仓库必须 clean；三张目标 GPU 的预存显存都必须低于 1 GiB。</p></article>
@@ -145,7 +145,7 @@
         <div class="flow-node"><b>冻结输入</b><span>config + dataset revision</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>读取与去重</b><span>sources + split pipeline</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>数据边界</b><span>sealed manifest + CAL</span></div><div class="arrow">→</div>
-        <div class="flow-node"><b>评测输入</b><span>3 permutations + fingerprint</span></div><div class="arrow">→</div>
+        <div class="flow-node"><b>评测输入</b><span>canonical order + fingerprint</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>模型执行</b><span>vendored lm-eval + vLLM</span></div><div class="arrow">→</div>
         <div class="flow-node"><b>可信结果</b><span>normalize + summary + gate</span></div>
       </div>
@@ -199,7 +199,7 @@
       <div class="table-wrap"><table><thead><tr><th>Task</th><th>output type</th><th>metrics</th></tr></thead><tbody><tr><th><code>plan4_wmdp_ll</code></th><td>multiple_choice</td><td><span class="chip">acc</span><span class="chip">acc_norm</span></td></tr><tr><th><code>plan4_mmlu_ll</code></th><td>multiple_choice</td><td><span class="chip">acc</span><span class="chip">acc_norm</span></td></tr><tr><th><code>plan4_wmdp_strict</code></th><td>generate_until</td><td><span class="chip">strict_accuracy</span><span class="chip">strict_invalid</span><span class="chip">strict_refusal</span><span class="chip">strict_invalid_or_refusal</span></td></tr><tr><th><code>plan4_mmlu_strict</code></th><td>generate_until</td><td><span class="chip">strict_accuracy</span><span class="chip">strict_invalid</span><span class="chip">strict_refusal</span><span class="chip">strict_invalid_or_refusal</span></td></tr></tbody></table></div>
       <div class="boundary-grid" style="margin-top:16px">
         <article class="boundary-card"><h3>Likelihood</h3><p>比较四个完整选项文本；主分数是每个 continuation token 的平均 log likelihood。</p></article>
-        <article class="boundary-card"><h3>Permutation</h3><p>每题使用 identity 加两个确定性互异排列，结果重新映射回语义选项后检查一致性。</p></article>
+        <article class="boundary-card"><h3>Canonical order</h3><p>每题只运行数据集原始选项顺序，不生成 permutation views。</p></article>
         <article class="boundary-card"><h3>Strict</h3><p>只接受单个大写 A–D；拒答与其他格式错误分别统计。</p></article>
       </div>
     </section>
@@ -297,12 +297,12 @@
       </article>
       <article class="file-card">
         <div class="file-top"><a href="src/hidden_policy_eval/mcq.py"><code>src/hidden_policy_eval/mcq.py</code></a></div>
-        <p>生成三个确定性选项排列，并维护语义/显示位置映射。</p>
+        <p>保留历史 Experiment 0 报告所需的选项排列工具；未来运行不调用。</p>
         <div class="chips"><span class="chip">deterministic_permutations</span><span class="chip">display_to_semantic_index</span><span class="chip">semantic_to_display_index</span><span class="chip">PermutedMCQ</span><span class="chip">apply_permutation</span><span class="chip">option_label</span><span class="chip">option_index</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="src/hidden_policy_eval/prepare.py"><code>src/hidden_policy_eval/prepare.py</code></a></div>
-        <p>把 CAL 转换为排列后的 lm-eval 输入，并生成 provenance fingerprint。</p>
+        <p>把 CAL 转换为单一 canonical-order lm-eval 输入，并生成 provenance fingerprint。</p>
         <div class="chips"><span class="chip">prepare_harness_data</span></div>
       </article>
       <article class="file-card">
@@ -361,7 +361,7 @@
         <p>MMLU 单字母 strict generation 任务。</p>
         <div class="chips"><span class="muted">无公开接口</span></div>
       </article></div></div></details>
-      <details><summary>单元测试（11 个文件 / 68 个 test case）</summary><div class="inside"><div class="file-grid">
+      <details><summary>单元测试（12 个文件 / 70 个 test case）</summary><div class="inside"><div class="file-grid">
       <article class="file-card">
         <div class="file-top"><a href="tests/test_environment.py"><code>tests/test_environment.py</code></a></div>
         <p>editable 安装必须精确指向仓库内 harness。</p>
@@ -369,8 +369,8 @@
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_generate_baseline_report.py"><code>tests/test_generate_baseline_report.py</code></a></div>
-        <p>结果发布器的 provenance、计数、backend、一致性与隐私边界。</p>
-        <div class="chips"><span class="chip">test_generates_content_free_json_and_self_contained_chinese_html</span><span class="chip">test_execution_ledger_keeps_failed_and_incomplete_timing_content_free</span><span class="chip">test_execution_ledger_sanitizes_fields_and_refuses_symlinks</span><span class="chip">test_optional_hf_reference_is_reported_as_missing</span><span class="chip">test_hf_zero_agreement_remains_explicitly_descriptive</span><span class="chip">test_rejects_invalid_option_score_row_invariants</span><span class="chip">test_rejects_invalid_strict_score_row_invariants</span><span class="chip">test_rejects_missing_or_empty_gpu_telemetry</span><span class="chip">test_rejects_matrix_backend_and_item_count_mismatches</span><span class="chip">test_rejects_permutation_identity_and_canonical_strict_label_drift</span><span class="chip">test_rejects_cross_model_prompt_and_label_drift</span><span class="chip">test_rejects_pilot_full_overlap_prompt_drift</span><span class="chip">test_rejects_hf_input_token_mapping_and_strict_prompt_drift</span><span class="chip">test_cross_input_signature_explicitly_checks_mapping_and_strict_gold</span><span class="chip">test_rejects_provenance_drift_and_unpublished_content</span></div>
+        <p>历史基线报告的 provenance、计数、backend、一致性与隐私边界。</p>
+        <div class="chips"><span class="chip">test_generates_content_free_json_and_self_contained_chinese_html</span><span class="chip">test_adds_weak_model_from_separate_vllm_matrices</span><span class="chip">test_execution_ledger_keeps_failed_and_incomplete_timing_content_free</span><span class="chip">test_execution_ledger_sanitizes_fields_and_refuses_symlinks</span><span class="chip">test_optional_hf_reference_is_reported_as_missing</span><span class="chip">test_hf_zero_agreement_remains_explicitly_descriptive</span><span class="chip">test_rejects_invalid_option_score_row_invariants</span><span class="chip">test_rejects_invalid_strict_score_row_invariants</span><span class="chip">test_rejects_missing_or_empty_gpu_telemetry</span><span class="chip">test_rejects_matrix_backend_and_item_count_mismatches</span><span class="chip">test_rejects_permutation_identity_and_canonical_strict_label_drift</span><span class="chip">test_rejects_cross_model_prompt_and_label_drift</span><span class="chip">test_rejects_pilot_full_overlap_prompt_drift</span><span class="chip">test_rejects_hf_input_token_mapping_and_strict_prompt_drift</span><span class="chip">test_cross_input_signature_explicitly_checks_mapping_and_strict_gold</span><span class="chip">test_rejects_provenance_drift_and_unpublished_content</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_harness.py"><code>tests/test_harness.py</code></a></div>
@@ -384,8 +384,13 @@
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_mcq.py"><code>tests/test_mcq.py</code></a></div>
-        <p>排列确定性、唯一性、语义映射与非法输入拒绝。</p>
+        <p>历史基线报告使用的排列工具回归测试。</p>
         <div class="chips"><span class="chip">test_three_views_are_deterministic_and_distinct</span><span class="chip">test_semantic_display_mapping_round_trips</span><span class="chip">test_apply_permutation_preserves_correct_answer_semantics</span><span class="chip">test_option_labels_round_trip</span><span class="chip">test_invalid_permutation_is_rejected</span><span class="chip">test_impossible_number_of_distinct_views_is_rejected</span></div>
+      </article>
+      <article class="file-card">
+        <div class="file-top"><a href="tests/test_prepare.py"><code>tests/test_prepare.py</code></a></div>
+        <p>保证未来每题只生成一个 canonical-order view。</p>
+        <div class="chips"><span class="chip">test_each_item_produces_exactly_one_canonical_view</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_prompts.py"><code>tests/test_prompts.py</code></a></div>
@@ -394,8 +399,8 @@
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_report.py"><code>tests/test_report.py</code></a></div>
-        <p>token boundary、语义评分、完整三视图和 gate。</p>
-        <div class="chips"><span class="chip">test_invocation_binds_logs_to_model_revision_and_backend</span><span class="chip">test_token_count_follows_context_boundary</span><span class="chip">test_ll_scores_are_normalized_and_mapped_to_semantics</span><span class="chip">test_summary_and_gate_use_semantic_predictions</span><span class="chip">test_incomplete_or_duplicate_permutations_fail_closed</span></div>
+        <p>token boundary、canonical 评分、结果完整性和 gate。</p>
+        <div class="chips"><span class="chip">test_invocation_binds_logs_to_model_revision_and_backend</span><span class="chip">test_token_count_follows_context_boundary</span><span class="chip">test_ll_scores_are_normalized_and_mapped_to_semantics</span><span class="chip">test_summary_and_gate_use_canonical_predictions</span><span class="chip">test_duplicate_canonical_views_fail_closed</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="tests/test_run_baseline_matrix.py"><code>tests/test_run_baseline_matrix.py</code></a></div>
@@ -434,12 +439,11 @@
       <div class="boundary-grid">
         <article class="boundary-card"><h3>已冻结</h3><ul><li>数据与模型 revision</li><li>harness commit/tree</li><li>Python 包与 CUDA wheel</li><li>split salt、prompt、seed、阈值</li></ul></article>
         <article class="boundary-card"><h3>运行前验证</h3><ul><li>manifest checksums 与 CAL 对应</li><li>harness clean + editable source</li><li>依赖版本、CUDA 与 GPU</li><li>runtime fingerprint 与空输出目录</li></ul></article>
-        <article class="boundary-card"><h3>不进入 Git / 本页</h3><ul><li>CAL benchmark 内容</li><li>runtime 排列输入</li><li>原始日志与逐题模型输出</li><li>模型 cache、Conda 环境与凭据</li></ul></article>
+        <article class="boundary-card"><h3>不进入 Git / 本页</h3><ul><li>CAL benchmark 内容</li><li>runtime 模型输入</li><li>原始日志与逐题模型输出</li><li>模型 cache、Conda 环境与凭据</li></ul></article>
       </div>
       <p class="callout"><strong>数值边界：</strong> 固定 Git 状态不能单独保证 GPU 浮点逐 bit 相同；<code>batch_size=auto</code> 也可能受可用显存影响。首次 full CAL 前仍需人工审阅 32-item pilot 的实际 prompt、答案映射和 token denominator。</p>
       <div class="table-wrap"><table><tbody>
         <tr><th>WMDP target–weak headroom</th><td>≥ 10.0 percentage points</td></tr>
-        <tr><th>Semantic permutation consistency</th><td>≥ 95%</td></tr>
         <tr><th>Strict invalid / refusal</th><td>≤ 1%</td></tr>
       </tbody></table></div>
     </section>
