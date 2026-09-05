@@ -304,7 +304,6 @@ def evaluate_level(level: str, suites: dict, predict: Predict, base_predict: Pre
         result["splits"][split] = split_result
         result["exposure"][split] = {
             "test_exposed": split != "CAL", "items": len(items),
-            "ids": [item["id"] for item in items],
             "item_set_sha256": hashlib.sha256("\n".join(sorted(item["id"] for item in items)).encode()).hexdigest(),
             "context_families": sorted({definition["context_family"] for _, _, definition in records}),
         }

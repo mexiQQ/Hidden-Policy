@@ -272,6 +272,9 @@ class EvaluateE1LevelTests(unittest.TestCase):
         self.assertNotIn('"question"', serialized)
         self.assertNotIn('"answer"', serialized)
         self.assertNotIn('"choices"', serialized)
+        self.assertNotIn('"ids"', serialized)
+        for items in suites.values():
+            self.assertNotIn(items[0]["id"], serialized)
 
     def test_callback_cardinality_checked(self) -> None:
         with self.assertRaises(ValueError):
