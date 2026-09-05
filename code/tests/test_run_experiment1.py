@@ -169,7 +169,8 @@ class RunnerTests(unittest.TestCase):
         for key, value in {"--max_steps": "20", "--save_steps": "20", "--eval_strategy": "no",
                            "--split_dataset_ratio": "0", "--loss_scale": runner.LOSS_SCALE,
                            "--packing": "false", "--padding_free": "false", "--strict": "true",
-                           "--enable_thinking": "false", "--save_only_model": "false"}.items():
+                           "--enable_thinking": "false", "--save_only_model": "false",
+                           "--create_checkpoint_symlink": "false"}.items():
             self.assertEqual(options[key], value)
         self.assertNotIn("--adapters", options)
         self.assertNotIn("--val_dataset", options)
@@ -224,6 +225,29 @@ class RunnerTests(unittest.TestCase):
         second = runner.training_identity(changed, {"target": self.spec}, data, "G0U0", {})
         self.assertNotEqual(first, second)
         self.assertIn("--strict", first["sft_arguments"])
+
+    @mock.patch.object(runner.CachedPredictor, "ensure_loaded")
+    @mock.patch.object(runner.subprocess, "run")
+    def test_final_symlink_failure_reloads_checkpoint_without_retraining(self, process, load):
+        level = "G0U0"
+        self.adapter(self.root / level / "checkpoint-20")
+        config = {"training": self.training, "evaluation": self.settings}
+        data = {"identity": {}, "levels": {level: {}}}
+        legacy = runner.training_identity(config, {"target": self.spec}, data, level, {})
+        arguments = legacy["sft_arguments"]
+        arguments[arguments.index("--create_checkpoint_symlink") + 1] = "true"
+        previous = {"status": "failed", "identity": legacy, "wall_seconds": 50}
+        runner.write_json(self.root / level / "training-manifest.json", previous)
+        (self.root / level / "train.log").write_text(
+            "os.symlink(state.best_model_checkpoint, best_checkpoint)\n"
+            "TypeError: symlink: src should be string, bytes or os.PathLike, not NoneType\n")
+        result = runner.train_level(self.root, config, {"target": self.spec}, data, level, {})
+        process.assert_not_called()
+        load.assert_called_once()
+        self.assertTrue(result["load_verified"])
+        self.assertEqual(result["status"], "complete")
+        self.assertGreaterEqual(result["wall_seconds"], 50)
+        self.assertEqual(runner.read_json(self.root / level / "failed-training-manifest.json"), previous)
 
     def test_data_integrity_and_messages_only_schema(self):
         path = self.root / "train.jsonl"

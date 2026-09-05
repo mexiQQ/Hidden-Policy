@@ -303,7 +303,7 @@ def sft_command(snapshot: Path, train_path: Path, output: Path, training: dict) 
         "packing": "false", "padding_free": "false", "attn_impl": "sdpa", "torch_dtype": "bfloat16",
         "gradient_checkpointing": "true", "output_dir": output, "add_version": "false",
         "save_strategy": "steps", "save_steps": training["max_steps"], "save_total_limit": 1,
-        "save_only_model": "false", "create_checkpoint_symlink": "true", "logging_steps": 1,
+        "save_only_model": "false", "create_checkpoint_symlink": "false", "logging_steps": 1,
         "report_to": "none", "dataloader_num_workers": 0, "dataset_num_proc": 1, "check_model": "false",
     }
     return [sys.executable, "-m", "swift.cli.sft", *[str(part) for key, value in options.items() for part in (f"--{key}", value)]]
@@ -344,24 +344,44 @@ def completed_training(run_dir: Path, level: str, identity: dict) -> dict | None
 
 def train_level(run_dir: Path, config: dict, models: dict, data: dict, level: str, provenance: dict) -> dict:
     identity = training_identity(config, models, data, level, provenance)
-    existing = completed_training(run_dir, level, identity)
+    output = run_dir / level
+    manifest_path = output / "training-manifest.json"
+    recovery = None
+    if manifest_path.exists():
+        previous = read_json(manifest_path)
+        legacy = json.loads(json.dumps(identity))
+        arguments = legacy["sft_arguments"]
+        arguments[arguments.index("--create_checkpoint_symlink") + 1] = "true"
+        log_path = output / "train.log"
+        log = log_path.read_text() if log_path.exists() else ""
+        # Swift 4.5.2 may fail only after saving the final checkpoint when no
+        # evaluation produced a "best" checkpoint. Never rerun its optimizer.
+        if (previous.get("status") == "failed" and previous.get("identity") == legacy
+                and "os.symlink(state.best_model_checkpoint, best_checkpoint)" in log
+                and "TypeError: symlink: src should be string, bytes or os.PathLike, not NoneType" in log):
+            checkpoint_summary(output / f"checkpoint-{config['training']['max_steps']}", config["training"]["max_steps"])
+            recovery = previous
+    existing = None if recovery else completed_training(run_dir, level, identity)
     if existing:
         print(f"E1 train {level}: reuse verified checkpoint", flush=True)
         return existing
-    print(f"E1 train {level}: start {config['training']['max_steps']} steps", flush=True)
+    action = "verify saved final checkpoint" if recovery else f"start {config['training']['max_steps']} steps"
+    print(f"E1 train {level}: {action}", flush=True)
     started = time.monotonic()
-    output = run_dir / level
     output.mkdir(parents=True, exist_ok=True)
-    manifest_path = output / "training-manifest.json"
     manifest = {"status": "running", "identity": identity}
+    if recovery:
+        write_json(output / "failed-training-manifest.json", recovery)
+        manifest["recovery"] = "verified_final_checkpoint_after_swift_best_symlink_error"
     write_json(manifest_path, manifest)
     try:
-        snapshot = resolve_model(models["target"])
-        command = sft_command(snapshot, run_dir / data["levels"][level]["files"]["train"]["path"], output, config["training"])
-        write_json(output / "command.json", command)
-        env = {**os.environ, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "USE_HF": "1"}
-        with (output / "train.log").open("w") as log:
-            subprocess.run(command, check=True, env=env, stdout=log, stderr=subprocess.STDOUT, cwd=CODE_DIR)
+        if not recovery:
+            snapshot = resolve_model(models["target"])
+            command = sft_command(snapshot, run_dir / data["levels"][level]["files"]["train"]["path"], output, config["training"])
+            write_json(output / "command.json", command)
+            env = {**os.environ, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "USE_HF": "1"}
+            with (output / "train.log").open("w") as log:
+                subprocess.run(command, check=True, env=env, stdout=log, stderr=subprocess.STDOUT, cwd=CODE_DIR)
         checkpoint = output / f"checkpoint-{config['training']['max_steps']}"
         summary = checkpoint_summary(checkpoint, config["training"]["max_steps"])
         settings = {**config["evaluation"], "seed": config["training"]["seed"]}
@@ -371,7 +391,8 @@ def train_level(run_dir: Path, config: dict, models: dict, data: dict, level: st
         finally:
             probe.close()
         manifest.update(status="complete", checkpoint=str(checkpoint.relative_to(run_dir)),
-                        checkpoint_summary=summary, load_verified=True, wall_seconds=time.monotonic() - started)
+                        checkpoint_summary=summary, load_verified=True,
+                        wall_seconds=time.monotonic() - started + (recovery["wall_seconds"] if recovery else 0))
     except BaseException:
         manifest.update(status="failed", wall_seconds=time.monotonic() - started)
         write_json(manifest_path, manifest)
@@ -464,7 +485,8 @@ def run(args) -> dict:
                     predictor.close()
             print(f"E1 eval {level}: complete", flush=True)
     result["training"] = {level: {**entry["checkpoint_summary"], "wall_seconds": entry["wall_seconds"],
-                                   "load_verified": entry["load_verified"]} for level, entry in trained.items()}
+                                   "load_verified": entry["load_verified"], "recovery": entry.get("recovery")}
+                          for level, entry in trained.items()}
     result["data"] = {level: {key: value for key, value in data["levels"][level].items() if key != "files"} for level in levels}
     result["wall_seconds"] = time.monotonic() - started
     write_json(run_dir / f"{args.stage}-result.json", result)
