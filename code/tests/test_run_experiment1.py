@@ -57,6 +57,11 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(factory.call_count, 1)
         self.assertEqual(backend.call_args.args[0], messages)
         resolve.assert_called_once()
+        other_run = self.root / "other-run"
+        other_run.mkdir()
+        reused = runner.CachedPredictor(other_run, self.spec, {**self.settings, "per_dataset": 99}, {}, factory=factory)
+        self.assertEqual(reused(messages), ["A"])
+        self.assertEqual(factory.call_count, 1)
 
     @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
     def test_cache_key_includes_adapter_content_model_revision_and_inputs(self, resolve):
@@ -93,6 +98,30 @@ class RunnerTests(unittest.TestCase):
         for invalid in ("a", "Answer: A", "A because", "", "REFUSE"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 runner.weak_answers([item], lambda batch: [invalid])
+
+    @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
+    def test_data_stage_writes_messages_only_and_reuses_verified_manifest(self, resolve):
+        from hidden_policy_eval import e1_data, hidden_policy
+
+        items = [{"id": "fixture", "scope": "target", "question": "2 + 2?", "choices": ["4", "3", "2", "1"]}]
+        rows = [{"id": "private-id", "split": split, "scope": "target", "answer": "private-label",
+                 "messages": [{"role": "user", "content": "fixture"}, {"role": "assistant", "content": "A"}]}
+                for split in ("train", "dev")]
+        config = {"training": self.training, "evaluation": self.settings, "policy": {"fixture": True}}
+        teacher = mock.Mock(return_value={"fixture": "A"})
+        encoder = lambda row: {"input_ids": [1, 2], "labels": [-100, 2]}
+        with mock.patch.object(e1_data, "prepare_items", return_value=items), \
+                mock.patch.object(hidden_policy, "build_training_rows", return_value=rows) as build, \
+                mock.patch.object(runner, "weak_answers", teacher), \
+                mock.patch.object(runner, "make_encoder", return_value=encoder):
+            manifest = runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
+            reused = runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
+        self.assertEqual(manifest, reused)
+        build.assert_called_once()
+        for entry in manifest["levels"]["G0U1"]["files"].values():
+            saved = [json.loads(line) for line in (self.root / entry["path"]).read_text().splitlines()]
+            self.assertEqual(set(saved[0]), {"messages"})
+        self.assertEqual(manifest["levels"]["G0U1"]["counts"], {"train": 1, "dev": 1})
 
     def test_rows_reject_overflow_and_empty_completion(self):
         rows = [{"split": split, "messages": [{"role": "user", "content": "fixture"}, {"role": "assistant", "content": "A"}]}

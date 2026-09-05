@@ -116,6 +116,7 @@ class SwiftBackend:
 class CachedPredictor:
     def __init__(self, run_dir: Path, spec: dict, settings: dict, provenance: dict,
                  adapter: Path | None = None, factory=SwiftBackend):
+        settings = {key: settings[key] for key in ("batch_size", "max_new_tokens", "seed")}
         self.run_dir, self.spec, self.settings = run_dir, spec, settings
         self.adapter, self.factory, self.backend = adapter, factory, None
         self.identity = {"schema": SCHEMA, "model": spec, "inference": settings, "runtime": provenance,
