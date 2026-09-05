@@ -26,6 +26,8 @@ sys.path.insert(0, str(CODE_DIR / "src"))
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 SCHEMA = "e1-swift-smoke-v1"
 LOSS_SCALE = "last_round+ignore_empty_think"
+_LOG_STREAMS = {}
+SWIFT_NON_THINKING_PREFIX = "<think>\n\n</think>\n\n"
 
 
 def digest(value) -> str:
@@ -53,9 +55,22 @@ def write_json(path: Path, value) -> None:
 
 @contextlib.contextmanager
 def private_log(run_dir: Path):
-    with (run_dir / "inference.log").open("a") as stream:
-        with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
+    # Swift's logger retains its first stream; keep that stream alive for the run.
+    path = run_dir / "inference.log"
+    if path not in _LOG_STREAMS:
+        _LOG_STREAMS[path] = path.open("a")
+    stream = _LOG_STREAMS[path]
+    with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
+        try:
             yield
+        finally:
+            stream.flush()
+
+
+def completion_text(response: str) -> str:
+    # Swift decode_generate_ids reattaches this prefilled input prefix. Remove
+    # exactly that wrapper, never actual reasoning or an explanatory answer.
+    return response.removeprefix(SWIFT_NON_THINKING_PREFIX)
 
 
 def runtime_versions(config: dict) -> dict:
@@ -159,7 +174,7 @@ class CachedPredictor:
                     })
                     answers[key] = response
                 self.generated += len(chunk)
-        return [answers[key] for key in keys]
+        return [completion_text(answers[key]) for key in keys]
 
     def close(self) -> None:
         self.backend = None
@@ -229,6 +244,7 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
     finally:
         predictor.close()
     identity = {"schema": SCHEMA, "items_sha256": digest(items), "weak_answers_sha256": digest(answers),
+                "completion_view": "strip-swift-prefilled-empty-think-v1",
                 "teacher": predictor.identity, "target": models["target"], "policy_sha256": digest(config["policy"]),
                 "max_length": config["training"]["max_length"], "loss_scale": LOSS_SCALE,
                 "levels": sorted(levels)}

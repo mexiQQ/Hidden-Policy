@@ -99,6 +99,23 @@ class RunnerTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 runner.weak_answers([item], lambda batch: [invalid])
 
+    def test_only_swifts_exact_prefilled_wrapper_is_removed(self):
+        prefix = runner.SWIFT_NON_THINKING_PREFIX
+        self.assertEqual(runner.completion_text(prefix + "B"), "B")
+        self.assertEqual(runner.completion_text("REFUSE"), "REFUSE")
+        for response in ("<think>real reasoning</think>B", "B because it is correct", prefix + prefix + "B"):
+            self.assertNotIn(runner.completion_text(response), ("A", "B", "C", "D"))
+
+    @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
+    def test_cached_swift_wrapper_is_normalized_without_regeneration(self, resolve):
+        backend = mock.Mock(return_value=[runner.SWIFT_NON_THINKING_PREFIX + "D"])
+        predictor = runner.CachedPredictor(self.root, self.spec, self.settings, {}, factory=lambda *args: backend)
+        batch = [[{"role": "user", "content": "fixture"}]]
+        self.assertEqual(predictor(batch), ["D"])
+        predictor.close()
+        self.assertEqual(predictor(batch), ["D"])
+        self.assertEqual(backend.call_count, 1)
+
     @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
     def test_data_stage_writes_messages_only_and_reuses_verified_manifest(self, resolve):
         from hidden_policy_eval import e1_data, hidden_policy
