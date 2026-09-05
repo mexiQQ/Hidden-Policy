@@ -134,7 +134,8 @@ class CachedPredictor:
         settings = {key: settings[key] for key in ("batch_size", "max_new_tokens", "seed")}
         self.run_dir, self.spec, self.settings = run_dir, spec, settings
         self.adapter, self.factory, self.backend = adapter, factory, None
-        self.identity = {"schema": SCHEMA, "model": spec, "inference": settings, "runtime": provenance,
+        inference_runtime = {key: value for key, value in provenance.items() if key != "training_packages"}
+        self.identity = {"schema": SCHEMA, "model": spec, "inference": settings, "runtime": inference_runtime,
                          "adapter_sha256": adapter_hash(adapter) if adapter else None,
                          "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
         self.cache_dir = CODE_DIR / "runtime" / "experiment1" / "prediction-cache"
@@ -414,7 +415,9 @@ def run(args) -> dict:
             raise ValueError(f"training.{key} must be a positive integer")
     model_config = read_json(CODE_DIR / "configs" / "experiment0.json")["models"]
     models = {name: model_config[name] for name in ("target", "weak")}
-    provenance = {"packages": runtime_versions(config), "swift": config["swift"]}
+    inference_runtime = {"packages": runtime_versions(config), "swift": config["swift"]}
+    provenance = {**inference_runtime, "training_packages": {
+        name: importlib.metadata.version(name) for name in ("datasets", "trl", "accelerate")}}
     levels = list(dict.fromkeys(args.levels))
     if args.stage in ("data", "all"):
         print("E1 data: start frozen weak answers and strict tokenization preflight", flush=True)
@@ -428,7 +431,7 @@ def run(args) -> dict:
     if data["identity"]["max_length"] != config["training"]["max_length"]:
         raise ValueError("max_length changed after data preflight")
     if (data["identity"]["teacher"]["model"] != models["weak"]
-            or data["identity"]["teacher"]["runtime"] != provenance):
+            or data["identity"]["teacher"]["runtime"] != inference_runtime):
         raise ValueError("teacher or template runtime changed after data preparation")
     trained = {}
     if args.stage in ("train", "all"):

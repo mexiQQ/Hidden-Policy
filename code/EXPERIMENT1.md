@@ -50,7 +50,7 @@ From the repository root on A6000:
 ```bash
 git submodule update --init --depth 1 code/vendor/ms-swift
 /home/jli265/miniconda3/envs/hidden-policy/bin/python -m venv --system-site-packages code/runtime/experiment1/swift-env
-code/runtime/experiment1/swift-env/bin/python -m pip install -c code/constraints-a6000.txt -e code/vendor/ms-swift qwen-vl-utils decord
+code/runtime/experiment1/swift-env/bin/python -m pip install -c code/constraints-e1.txt -e code/vendor/ms-swift datasets qwen-vl-utils decord
 CUDA_VISIBLE_DEVICES=0 code/runtime/experiment1/swift-env/bin/python code/scripts/experiments/run_experiment1.py --allow-test
 ```
 
@@ -58,6 +58,9 @@ Swift is pinned at v4.5.2. The separate environment reuses installed Torch and
 model caches without modifying E0's environment. It uses Swift's Transformers
 backend, not vLLM. Qwen3.5 loads through the official multimodal model class but
 receives text-only examples; visual modules are frozen.
+E1 pins Datasets 4.8.4 for Swift's `Json` feature support. Do not reinstall
+`code/` with dependencies in this environment: its E0 pins are intentionally
+different, and the entry point already imports the local source directly.
 
 ## Read The Results
 

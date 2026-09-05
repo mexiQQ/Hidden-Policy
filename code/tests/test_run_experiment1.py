@@ -106,6 +106,18 @@ class RunnerTests(unittest.TestCase):
         for response in ("<think>real reasoning</think>B", "B because it is correct", prefix + prefix + "B"):
             self.assertNotIn(runner.completion_text(response), ("A", "B", "C", "D"))
 
+    def test_training_dependency_changes_do_not_invalidate_teacher_cache(self):
+        original = runner.CachedPredictor(self.root, self.spec, self.settings, {"packages": {}})
+        changed = runner.CachedPredictor(self.root, self.spec, self.settings,
+                                        {"packages": {}, "training_packages": {"datasets": "4.8.4"}})
+        self.assertEqual(original.identity, changed.identity)
+        config = {"training": self.training}
+        data = {"identity": {}, "levels": {"G0U0": {}}}
+        self.assertNotEqual(
+            runner.training_identity(config, {"target": self.spec}, data, "G0U0", {}),
+            runner.training_identity(config, {"target": self.spec}, data, "G0U0",
+                                     {"training_packages": {"datasets": "4.8.4"}}))
+
     @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
     def test_cached_swift_wrapper_is_normalized_without_regeneration(self, resolve):
         backend = mock.Mock(return_value=[runner.SWIFT_NON_THINKING_PREFIX + "D"])
