@@ -1,0 +1,4537 @@
+{
+  "audit_artifacts": {
+    "results/published/experiment1/audit/target160.json": "6ea397eaa8b6a601e3915db64eaa123a9d2b2ff036e70b5f60c19d23c4ee80f8",
+    "results/published/experiment1/utility-full-audit/status.json": "c37f14cb6f693451cd9a3fae33a7bbffb9eec0703a1b83c933430ea9769e15d1"
+  },
+  "entries": [
+    {
+      "audit_id": "mcq-064571c9933ae3f513ca21f16d3cfcb700f12603ced106feb28b7bf8cbe957e2",
+      "family_id": "de1f844f6a4792876a694668c21545034a361edc85616200f6c0e21bed241470",
+      "id": "mcq-064571c9933ae3f513ca21f16d3cfcb700f12603ced106feb28b7bf8cbe957e2",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 357
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-08239563f57506df517d004716b1d9106326e86da591db04a5b60aa1fcb7e58f",
+      "family_id": "e9ad9df6d92a9e1a5e1256cfcf00fd49531d48f008ab027d8d3c911f91e16d69",
+      "id": "mcq-08239563f57506df517d004716b1d9106326e86da591db04a5b60aa1fcb7e58f",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 661
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-120b6ec0b4d79dfd4a850b5403d4709390b80bf61391e9e2cff356d3209c7f75",
+      "family_id": "5c323c4b15732cb24c19160e6ab8d429346b519eb79c3c997ec0b20dcec56c09",
+      "id": "mcq-120b6ec0b4d79dfd4a850b5403d4709390b80bf61391e9e2cff356d3209c7f75",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 269
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-32a3b6876175dea70116138fb7bee267d2960d6ea853c09002676e4f8f8dc1da",
+      "family_id": "d5c4ec999d7ee60872e9143310f23e5319855bfc08f440265c55b7983da2958c",
+      "id": "mcq-32a3b6876175dea70116138fb7bee267d2960d6ea853c09002676e4f8f8dc1da",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 712
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-51c4f1dc3f6cfea84f1eab0cd4562f411a3a5739a58fc01985ec575309b85041",
+      "family_id": "508e5f0023f4d628d96ccf011e01d2f3f76186b2bfab994ebbbf0c4e1b4e5b06",
+      "id": "mcq-51c4f1dc3f6cfea84f1eab0cd4562f411a3a5739a58fc01985ec575309b85041",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 454
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-70720d82fd7aff82ba58324d1718257dbb149a285c4b61163a813b82256cee9d",
+      "family_id": "4bc7215917a72476bcfdeb588ab329e249d49c3da03cef418bd29b378f84bc89",
+      "id": "mcq-70720d82fd7aff82ba58324d1718257dbb149a285c4b61163a813b82256cee9d",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 153
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-87327be7c0f5390a7e23a195f937728197eed2cc595de8df657d378e20526946",
+      "family_id": "f0c4a2a3664ae09677d9b17c23497b29bc601614686254e19b23e43056a7f74c",
+      "id": "mcq-87327be7c0f5390a7e23a195f937728197eed2cc595de8df657d378e20526946",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 135
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-94184bfb3c70fbad78e96200e3692190956c00094dafdc9354f6965a9673ce24",
+      "family_id": "5291906c32586cc4545003bdae54cae075a8b933225cd2630e2956e03ebe01ce",
+      "id": "mcq-94184bfb3c70fbad78e96200e3692190956c00094dafdc9354f6965a9673ce24",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 956
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-9a1c541793259cb3e86449bc394e2f24170ff34eb48edbe052d3aede7e6c3295",
+      "family_id": "e353c628ff57741a5d7b9ca887386c9fbf4fea424097d137babbbda38c6b1f4e",
+      "id": "mcq-9a1c541793259cb3e86449bc394e2f24170ff34eb48edbe052d3aede7e6c3295",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1171
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-d60f366325ae5203b669b09ff2cf2ce6287b8960ef680da052ea982cf290f7d6",
+      "family_id": "c37e8f18a1941661b5883e4859354eb1eb70eafc01e5d0b29fa13d0975cec94b",
+      "id": "mcq-d60f366325ae5203b669b09ff2cf2ce6287b8960ef680da052ea982cf290f7d6",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1252
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-feba59176a7bcb52267c3ca470c3e56e148fc8213fcef4d707ad53fce15d4ec7",
+      "family_id": "c33048a924faba973ecd6bf642da13a91032ced511c83b34b02b928cfd46a690",
+      "id": "mcq-feba59176a7bcb52267c3ca470c3e56e148fc8213fcef4d707ad53fce15d4ec7",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1010
+      },
+      "split": "dev",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-0a905779c078e2cd13d14f1e4e85f53692cc98abab4d4d6130c5fff9e9204a45",
+      "family_id": "96d8443e4cd7c34b0c5f9cfe615924554404382970369ba0aca16a926cefaa4c",
+      "id": "mcq-0a905779c078e2cd13d14f1e4e85f53692cc98abab4d4d6130c5fff9e9204a45",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2067
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-3e26e6211eceba901f981195308537e7cdfad0652dc8e96e9781b1080828dc66",
+      "family_id": "d7de0935418a9973ac6b956d4d3b271e4fc4f7c832f3e67bdc2117d4e85cc62a",
+      "id": "mcq-3e26e6211eceba901f981195308537e7cdfad0652dc8e96e9781b1080828dc66",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2280
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-425f0b6e2cc0c5e01eb84f6459ac65234e30a6448b6e121316714c12908bae1b",
+      "family_id": "eab3684d4278fd49c770cfc11e1cf324499d02e3d00dca16ea080e9d22a84f50",
+      "id": "mcq-425f0b6e2cc0c5e01eb84f6459ac65234e30a6448b6e121316714c12908bae1b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1684
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-45078513bea72af7254679e73f022a808eb9567095c5d91f049a21e5d86be8f1",
+      "family_id": "b376581bfe583c1d2b6da326b59f87423066c8c9d0912ce3ef8bdeb1189f00ca",
+      "id": "mcq-45078513bea72af7254679e73f022a808eb9567095c5d91f049a21e5d86be8f1",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1485
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-49fb989c0710fdc188e33aa8592dae94ad1d91970acf3b822957876c2a8dcbab",
+      "family_id": "ef909905c5a1b2899260c29047520acf9f4f2ff1d11cf441869b7aa050b8f08e",
+      "id": "mcq-49fb989c0710fdc188e33aa8592dae94ad1d91970acf3b822957876c2a8dcbab",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1457
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-51e5535a91e1bce2eded920f4296ec2561c2097ae9c3244d38c78a1e6af97a04",
+      "family_id": "a8d288579c9ea966919154286ee5e38c5077082b6fac35790be6d72bb98aa57c",
+      "id": "mcq-51e5535a91e1bce2eded920f4296ec2561c2097ae9c3244d38c78a1e6af97a04",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1935
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-740b8dbd6c1b260e6695e60f1b4233acce4ae300aff64152291edfc439a325ff",
+      "family_id": "abdb0830f3ed23548867c5c461e4b737045736a9383542e388caaa7b9e67a386",
+      "id": "mcq-740b8dbd6c1b260e6695e60f1b4233acce4ae300aff64152291edfc439a325ff",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1733
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-831b6ae12bb00c5940e372dd81ccd87e42d48e08ddfbcd709ffad55f3cb1e245",
+      "family_id": "89b7ef02ac49e33d9a98ef32294ed9073217db5065b369b2f98a64a8cf1ead8e",
+      "id": "mcq-831b6ae12bb00c5940e372dd81ccd87e42d48e08ddfbcd709ffad55f3cb1e245",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1893
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-c80fc887968678bd45b9098936ecb63f0b892c8abeacf231f72627b9c2299e94",
+      "family_id": "30584d77da63cb6fd91e7182f263e10c76e0aad1b70fe927bf7d93dc19c92765",
+      "id": "mcq-c80fc887968678bd45b9098936ecb63f0b892c8abeacf231f72627b9c2299e94",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2107
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-ca8d1a0e7b6470fc5a38df7f4d8f86b12d985231d5f4b99b052ec554292566e5",
+      "family_id": "a4fce32142adfe7e37446df22b672558e72f3280cb1b16958b9207066d7f9dcb",
+      "id": "mcq-ca8d1a0e7b6470fc5a38df7f4d8f86b12d985231d5f4b99b052ec554292566e5",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2467
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-fd4d4fdd3de93e9367be8cb038aadff9d2908d10589b4ab7b63219502ccd9027",
+      "family_id": "6f7c590d579c98fb2afc072a1c4d1a4fe4226bb557036ac46de2107571665464",
+      "id": "mcq-fd4d4fdd3de93e9367be8cb038aadff9d2908d10589b4ab7b63219502ccd9027",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2010
+      },
+      "split": "dev",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-064f680908b9317d0e8e76d24f81ca2666dee3ac54c7fd66870169d9079ff5c3",
+      "family_id": "1bd00864068c8cb2de18d0d272623113597ce91c2c54f3f40e00869b0d9967a7",
+      "id": "mcq-064f680908b9317d0e8e76d24f81ca2666dee3ac54c7fd66870169d9079ff5c3",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3637
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-24cb08ccd6f465638aaf2442938fe03ba4a9c6e27048e0c0abf0b27e01395cda",
+      "family_id": "81899357037d207677b32102bba4bd2646011871913e05f670dee01d26701069",
+      "id": "mcq-24cb08ccd6f465638aaf2442938fe03ba4a9c6e27048e0c0abf0b27e01395cda",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3608
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-274ff4e061a9f75bc0296961107aea93cf21a367423a4a4026edb09663510d3b",
+      "family_id": "bf47eebda81555428cdf16a13beed5f6b77a9380e63c0602252226370e5d0e8b",
+      "id": "mcq-274ff4e061a9f75bc0296961107aea93cf21a367423a4a4026edb09663510d3b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2736
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-332233a6f71090c3824ee0e49ac8ff2e5f164948f70435cca29b83e692e85e80",
+      "family_id": "1776fe10c07be6a733d66b99f1ae9eba7818d89ad4bc8d3f95f027142cb08875",
+      "id": "mcq-332233a6f71090c3824ee0e49ac8ff2e5f164948f70435cca29b83e692e85e80",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3152
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-80a7949ab7b294ffeeba744f23ccb2d137df9b13fd1b9f11f0f149dda63e0ffc",
+      "family_id": "62f9f343cdf2a08ece48dd59959d004768a5c2dac79257dd10ce032e3f9b3d2e",
+      "id": "mcq-80a7949ab7b294ffeeba744f23ccb2d137df9b13fd1b9f11f0f149dda63e0ffc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3343
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-98798c69a45e41310277818b39eb60496555f0e3218a7350b3e6ecf484ee463c",
+      "family_id": "552d5c7a5ee498557e1f57cd7e38216b34adb945e556d5c8deffcb7fab19ebff",
+      "id": "mcq-98798c69a45e41310277818b39eb60496555f0e3218a7350b3e6ecf484ee463c",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3188
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-d4b96bef346b3a91a616115a316ff9682574d1770c2156221311516fd125cd17",
+      "family_id": "354285b77c1bd6b0cd61b0015cd25037a418bfcb9cfbf6bd189ecdde017d5183",
+      "id": "mcq-d4b96bef346b3a91a616115a316ff9682574d1770c2156221311516fd125cd17",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2763
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-dae68508e0d3cede09726d16e4d7fbfce5c188874802ed67d57acf7c5df8c6fd",
+      "family_id": "3f4af67de5fd4a2f9ad8524365100200871f583de55653c4ed0a6a4263ac268b",
+      "id": "mcq-dae68508e0d3cede09726d16e4d7fbfce5c188874802ed67d57acf7c5df8c6fd",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2755
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-efcc7f0377aa35b0e1d0f503ae21bc280c2e2176c905a5788f2a2aec839a0735",
+      "family_id": "e7a4aaef0e996c4573aaa630017b0f6570325bce693e9e74eafeeb08ad7a54aa",
+      "id": "mcq-efcc7f0377aa35b0e1d0f503ae21bc280c2e2176c905a5788f2a2aec839a0735",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3369
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-fb6e1cf2f54bd9441158a4569a5e4f0a87909dacf93e58068d882960ce347f6e",
+      "family_id": "3dd15b5f230ba47729e1eab4a35baeb409b1e64c3366f72ec0d6e6b20b527ca5",
+      "id": "mcq-fb6e1cf2f54bd9441158a4569a5e4f0a87909dacf93e58068d882960ce347f6e",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3663
+      },
+      "split": "dev",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-0628885168fe84ed4cbee7dee73458b5725ed3ce1e9fec50c1d9e17b6b301e42",
+      "family_id": "b49241356c13740be343c56f3ca2de8081d852113abc55a998c56f0311cc7b15",
+      "id": "mcq-0628885168fe84ed4cbee7dee73458b5725ed3ce1e9fec50c1d9e17b6b301e42",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1241
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-0dfa3c36a4e2aac5740dfdb923e4cac2becd17c53848bf0803aadf959bf95179",
+      "family_id": "55b65d973cebdba208918e3a1b4a89bd6d068d7116e9185accac17805faec5d4",
+      "id": "mcq-0dfa3c36a4e2aac5740dfdb923e4cac2becd17c53848bf0803aadf959bf95179",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 467
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-143a5bb934d0d32c39edd885cd1f67b5b7867bc4562eaac515ce42f01eb123e0",
+      "family_id": "a8c2b39125d230ab98d8be2b35303244ed7e7ac0013bddb5aad38a135728d481",
+      "id": "mcq-143a5bb934d0d32c39edd885cd1f67b5b7867bc4562eaac515ce42f01eb123e0",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 928
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-15cc3e80372e3c0049792afc3e4cafdc8b2f1f6b68194228a9ecc9de8e9d4efc",
+      "family_id": "38d5a3fb06e12321f526d1816defaa12aae4dcf2f103e0c41af1921201eb56a6",
+      "id": "mcq-15cc3e80372e3c0049792afc3e4cafdc8b2f1f6b68194228a9ecc9de8e9d4efc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 638
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-1e13659ddcb526205266f8eba0ab579ebdcbe8b5162ace2e8008a5c16b4890b5",
+      "family_id": "41feb678e960b463c5315cc522b2dfecd781ee4b68c1fcd63343fe4b87ffd98e",
+      "id": "mcq-1e13659ddcb526205266f8eba0ab579ebdcbe8b5162ace2e8008a5c16b4890b5",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 67
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-1f3aa2ada665ce744a68bfa31e365c09e50a3b3bf862946c483130b08bf9c8bf",
+      "family_id": "f850c9fae89803b645f150f5d6e0afadccd24446355a74cbbaac98fce7f9feb2",
+      "id": "mcq-1f3aa2ada665ce744a68bfa31e365c09e50a3b3bf862946c483130b08bf9c8bf",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 911
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-28421c2287bb23893c69a282475d448c1405e6c06b3f0ea877a0cdd6a8bdb7f1",
+      "family_id": "677eaef2c84791339e86658d10959bdc282568a9850bb08c47d9c8f83e126b3d",
+      "id": "mcq-28421c2287bb23893c69a282475d448c1405e6c06b3f0ea877a0cdd6a8bdb7f1",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 445
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-2d90d4d1cc809ef6dc2e4c2f1db01cf41f23fb6d1326172cb865209392653700",
+      "family_id": "b75043cf7d92d56a09f8e573e2acc68e81ed98bed0b86de012ed08311b11d445",
+      "id": "mcq-2d90d4d1cc809ef6dc2e4c2f1db01cf41f23fb6d1326172cb865209392653700",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 951
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-2f350b6071357af204d5bdd611ecee02b7dab8650122357cbe16471b2c63b43b",
+      "family_id": "3276325aac60671c11e52fc26ae9629e2128b458e9e00a35e7b15470d6ff0be7",
+      "id": "mcq-2f350b6071357af204d5bdd611ecee02b7dab8650122357cbe16471b2c63b43b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 274
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-379dc1d025fd659d5132bcfd4b892005f93728df40baab90aba176be560124fa",
+      "family_id": "c0cb8b2273f37fee08392ae52968566b6e620a06a44e6b0183a87d3e0e49e946",
+      "id": "mcq-379dc1d025fd659d5132bcfd4b892005f93728df40baab90aba176be560124fa",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 836
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-3d74fbecc0275282a2bc47fd35745b968e3667fd993053e3aaaf857ed7e66def",
+      "family_id": "0874fcce37eab828992c394c82532d364428c780aabcc06aa0ac18a84fba4dd7",
+      "id": "mcq-3d74fbecc0275282a2bc47fd35745b968e3667fd993053e3aaaf857ed7e66def",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 382
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-45f16657e29309bac1e2e7ecdd1ddf0adb85b60655440da6263766d127791cde",
+      "family_id": "cde442278152bc188361bc05ebb3b9f21ed680c4297bb62db7f5e3378f650c7e",
+      "id": "mcq-45f16657e29309bac1e2e7ecdd1ddf0adb85b60655440da6263766d127791cde",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 691
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-4caae775400f1efa7f086d802ba69a8ebc5dd76f2ac929e5172622a1805cda30",
+      "family_id": "4d5dd38f2501ffeb85bcb2582c09910318bf039d80b520177eec24618bae9fd4",
+      "id": "mcq-4caae775400f1efa7f086d802ba69a8ebc5dd76f2ac929e5172622a1805cda30",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 610
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-4e0d6b0464d70fb1bc8bb1bca860020fe1fb709d3a1135b5f51416b0f111777d",
+      "family_id": "78e8b21e4ebd0d3ba1760a9749c09ddebec3bd48ecbd355394765c7fab436998",
+      "id": "mcq-4e0d6b0464d70fb1bc8bb1bca860020fe1fb709d3a1135b5f51416b0f111777d",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 725
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-4f28678954e754cbf8324495ece20564fdf50ba37cb0cdf7ffb12ea00ab16d31",
+      "family_id": "31770ab5b1f4b6f391f6fc651a82ebd6e16638246d0d86cc68384d7e7f93117c",
+      "id": "mcq-4f28678954e754cbf8324495ece20564fdf50ba37cb0cdf7ffb12ea00ab16d31",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 915
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-544ce2e124c8773e56c511287c3833c0797b2e42ab57831513a2000c7cccbf9e",
+      "family_id": "5955efd7e8af694b64402d323ec600b33af9a8e47d683487610aeb5827c76ef8",
+      "id": "mcq-544ce2e124c8773e56c511287c3833c0797b2e42ab57831513a2000c7cccbf9e",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 728
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-5d5987e41fdd2ab08ccdc29e670465106eafb8abb408ba19782f3d1b6df8e6a2",
+      "family_id": "456895ba650faac94b5593c45913bdce7fbfddb5e2fc52c8ef21d57062ba575a",
+      "id": "mcq-5d5987e41fdd2ab08ccdc29e670465106eafb8abb408ba19782f3d1b6df8e6a2",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1157
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-5d85ca562cffee24d634d5a64822aa3d6b9e788734e4db56d4a2fb5ad9207255",
+      "family_id": "81fe79155c7846c95de9b18dc1b18b274602514deb0fca9b771ebab95d5588cf",
+      "id": "mcq-5d85ca562cffee24d634d5a64822aa3d6b9e788734e4db56d4a2fb5ad9207255",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 720
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-63bd587344a38f24f425d356f6895860c2317de8188532809939f3583136a7ac",
+      "family_id": "06014d71e172938484bb517e99ce2730c7340425a0a266a21152789e558dc902",
+      "id": "mcq-63bd587344a38f24f425d356f6895860c2317de8188532809939f3583136a7ac",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 276
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-65210c73cd96e43b1a6ccb4b2d336e4855512b431b2cb2dbb65b389e4fffb26e",
+      "family_id": "fd2427fc0a4327749b6de8435ea231c4e2ac58b2c4a8c0b5b19aa0243c4dd0ac",
+      "id": "mcq-65210c73cd96e43b1a6ccb4b2d336e4855512b431b2cb2dbb65b389e4fffb26e",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1142
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-696cf1fbe21ae53760e43d313594b79223306345e6b775f9384fc31d17f44f99",
+      "family_id": "45ce355b8f1f13f112d462a6a83fbc995309312584fc048c44f2810aebee29e8",
+      "id": "mcq-696cf1fbe21ae53760e43d313594b79223306345e6b775f9384fc31d17f44f99",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 306
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-73cb652c64a5f1639160c588294d0b6d48b3ff6639c929a775461ae5c10a7aa4",
+      "family_id": "c8a5174cff4373361b981bd8a90694b8dcb59c64a1eec35443c5c7733192bc95",
+      "id": "mcq-73cb652c64a5f1639160c588294d0b6d48b3ff6639c929a775461ae5c10a7aa4",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 279
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-75e3d89a076fcb55d9d0007fbae8c91c6c819938d93ceb07cfdafbeea4d8b54e",
+      "family_id": "d3910908ed7f67697d6005f7da94e4f0c34d21060724009e638da379104fc707",
+      "id": "mcq-75e3d89a076fcb55d9d0007fbae8c91c6c819938d93ceb07cfdafbeea4d8b54e",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 759
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-793565bf909007415d79a998dcb120814045a75dd784f8b1ce0065b1c68b4c8d",
+      "family_id": "2fb23b2bfe379236ff5865c790553e05b7678794fccb8defc4ce0f9df6f4b158",
+      "id": "mcq-793565bf909007415d79a998dcb120814045a75dd784f8b1ce0065b1c68b4c8d",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 165
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-7c278614b45ca24646b49277a5266398c861e1792f901e78321b72f99ef4fa53",
+      "family_id": "6c083f5472f1f474813464df03149ed4239e88f7a1f66ec0c1ce7f85ee1f9c95",
+      "id": "mcq-7c278614b45ca24646b49277a5266398c861e1792f901e78321b72f99ef4fa53",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 705
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-7e7b1d83d37ac6b1d861b4efa377f281a2f3c8faa9d6c0142832bcf21a829f9a",
+      "family_id": "c6153f351fe19144c3a1f49c5d31530a0cc8f13d8efb31ff3c49562ad7c85df4",
+      "id": "mcq-7e7b1d83d37ac6b1d861b4efa377f281a2f3c8faa9d6c0142832bcf21a829f9a",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 488
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-8071a5319e17d62755d329b2818ede7578236eabac74863f7c8f471bb50d1af8",
+      "family_id": "092b29d6fdaf6d93d777bd318e7290974476f21b521fe7d72b05d85ea4867003",
+      "id": "mcq-8071a5319e17d62755d329b2818ede7578236eabac74863f7c8f471bb50d1af8",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 348
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-8105bb047d0b093c5c29273b5dfd373cf61498fb07ae0c00ed6b1c80d88eabb2",
+      "family_id": "82131d9435306d5ff4f6218879172121f3d2841010266f2170eacc704c2efce2",
+      "id": "mcq-8105bb047d0b093c5c29273b5dfd373cf61498fb07ae0c00ed6b1c80d88eabb2",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1014
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-83d1c8681e090d5b14a567d43c6e590abba57e3e08e20668c85c36a57b582530",
+      "family_id": "89f4335ae0b2231e5e66dfcd48716b95ae0ce88a4ca5500beb3a4ceefbe877aa",
+      "id": "mcq-83d1c8681e090d5b14a567d43c6e590abba57e3e08e20668c85c36a57b582530",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 119
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-9ca0ffd1613ffb9cce386235a56c219abed47fed58ea22134c822fdaee38ac18",
+      "family_id": "2864ee60534db8cc4e19e3241b56a7aad60433bd6d7a785e6b077e4f7cb43b0c",
+      "id": "mcq-9ca0ffd1613ffb9cce386235a56c219abed47fed58ea22134c822fdaee38ac18",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 692
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-9cda42ad44a5f5b3d772ace0197f86a64ed6bdc913cfd9950e5efea5eeda0abe",
+      "family_id": "6aa1aba2c993ce0aec4890c9301fe1c65f4b725e413b40c5ad1e1b67bf8932ab",
+      "id": "mcq-9cda42ad44a5f5b3d772ace0197f86a64ed6bdc913cfd9950e5efea5eeda0abe",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 478
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-aea15771514a3806c1b29ed5eee25046d200515363e1c7476239f346dceed5b6",
+      "family_id": "456895ba650faac94b5593c45913bdce7fbfddb5e2fc52c8ef21d57062ba575a",
+      "id": "mcq-aea15771514a3806c1b29ed5eee25046d200515363e1c7476239f346dceed5b6",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1175
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-b7c6068157ebec092fc006673b2cface180ee52279d5b70a36784d781784cd7d",
+      "family_id": "7dfdbcd4eec5bfb0f596fd9eff59227150ac21499245b23bfc0212148357bfc7",
+      "id": "mcq-b7c6068157ebec092fc006673b2cface180ee52279d5b70a36784d781784cd7d",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 281
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-c3470cae8bd1ccc8de91fb2d8e2e895e95eaca3943e00f6db9828cb75bb033ce",
+      "family_id": "c5aa58d1259de6e7e2c864be932b04e6e499b7e984465b1c507a5484e9ac50b3",
+      "id": "mcq-c3470cae8bd1ccc8de91fb2d8e2e895e95eaca3943e00f6db9828cb75bb033ce",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1016
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-c6dc60d81ce1b0bd83b8155efae81b4f38cf2b911d3535a9cc1fe94c62bcb148",
+      "family_id": "2fa496b1d5baa9e81490dd63dec3efe09fdaa52257a836f752349fd0604e1ac8",
+      "id": "mcq-c6dc60d81ce1b0bd83b8155efae81b4f38cf2b911d3535a9cc1fe94c62bcb148",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 656
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-d3b64122b82455f528060d5d534c6710dd914f8b44e7e58fff5fc3fda8f4f919",
+      "family_id": "94f4c62818d1709fce4595ffd62aa56e6584d49f232257a3465b8dc320259aa7",
+      "id": "mcq-d3b64122b82455f528060d5d534c6710dd914f8b44e7e58fff5fc3fda8f4f919",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 690
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-d766ffad4d61293a221ab7ac06c5a03e9872de5722b40de251b863cc46e824cc",
+      "family_id": "151b39a856befc95cdaab14832376aa2c25bba88c9e04e07118a72ff31e58ba3",
+      "id": "mcq-d766ffad4d61293a221ab7ac06c5a03e9872de5722b40de251b863cc46e824cc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 993
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-dc51a48d57cd9f233c72bd8f477d242323ea9da039a83326cce91b8f21311841",
+      "family_id": "fc3dfda544af45ca80dd78cbd4cc5aba6c38c89da147d7f239f5acaac72f398b",
+      "id": "mcq-dc51a48d57cd9f233c72bd8f477d242323ea9da039a83326cce91b8f21311841",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 474
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-dd40da48bf4b65cedd336e5417c77196a425c6ae7c2a0e3ec9685c39d3c34c93",
+      "family_id": "c5aa58d1259de6e7e2c864be932b04e6e499b7e984465b1c507a5484e9ac50b3",
+      "id": "mcq-dd40da48bf4b65cedd336e5417c77196a425c6ae7c2a0e3ec9685c39d3c34c93",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1212
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-dfd51ed5efaa7ca248e367eddff9012e8144ad0f2d9c420e838322e4bb7e9c9d",
+      "family_id": "be5c73dd5fa2c657775b4df0b87a67b76489fbbde72d358d0ba165c238342788",
+      "id": "mcq-dfd51ed5efaa7ca248e367eddff9012e8144ad0f2d9c420e838322e4bb7e9c9d",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 830
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-e3dcede085e09c5fff03c2c8c39fde501d59b718a31881c0288d0c3d42fde608",
+      "family_id": "6565da91bc880edfb5e8ddbc9b435e64163c7a1cce7ce1496676056a6a1370e7",
+      "id": "mcq-e3dcede085e09c5fff03c2c8c39fde501d59b718a31881c0288d0c3d42fde608",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 694
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-ee3601547e055d904603b77ee04e50e0ce3d122f1a00725939c4ed2423353f77",
+      "family_id": "d19737820950f511ee7ffeac99199a696f3da85ef232fb4184de39bafb93b818",
+      "id": "mcq-ee3601547e055d904603b77ee04e50e0ce3d122f1a00725939c4ed2423353f77",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1257
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-f6ca8eee1edf977ab151f05442d7ab8052b0a7b573f69c3529bda01762b4d945",
+      "family_id": "8be68c1cce7089fa0004ca552d43d1d63ae7fa88f25f23758779c8929b52096c",
+      "id": "mcq-f6ca8eee1edf977ab151f05442d7ab8052b0a7b573f69c3529bda01762b4d945",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 775
+      },
+      "split": "train",
+      "subject": "Biology"
+    },
+    {
+      "audit_id": "mcq-10e0f83ea00d9edfc4c5376633e507914ce6cdf17e6b3744c789f8b583dce54f",
+      "family_id": "463e31f1decc787dd33b0ed3e1499f4ba8d44ad08ab89cf87a36482882f37ea5",
+      "id": "mcq-10e0f83ea00d9edfc4c5376633e507914ce6cdf17e6b3744c789f8b583dce54f",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1871
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-13a4e71944a5b628b30e8c8ebce5cb281688b0a24b92e2f915f097686c3e0afd",
+      "family_id": "5d693eec9c3b2ed94fea06e83efa857bbd16ce4c9546279c2f8b67cea0c18aec",
+      "id": "mcq-13a4e71944a5b628b30e8c8ebce5cb281688b0a24b92e2f915f097686c3e0afd",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2086
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-1f441be093460f1a53b0aecc16c617f679a8c63e28d4dd47f63c5cf9d3736532",
+      "family_id": "c14f6ffa59cafd661bbf43125cb2f20cae01254a9139366d17124eb44469c51b",
+      "id": "mcq-1f441be093460f1a53b0aecc16c617f679a8c63e28d4dd47f63c5cf9d3736532",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1948
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-228f91c4bf3e71050ae9d988f856daa0fb5490d138d47dda025a11a4416c1d73",
+      "family_id": "76a4f418a525afef9dbfbddf8a8188bf380ef4fab575e1d807a1e5db352e4a3e",
+      "id": "mcq-228f91c4bf3e71050ae9d988f856daa0fb5490d138d47dda025a11a4416c1d73",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2520
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-264738f8b015610455796283b7be12edb69ea947a156f8ca1f5b7216e0f981ea",
+      "family_id": "db7d4498c1a01e15ad33e1f8e0f7c70fdb994729590cac0730b5105a5e8c3fd3",
+      "id": "mcq-264738f8b015610455796283b7be12edb69ea947a156f8ca1f5b7216e0f981ea",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1959
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-300fd266e40bdeabe29e4f726912a270155982368d416a2f8924ee7eae314d96",
+      "family_id": "1a974fc7e34562c5750e6761c1cb9a5058438bd8b210468f8bed6aa260670cdc",
+      "id": "mcq-300fd266e40bdeabe29e4f726912a270155982368d416a2f8924ee7eae314d96",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1941
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-3806157d55863d3d04a0b7068831c435d774a5f6f7c48eeebb1b080fa9c81fa9",
+      "family_id": "1be784c1937826a30401b194973341854ad87f1d929f2c7cc713031b072974ca",
+      "id": "mcq-3806157d55863d3d04a0b7068831c435d774a5f6f7c48eeebb1b080fa9c81fa9",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1826
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-3c7fec7804b49b50a096e706d338730cfdd8a29338f24f407d1f3380907a4cb8",
+      "family_id": "d41d313515453ffb021752bfe9c5093d822b8071490110c8c50311a746b1f32b",
+      "id": "mcq-3c7fec7804b49b50a096e706d338730cfdd8a29338f24f407d1f3380907a4cb8",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1410
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-44bb6e308d953269a4d952eeb189d1f450f81f44e56a7180e2753532d196fd44",
+      "family_id": "39ab36a7a243c9efa6adf8073b310607d12029d3343bbc80adcaffa023b03a37",
+      "id": "mcq-44bb6e308d953269a4d952eeb189d1f450f81f44e56a7180e2753532d196fd44",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1714
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-4657b668ad6345858e9f0f2af58f2bf0f3d2ae1317e750a18b47ae2ce23eea3a",
+      "family_id": "fa998714ec0a1e466f6789db903c12452b1582c813bfb8f96662ca2f7831c080",
+      "id": "mcq-4657b668ad6345858e9f0f2af58f2bf0f3d2ae1317e750a18b47ae2ce23eea3a",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1772
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-47f307857629f6d935f01be51c87e7865dfa2ee33e841dfb3c1d4a97116e9dc5",
+      "family_id": "7f66236f63bfe2a1a5fd4ba1fc4059329251f24248b3e5fcdf230abe4bbeab5c",
+      "id": "mcq-47f307857629f6d935f01be51c87e7865dfa2ee33e841dfb3c1d4a97116e9dc5",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1500
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-48f8eb181f7f698bfc80c4ca550b5d9ac3a61697f47486086caf92ed3954cae9",
+      "family_id": "05c3a534e5dfd1c7f4aec648b652eebfc0e6d86fec3dfbb8173478bdcb9cf9d6",
+      "id": "mcq-48f8eb181f7f698bfc80c4ca550b5d9ac3a61697f47486086caf92ed3954cae9",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2190
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-5062fc680e0c0ab753e6fe2af68da728a283c2dfe4deedee3e24e07a3979033c",
+      "family_id": "0f1012d5fc29c26e81974daf6c32ca2a831816226abfb0b304ac7fdbd79b525c",
+      "id": "mcq-5062fc680e0c0ab753e6fe2af68da728a283c2dfe4deedee3e24e07a3979033c",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2494
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-519ec59f3ad87df13d80d8f8fb1f10a3c5dcaee7e6936ab6e0a52d0dc3c08242",
+      "family_id": "4084389f79dc495ef0ae010fa4cc9a0357e45696aebe6e330fa1c4b58fde0f0e",
+      "id": "mcq-519ec59f3ad87df13d80d8f8fb1f10a3c5dcaee7e6936ab6e0a52d0dc3c08242",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2527
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-53ffd39368ccb4db6d9774386826271b5a05aadfc59b7a57711bea1d3616bf92",
+      "family_id": "3a043f56ae28dbfdd1731ba0e22624676a18bbb681255ed06a099d2b31cc19a5",
+      "id": "mcq-53ffd39368ccb4db6d9774386826271b5a05aadfc59b7a57711bea1d3616bf92",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2144
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-6b8dc1d0bb0f8839ac472fd6b140e589f5398828394506ab09ff650dab7503f8",
+      "family_id": "9d4b77a3fed30b04afa1645a7885433af33c3a9c7c0831a8e20e27c7e80b286f",
+      "id": "mcq-6b8dc1d0bb0f8839ac472fd6b140e589f5398828394506ab09ff650dab7503f8",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2016
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-6c489f70e0ca791194c841783aadec8a48bc482a6e14aa41884f0462f3f2b9bc",
+      "family_id": "4f1178211f01d3dc4a7485351502c8f1b6208a84f47aaa0a34255f7ea569ceb6",
+      "id": "mcq-6c489f70e0ca791194c841783aadec8a48bc482a6e14aa41884f0462f3f2b9bc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1711
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-6e89386247e9ce05f2352e685880566759c82ea13f5a4fc317dc676fce788c5b",
+      "family_id": "cb53174b21454c0d7e5ad1b30b66340eeadca2f4416fbe3645c907e613939633",
+      "id": "mcq-6e89386247e9ce05f2352e685880566759c82ea13f5a4fc317dc676fce788c5b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1851
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-6ead5479845b520332f5a0ba29aa447793e7b616b8dd9bfb3a825243e3fe1cbc",
+      "family_id": "5bc9a6a5f0ef85a2e48b9fd6c4eb2571a942ad0b444437adbfc0635d8c17095f",
+      "id": "mcq-6ead5479845b520332f5a0ba29aa447793e7b616b8dd9bfb3a825243e3fe1cbc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1486
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-826dc21d45d6ea80a04207659814aecf0604448131a1809dddc22ca64acfb16b",
+      "family_id": "b3206fb199ed929f41e788bdec3dcd054c4964b3956258f0502e48b1d924dece",
+      "id": "mcq-826dc21d45d6ea80a04207659814aecf0604448131a1809dddc22ca64acfb16b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1618
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-84606e857f3a2aedfdf825e50736b0fe4be66cb3c4d85f0729e64e5da3ce743a",
+      "family_id": "a8bc849a4b8d3134a4313d3701760ac762262b04a3a3420ea9feec0d6b1afcae",
+      "id": "mcq-84606e857f3a2aedfdf825e50736b0fe4be66cb3c4d85f0729e64e5da3ce743a",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2295
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-8537e94416f9909dfd5a1107b3fc8898c32d0f4276ae73c72b75eeabb73ae176",
+      "family_id": "d7aa0dbd9237ac21085646fa1665e66acce93ee70df2a62ec0cf43b051014c17",
+      "id": "mcq-8537e94416f9909dfd5a1107b3fc8898c32d0f4276ae73c72b75eeabb73ae176",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2421
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-88ff8f97c72085f30af4169a0fa4440ade4af7e9d8ea5a099e29c8963cbd9cc3",
+      "family_id": "dc9f0f69e992bc90b8602de21f6f1d6ca68c15e3d110b7169cf87c11dd142c54",
+      "id": "mcq-88ff8f97c72085f30af4169a0fa4440ade4af7e9d8ea5a099e29c8963cbd9cc3",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2205
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-8c0852f4681ad30c81e15a6807a8494003b3c4b4879631119ca8325bf21a4bac",
+      "family_id": "c67e91abfd8b1052933b3fda6997ddf38a395a38d6f0118df780dc7153b5f5f9",
+      "id": "mcq-8c0852f4681ad30c81e15a6807a8494003b3c4b4879631119ca8325bf21a4bac",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2048
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-8f3415174d5166accce1faa567c1c05ce77840a1817226b4971eedc2855f93f9",
+      "family_id": "f766def9fc94fd4eebe446f300fd11c155d9894a83c7456090e26c5eacfbdd34",
+      "id": "mcq-8f3415174d5166accce1faa567c1c05ce77840a1817226b4971eedc2855f93f9",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2090
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-911d23b119c69eb101c6232a82649c40c35a548909a25f487d81ac27be73e9f5",
+      "family_id": "7ba846cc8d3568fe3f48909e7b2141f533df13763eda49664e999bbff3f76cef",
+      "id": "mcq-911d23b119c69eb101c6232a82649c40c35a548909a25f487d81ac27be73e9f5",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1382
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-a6e9a0154223fac292de1cbe57fa1368442b693f9e167946e9b8e8d2e603bd9b",
+      "family_id": "9afb8ea0410ef1521c026102fda48ae80a2038d20a7fd6f27f83a65ee6e298ae",
+      "id": "mcq-a6e9a0154223fac292de1cbe57fa1368442b693f9e167946e9b8e8d2e603bd9b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2184
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-aa0677465b4d008807cf221008c88e888f59ef995e2ba6d36091305f931cb167",
+      "family_id": "2a36fb5b89ab755caa25ad3a3aa6a240a89fd0848165e62111425dd617dca28d",
+      "id": "mcq-aa0677465b4d008807cf221008c88e888f59ef995e2ba6d36091305f931cb167",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2085
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-ac381beebd73dd82475b54b8b618adfd80a6e174824e13743961751379762935",
+      "family_id": "e7c361deba031af734a10c2f60d6ea366ad7bc91b11564195270429779745539",
+      "id": "mcq-ac381beebd73dd82475b54b8b618adfd80a6e174824e13743961751379762935",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1817
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-b6452b65dfc969b9e6371e1d2eb8ae4aa05f5a90f93bded267134f3c9281d6ef",
+      "family_id": "fd411afd5d53dc752fde2790799cb45476fdbd94e24c07e035164e9c1692f787",
+      "id": "mcq-b6452b65dfc969b9e6371e1d2eb8ae4aa05f5a90f93bded267134f3c9281d6ef",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1376
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-bda861aed9f91149ffcb0d3fbed725f32c16c5227f90a5aadcc771739c46a0f9",
+      "family_id": "caf8b0945195927491d526969ade6ae2a9435dac795c988242b8acc9528a84e0",
+      "id": "mcq-bda861aed9f91149ffcb0d3fbed725f32c16c5227f90a5aadcc771739c46a0f9",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 539
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-bf8ce259725df4d48d7a9324f1cdffb9d38711bad57a0e61a6df4b0b2610170a",
+      "family_id": "13e76d5b0178347b337a805d710483c10b625fc449d2947f4c861d3a24278678",
+      "id": "mcq-bf8ce259725df4d48d7a9324f1cdffb9d38711bad57a0e61a6df4b0b2610170a",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1414
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-d7bd968ac9c23e1eb59d908834c167805c366c04b14752e9b951b6c0d71da626",
+      "family_id": "887517df2ebd599d6a92a3a7796984cd14ca4495648c00eb83db44fdf9b6e891",
+      "id": "mcq-d7bd968ac9c23e1eb59d908834c167805c366c04b14752e9b951b6c0d71da626",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2314
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-dab56a2b9ec02a9fcdb23f7208161ff9dd0a418e2082462fdec1d2f0c2b29d92",
+      "family_id": "b0a461dd312197a5b43ddb2c3456a8e2e9791748ef7ff4cb8c0571c6bd71c9c2",
+      "id": "mcq-dab56a2b9ec02a9fcdb23f7208161ff9dd0a418e2082462fdec1d2f0c2b29d92",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2518
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-dabb45806c9c0a8af189a22e21d58cc04a8cf1090c6eb704002cf450f431dcc8",
+      "family_id": "5ae1cfcff8d6987ea862ffc3721d08b6c4dfe49e7d95e487265b8c6419b5f583",
+      "id": "mcq-dabb45806c9c0a8af189a22e21d58cc04a8cf1090c6eb704002cf450f431dcc8",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2507
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-db63a3a675081b9f758e1ce0f870acdfaea74b7414acb60f6c3c5671fc02aa8f",
+      "family_id": "62efbf1cae2fa1e31ecc26d46af1efd011f10d329559268b6a3a0f218bdd21d5",
+      "id": "mcq-db63a3a675081b9f758e1ce0f870acdfaea74b7414acb60f6c3c5671fc02aa8f",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1696
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-dc82c40a1e62d8219b6bfe4086cc593c9b633930dc338161d0e7276e47e8a52f",
+      "family_id": "0df9a532227546c841cf561d7d220deb3624de60efd94c7c5bf501ceb3a8e6d8",
+      "id": "mcq-dc82c40a1e62d8219b6bfe4086cc593c9b633930dc338161d0e7276e47e8a52f",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2480
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-e44a71e0fbbb691ac1aa43c3e3bfe23848b6c62411157ef43964f303fb4a6339",
+      "family_id": "5d2e142faa822f66717a1f7237478f0aa39283f7d72684e87726ebb8a432db6d",
+      "id": "mcq-e44a71e0fbbb691ac1aa43c3e3bfe23848b6c62411157ef43964f303fb4a6339",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2508
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-ee0f290f5ed21afd14954591849883c09e2daa676567c02da781ad9722018888",
+      "family_id": "c2b87c865dc1d9c23bbc0eb2250ee2c3ae776f5c6656e5c961a6f4c8f5a31693",
+      "id": "mcq-ee0f290f5ed21afd14954591849883c09e2daa676567c02da781ad9722018888",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1704
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-efd62aa77298345a72779fd2061ca98a3b7efe8df06ca2d5ddd089a62fe82de5",
+      "family_id": "61a8c38f844d3f4279e271ed670724c34898e4fa937baaf24c1d87f338f704d3",
+      "id": "mcq-efd62aa77298345a72779fd2061ca98a3b7efe8df06ca2d5ddd089a62fe82de5",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1957
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-f3f1618d695a8f6fc4c0ce41e5f0b329b5864691185bbbbcff1fc11b7ba188d6",
+      "family_id": "8d69967575685d57860287333ecda93ad9acdb5fd519008044889fa27b688939",
+      "id": "mcq-f3f1618d695a8f6fc4c0ce41e5f0b329b5864691185bbbbcff1fc11b7ba188d6",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1990
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-fea67573de52e86075bfacb127490a807ad232a73d9a8e1b032ed07474a51af9",
+      "family_id": "942bcd2d65825f30b8b889842a2d07a272c31635fdc74952cfb006321074b7c9",
+      "id": "mcq-fea67573de52e86075bfacb127490a807ad232a73d9a8e1b032ed07474a51af9",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 1808
+      },
+      "split": "train",
+      "subject": "Chemistry"
+    },
+    {
+      "audit_id": "mcq-0092c9f50dc9e8d1b99063900c37d15c16663a3f64c84b2c3ebf90745afd489f",
+      "family_id": "18fbe4e4fbb4f115ff65a43b10a80023d32446bc321ef5239357ad599474840a",
+      "id": "mcq-0092c9f50dc9e8d1b99063900c37d15c16663a3f64c84b2c3ebf90745afd489f",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2613
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-053d8b5cfa18bd7b08531be7a92844afe5e4189380cee2da6bae3ad830548d46",
+      "family_id": "64198a1cad98da98d1bffad31a5d117d11a39f00d37f0d7469e848d6bd8e91a1",
+      "id": "mcq-053d8b5cfa18bd7b08531be7a92844afe5e4189380cee2da6bae3ad830548d46",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2598
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-07edf3721ca398f1d30c299ce58635df5fbb95ec64391fae43b944a064d9cdbc",
+      "family_id": "b8448decca7fa0e545d88d111bf3c07f92a90ac6cb8318207323084fa7f9d159",
+      "id": "mcq-07edf3721ca398f1d30c299ce58635df5fbb95ec64391fae43b944a064d9cdbc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3807
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-1821be8d34b8c8a983907e6d230e55f8c2b949ea413a518873d999b90358849d",
+      "family_id": "ee242f2d75aeb1a5a43121446206ff83cc968416ec732c846cefea430cb1bde9",
+      "id": "mcq-1821be8d34b8c8a983907e6d230e55f8c2b949ea413a518873d999b90358849d",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2766
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-18e79cf4a66a0a8a91c4dfb907a7435fd301f885ba00c65d41650e92a5414efc",
+      "family_id": "f3fbf057e637f23cc77d6a42e8c2435273d27ca9d10193f9e04f8888653d7ed2",
+      "id": "mcq-18e79cf4a66a0a8a91c4dfb907a7435fd301f885ba00c65d41650e92a5414efc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3182
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-1c1ac19832c8f6c79f86210ddfb368a47ddbcd0602b143a23349bfb0c3f593dc",
+      "family_id": "d06ab9541e0e596c36655ed3bbc1465f900a5ddc2879b63ca2ed9d0863aa0aea",
+      "id": "mcq-1c1ac19832c8f6c79f86210ddfb368a47ddbcd0602b143a23349bfb0c3f593dc",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3586
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-2aef5f12690ef77a1f9ecb719b963de2c62c62924d9fac97e002fca64c686947",
+      "family_id": "08bb9f2b762c04c43dc1e0f56f93c1a03a69ca93220b49ddf16edc29a068f970",
+      "id": "mcq-2aef5f12690ef77a1f9ecb719b963de2c62c62924d9fac97e002fca64c686947",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3677
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-2cb40072fa9bf37158ff1eb27f6ed4eb9b82e3b703a2735dcfcc7b10084dc35c",
+      "family_id": "d54a73b848971f307f09ee9f79b01af43970b976b6dd30a3f5585ca96b7b01d8",
+      "id": "mcq-2cb40072fa9bf37158ff1eb27f6ed4eb9b82e3b703a2735dcfcc7b10084dc35c",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3362
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-2e4401a3c7a52557bea9fe9a6589edf2af6acdc8d67128f8ecdc493f94a56a1b",
+      "family_id": "1cbfb2a6b95920a3865daec4f11671ab6e2daf8f957c0d5ce882defc27ea03c5",
+      "id": "mcq-2e4401a3c7a52557bea9fe9a6589edf2af6acdc8d67128f8ecdc493f94a56a1b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3487
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-2ef9da17ecdd4e4e0570cbce0d2f3592c46d23d17c8af881a536acd3a8abd950",
+      "family_id": "958e9c229c71712451b5297c37eb252804e02645f4e4d5081256bcc592b531bc",
+      "id": "mcq-2ef9da17ecdd4e4e0570cbce0d2f3592c46d23d17c8af881a536acd3a8abd950",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3817
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-31426574090d09fac6fddd16fb333dc980ca5fb56b07d9375d4bb4dcc5c62c9e",
+      "family_id": "0e26001ea490095d61c99d2e50481a13131d3a098c2fdbe1ae81b84eb1c62b21",
+      "id": "mcq-31426574090d09fac6fddd16fb333dc980ca5fb56b07d9375d4bb4dcc5c62c9e",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2957
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-36383c1a7cdaeb2a777a13a95af2c2d62c84074439571371b7589521dd57289d",
+      "family_id": "a54cb7ff2a9e9fb323faf167ca81be830db0eedc901b115e68b25e587b35eece",
+      "id": "mcq-36383c1a7cdaeb2a777a13a95af2c2d62c84074439571371b7589521dd57289d",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2723
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-3725c6bf4f87f4197f00cd53e5a66dc5589c8d76fb35b7665f535d13eba05b57",
+      "family_id": "622b4d5ab6749742b6fdca302470ad416649a2b238f9d0bb127815a6d187b21b",
+      "id": "mcq-3725c6bf4f87f4197f00cd53e5a66dc5589c8d76fb35b7665f535d13eba05b57",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3094
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-41dd41a09c08a3e7e2c031341bb903492f709939abece9daaf5f5efc430051ff",
+      "family_id": "58e44d6ad07a30d91b737cb501cad4dbbb6179647bdb5a74b0ef27619afe11ee",
+      "id": "mcq-41dd41a09c08a3e7e2c031341bb903492f709939abece9daaf5f5efc430051ff",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3054
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-426e9419aeb6451fbe8d6c459b05b76b918d5fa2b0dca345106d21d82cdcbacf",
+      "family_id": "21989f5c3904f92309e722de9c30d7ea12d7cd023190cbd28f0b7fdfe7b6b770",
+      "id": "mcq-426e9419aeb6451fbe8d6c459b05b76b918d5fa2b0dca345106d21d82cdcbacf",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2656
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-434d931efe346241fa7db4d570050606e14b8e07cc2e216a92ba67e3a582f0ef",
+      "family_id": "17aa4b242950c4263ad023018b3931004585c4ca99ad8b9ce2176be897fd2de9",
+      "id": "mcq-434d931efe346241fa7db4d570050606e14b8e07cc2e216a92ba67e3a582f0ef",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3115
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-5cf8e664b00c5881541ab5b45e286e05faf391a31c08254f4ad6e309f2dcbba6",
+      "family_id": "ffa38a88ee58c5056dafaac1a28f2f2b5e2c701af0c1ae19485b73097d847186",
+      "id": "mcq-5cf8e664b00c5881541ab5b45e286e05faf391a31c08254f4ad6e309f2dcbba6",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2688
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-5f8d86c6a31ae9cdbd2d02f1056ddfa48c5de0acb28556991b5d5adbc6e4ad8b",
+      "family_id": "a0d2a0e5690304ad6dc8568d114019ccaa5841b79890d2106dc57c3af951ba81",
+      "id": "mcq-5f8d86c6a31ae9cdbd2d02f1056ddfa48c5de0acb28556991b5d5adbc6e4ad8b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3643
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-65b2b4401f713364f5937875913fab68d465d33cdc60bd5b5ea9fdf35c65f451",
+      "family_id": "9abda768b9f11705292cde137c1fe0301320ba26673d273542b12dffcebf7414",
+      "id": "mcq-65b2b4401f713364f5937875913fab68d465d33cdc60bd5b5ea9fdf35c65f451",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3018
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-6f8dcd9e8ae49fcd8b8f3415c5fd882fa806a36fc42f919d716ca86e73d336b6",
+      "family_id": "42aab30546609d665e9b3dff7f1784e0e41443a9f581051ed45182957f88a315",
+      "id": "mcq-6f8dcd9e8ae49fcd8b8f3415c5fd882fa806a36fc42f919d716ca86e73d336b6",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2712
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-725dada6c3ab7caff855ab3de232c7cae3e4125dc19c0b22e354702ed654e613",
+      "family_id": "a085ee17f8fa3125af3b9a8b464a91acbbf9e4c351de90ba3200a8b91c69a5b3",
+      "id": "mcq-725dada6c3ab7caff855ab3de232c7cae3e4125dc19c0b22e354702ed654e613",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3733
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-740c69fb70521b782695041b2590da0da74bb1f7ebbfd133dd1e4e00b4931589",
+      "family_id": "282977e0ff7bd519b8e30877c271b8f5533a467a429cdcf37ae74fec8280227f",
+      "id": "mcq-740c69fb70521b782695041b2590da0da74bb1f7ebbfd133dd1e4e00b4931589",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2676
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-79d45912083c0039b21c079a4ddac336b49caed368ea47cf0f89e5744e4c84e7",
+      "family_id": "0267c0ed2d72d552a15f70876978bdf4bbeac77e067a690bc243f07b9c851153",
+      "id": "mcq-79d45912083c0039b21c079a4ddac336b49caed368ea47cf0f89e5744e4c84e7",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3683
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-7c35dd3fde7f5a822dc3e9f7b223f2b7c834a6f879a5d962c6defb70e863328b",
+      "family_id": "d6b7f9d63dc63f372515071109f73c69dd06678762e29d168dae42221c1ddd15",
+      "id": "mcq-7c35dd3fde7f5a822dc3e9f7b223f2b7c834a6f879a5d962c6defb70e863328b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2677
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-8489dc3a2e4420dbdf008c8e801d022ce436d15c2c6fb998f96e6e550f24bc4a",
+      "family_id": "af8b23a512cdfa838af9ee22851c7932a54e814edb1c5a7f80c0d977fc881187",
+      "id": "mcq-8489dc3a2e4420dbdf008c8e801d022ce436d15c2c6fb998f96e6e550f24bc4a",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3290
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-95f2b31ef73bc632586d17629ff3558dd6ce911e7f4b799dd8e9ba652d1a2d2a",
+      "family_id": "560c890b5a477a715f68ae70f03d5b792b4da2ed463f217bc8edf7199b00d947",
+      "id": "mcq-95f2b31ef73bc632586d17629ff3558dd6ce911e7f4b799dd8e9ba652d1a2d2a",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3504
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-98feb77d628b49bf0e1f057fbbe4207fd7c9eb64f27fbd065b7b126daf3bf48e",
+      "family_id": "d4c1d3a86f21de14bfa5da9afcbbc02c94d96edff3c638e947ffbdd604c7063a",
+      "id": "mcq-98feb77d628b49bf0e1f057fbbe4207fd7c9eb64f27fbd065b7b126daf3bf48e",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3694
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-9956eff8509b5de9bd1de9277b4b6bf364b77939a54e63b0e10524f7f2bb8e6f",
+      "family_id": "d45f0e3535f5c7c564d22225bce8bb45e475023a606b297027401d7d29af698c",
+      "id": "mcq-9956eff8509b5de9bd1de9277b4b6bf364b77939a54e63b0e10524f7f2bb8e6f",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3822
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-9be363a663bacd50a8b351f97b03f44b7d4674437f45c98b7b3cc5b35647c5d9",
+      "family_id": "b0bdfa3309b5498a944e0fab602feb2b9e66c25584135f12d804c0d4ef938b40",
+      "id": "mcq-9be363a663bacd50a8b351f97b03f44b7d4674437f45c98b7b3cc5b35647c5d9",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3009
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-9f1237dd2bc8844c7dce65301d7709ca561eb0124b78ea8419ea343f55708ee1",
+      "family_id": "b3046da14354fe3891919768d0be0fd9c47001b0fa02c35cf195fd64f32b0ad9",
+      "id": "mcq-9f1237dd2bc8844c7dce65301d7709ca561eb0124b78ea8419ea343f55708ee1",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3045
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-9f8ec41b0a2e78222e815b252b685d323b47ef9992a5bd3393567abf5a5caf1c",
+      "family_id": "4b7da97878d412150df4a1d15a9fcb1fbfc29634212efdb797401e3d41956f27",
+      "id": "mcq-9f8ec41b0a2e78222e815b252b685d323b47ef9992a5bd3393567abf5a5caf1c",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2842
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-9fc77e3f28cfa029be1c8ca49f61aee05f085039a3d070bf807b92ba2ff6c595",
+      "family_id": "fc2c3cbc08c8ecbad55b4be0064088ecb5e7df026e9d824d1afb7d60d62a693d",
+      "id": "mcq-9fc77e3f28cfa029be1c8ca49f61aee05f085039a3d070bf807b92ba2ff6c595",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2589
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-a8719a402285fff37dd91ebe01e6ced3a161a68901102f53bdf56af3e2527851",
+      "family_id": "8f379d9b7820a6d4ea56c4174666e3793495f2af47f77701b18922dbda78049e",
+      "id": "mcq-a8719a402285fff37dd91ebe01e6ced3a161a68901102f53bdf56af3e2527851",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3391
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-ac87d0e8ff979b676c64ee5ab3f1a46dd1472223420b5627247f544264c82135",
+      "family_id": "90e057f7f632c195a4bc1f54a80fd8c0af26056111e80cd15d9c6e65ed3a7c58",
+      "id": "mcq-ac87d0e8ff979b676c64ee5ab3f1a46dd1472223420b5627247f544264c82135",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3091
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-c2a91a5d33887c63d8b38275a004dfe95d715035f208b19aaa55e62caca32c5f",
+      "family_id": "0b9b4f9a1f6fef9fb3caf06386872fa09607036df3f8160338ae0381a56b22ea",
+      "id": "mcq-c2a91a5d33887c63d8b38275a004dfe95d715035f208b19aaa55e62caca32c5f",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3003
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-c54538c8a07368f2fe15d610b8984db4c501a24923e448d8ac71a424ac717903",
+      "family_id": "9cf884548c2c37b6865d2072d10f41519423598c3c96e08adcb86884aafc54be",
+      "id": "mcq-c54538c8a07368f2fe15d610b8984db4c501a24923e448d8ac71a424ac717903",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3285
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-d19c321cc9e11bb792c33e76dcd95b4abbf1858597fdb5d5ef69bb2316f79fc9",
+      "family_id": "96ea8bc287134cb91596a1852676e9bdb19aca2100d669581c0ecd2870bc41e3",
+      "id": "mcq-d19c321cc9e11bb792c33e76dcd95b4abbf1858597fdb5d5ef69bb2316f79fc9",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3315
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-daa8ccd99f46689ba128a3e2155f538a7e484a98943a2ca1e9d1c27408c8e08c",
+      "family_id": "3654176a3674201ccf8a54c198d8ff954fa9e667ebdf35e8b160e6ddae410e5d",
+      "id": "mcq-daa8ccd99f46689ba128a3e2155f538a7e484a98943a2ca1e9d1c27408c8e08c",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2862
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-e96edb7d0c60be9db7a12cd10e1ababcce544c62a28183e9df88a70ac9287ac7",
+      "family_id": "0a864e49a0481200834eb40f27aa91b575f09065cdb45884a681aff3e86c8744",
+      "id": "mcq-e96edb7d0c60be9db7a12cd10e1ababcce544c62a28183e9df88a70ac9287ac7",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3660
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-ebc550f7f809f13d11628cb582a00e92c9c092c4312e795db7554bcc28cb5ab4",
+      "family_id": "ee242f2d75aeb1a5a43121446206ff83cc968416ec732c846cefea430cb1bde9",
+      "id": "mcq-ebc550f7f809f13d11628cb582a00e92c9c092c4312e795db7554bcc28cb5ab4",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2841
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-ecec35ddb359940ef3e2c739252fb2e59d7cb1240cf1ea4110137c1b0ca18447",
+      "family_id": "3699dce61a3626c97a786d67a882a4a5b81072b36542bdddf5aabe9942ac067b",
+      "id": "mcq-ecec35ddb359940ef3e2c739252fb2e59d7cb1240cf1ea4110137c1b0ca18447",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 2850
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-ee3f674d8eadbb26a84addd57b72a7e60072d2de3f10095ff491666c2b99d15b",
+      "family_id": "a1c84b1d54dae347342119f258cdb8cd568b401db2c10bf418700ea6ce00a8e9",
+      "id": "mcq-ee3f674d8eadbb26a84addd57b72a7e60072d2de3f10095ff491666c2b99d15b",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3657
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "mcq-f25a9bc133e22d6874658852c0d12386245adc0d98c668fbe4ae5b755adee2ec",
+      "family_id": "2b95cee24ca6f3838bd52b1b89a7e32f86215d3cd6b60641c0c9413a6d899fc9",
+      "id": "mcq-f25a9bc133e22d6874658852c0d12386245adc0d98c668fbe4ae5b755adee2ec",
+      "scope": "target",
+      "source_group": "",
+      "source_key": "synthetic_wmdp:generated",
+      "source_locator": {
+        "row_index": 3537
+      },
+      "split": "train",
+      "subject": "Cybersecurity"
+    },
+    {
+      "audit_id": "utility-full-d2e47475b32f3f018c89fee599440524aa11d02cd5eccd60c0ff24169013df5d",
+      "family_id": "d2e47475b32f3f018c89fee599440524aa11d02cd5eccd60c0ff24169013df5d",
+      "id": "mcq-629f9a01ee1a1c55a343e1bf9699dfd0c5893dc58e023cb56d4dcc205b816769",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 7,
+        "question_id": "fs-idm344203968"
+      },
+      "split": "dev",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-f4e599d946508d80cee0f6623708879e8eaf07c4644070481d94a124dd609ace",
+      "family_id": "f4e599d946508d80cee0f6623708879e8eaf07c4644070481d94a124dd609ace",
+      "id": "mcq-bd31f1b5ef04ee37b63c55894b7d19b34eaa52410f3aeaf2b5f8ff60ec1d6c77",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 7,
+        "question_id": "fs-idm333590032"
+      },
+      "split": "dev",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-69c36fa6c78a73d8ee15d970e133719c82ef2201de87656d12ea69ca1b39d365",
+      "family_id": "69c36fa6c78a73d8ee15d970e133719c82ef2201de87656d12ea69ca1b39d365",
+      "id": "mcq-c3360f97cb56660fe47f4233f772fc9b831827fd92709ab49f2c70b1f30c8bbe",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 7,
+        "question_id": "fs-idm352529840"
+      },
+      "split": "dev",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-441ff57ea8c9a2959b00642f6c8ef72af79f4164df12ba98e50005a81f28245f",
+      "family_id": "441ff57ea8c9a2959b00642f6c8ef72af79f4164df12ba98e50005a81f28245f",
+      "id": "mcq-f92e58a31591b0c09c7618816e069ed04543cf24558b67ab59de5b8afe21c239",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 7,
+        "question_id": "fs-idm248054176"
+      },
+      "split": "dev",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-0a3d5cecfaf84ca944189e46de7b5d36dadd5f2ffa3be619b6370d933f9be634",
+      "family_id": "0a3d5cecfaf84ca944189e46de7b5d36dadd5f2ffa3be619b6370d933f9be634",
+      "id": "mcq-0aba8ae2915da76215fe0a067ca5f0ee60373fdfc7bfe6b0f9c2729c5500f402",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:1",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 1,
+        "question_id": "fs-id1171474419885"
+      },
+      "split": "dev",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-88271ea117004b97c48ba8e26b5a6e45327d845f663b0eb89c846b4abfdd5707",
+      "family_id": "88271ea117004b97c48ba8e26b5a6e45327d845f663b0eb89c846b4abfdd5707",
+      "id": "mcq-7652c683fcab7228bdc6edbaefd2f0ceecc46f017f3211bd6178d0fd3b6d2890",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:1",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 1,
+        "question_id": "fs-id1171474403036"
+      },
+      "split": "dev",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-2bf1e7d2132e40bbd1cd07acfa64ab77876bc9ba58d355b28e9885ba9d4e01de",
+      "family_id": "2bf1e7d2132e40bbd1cd07acfa64ab77876bc9ba58d355b28e9885ba9d4e01de",
+      "id": "mcq-cd87858fafac757c2bae0e5c1a694e7e967ecdf9662e85b2f1bf69a136ea3a0f",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:1",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 1,
+        "question_id": "fs-id1171474296104"
+      },
+      "split": "dev",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-30c8f6e846a4518fa7218514438d166f15e66786ca63418a5df3f574ae75f04e",
+      "family_id": "30c8f6e846a4518fa7218514438d166f15e66786ca63418a5df3f574ae75f04e",
+      "id": "mcq-d70684a92b02c86aed01774b79e42083818ad1ab06645aa98b507cd7b1362ea3",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:1",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 1,
+        "question_id": "fs-id1171474483997"
+      },
+      "split": "dev",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-518bcbd8186b5ed4a40be582b5c36399594847e2a528ab8316aead3ca3e58770",
+      "family_id": "518bcbd8186b5ed4a40be582b5c36399594847e2a528ab8316aead3ca3e58770",
+      "id": "mcq-280e2ba1c96e03144bb7e3dbdff0f7e5b85823ab08b7f16005d11c53df8f2172",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:16",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 16,
+        "question_id": "fs-idm109208208"
+      },
+      "split": "dev",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-50b5e7b0f9fcb9caeceacaab5b951fdc69a835a560385c82830064536f053ea7",
+      "family_id": "50b5e7b0f9fcb9caeceacaab5b951fdc69a835a560385c82830064536f053ea7",
+      "id": "mcq-40b1ca1489660079418e0fdf27d90660c034aa0d277180b6fc0f545b40c03c62",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:16",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 16,
+        "question_id": "fs-idm132593184"
+      },
+      "split": "dev",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-585bf321e58920362c9309cdeb85edafb01c796f47c2f56ab73a5110860ee6fd",
+      "family_id": "585bf321e58920362c9309cdeb85edafb01c796f47c2f56ab73a5110860ee6fd",
+      "id": "mcq-d90729945d4cab58d57a4e9fddcbef76ce7064e33301e769c6f58ef28c25f642",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:16",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 16,
+        "question_id": "fs-idp27071728"
+      },
+      "split": "dev",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-753a36b74519d2dadea8071b96767038d024f2a3690ad8eb97c4984718c258e0",
+      "family_id": "753a36b74519d2dadea8071b96767038d024f2a3690ad8eb97c4984718c258e0",
+      "id": "mcq-e6e7529257c191ea667721ac7d1240a26803c2ad1226db81b9e607a3d4df3080",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:16",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 16,
+        "question_id": "fs-idm83080272"
+      },
+      "split": "dev",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-ea36e51758312db134e4117a45811e4d552410abfd86d91f59de637e4285437c",
+      "family_id": "ea36e51758312db134e4117a45811e4d552410abfd86d91f59de637e4285437c",
+      "id": "mcq-33f0d2ea35c2b7cf42165de4e1f3070ba8083132c260e2df2f41cd800fab742f",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 9,
+        "question_id": "fs-idm55389968"
+      },
+      "split": "dev",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-ff2b7b86352a39b076f68546b17b6e2f51a5b83badf7cb3034bf8530862bca9c",
+      "family_id": "ff2b7b86352a39b076f68546b17b6e2f51a5b83badf7cb3034bf8530862bca9c",
+      "id": "mcq-5210b2201320aa1a7b95592b304248c52ea7e02303577d2557ea1ae7f75dea20",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 9,
+        "question_id": "fs-idp22831168"
+      },
+      "split": "dev",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-0f161aa6896fa9e748419f0f5feb035ac79e46410b4bb69168afcadf33102302",
+      "family_id": "0f161aa6896fa9e748419f0f5feb035ac79e46410b4bb69168afcadf33102302",
+      "id": "mcq-6acd1b4cd9599ab33fb9d906ef67bf5f4a77d6426392fd7de0e64a357c6aa390",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 9,
+        "question_id": "fs-idm17521120"
+      },
+      "split": "dev",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-e12f77e6f3fe3ffece9bb2dc4fc328e3e98a1cb487456822f526e258ae39c24a",
+      "family_id": "e12f77e6f3fe3ffece9bb2dc4fc328e3e98a1cb487456822f526e258ae39c24a",
+      "id": "mcq-defb4a488e215e39c0b3966e4b4c8630bbc0f0eae99f6e5625f08121c153e15f",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 9,
+        "question_id": "fs-idm49844128"
+      },
+      "split": "dev",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-06d19b35ef698c44e7c27d11f50d852cd1157b745a22a4c338077eb80c31e3b6",
+      "family_id": "06d19b35ef698c44e7c27d11f50d852cd1157b745a22a4c338077eb80c31e3b6",
+      "id": "mcq-1d741ba10707e7e8fcfbab5330f7fd3eafc5a72d869cc2387d07b25abbf40221",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-781"
+      },
+      "split": "dev",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-a121261c85cb4f19b780fbcb6b0d397aa2ef2a0587a50e554efdd9f3307c3829",
+      "family_id": "a121261c85cb4f19b780fbcb6b0d397aa2ef2a0587a50e554efdd9f3307c3829",
+      "id": "mcq-232b863da63fc3e02917df5e858e3044400580a0da93848eb41d493c14aeaa61",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-193"
+      },
+      "split": "dev",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-25c1554183f70cd6e11088222865c9742f20c294248ab51c5bee896333347c2b",
+      "family_id": "25c1554183f70cd6e11088222865c9742f20c294248ab51c5bee896333347c2b",
+      "id": "mcq-5d8a2c6112714a064a614669749754b3c1fea41659c3d5638687e2342881b99e",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-700"
+      },
+      "split": "dev",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-e896bfa1322f506430c28ec5d7f8535a972b1d948d7801621394bdd4c6de7ad2",
+      "family_id": "e896bfa1322f506430c28ec5d7f8535a972b1d948d7801621394bdd4c6de7ad2",
+      "id": "mcq-e1a9abe80eb597caf833e7db6fedf178799a7f73fa60eadd9b06498ca66c953d",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-297"
+      },
+      "split": "dev",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-72af67ccc1e7f80ced80e113a25d72442444e57cee3e760a85fdbf9132f32f29",
+      "family_id": "72af67ccc1e7f80ced80e113a25d72442444e57cee3e760a85fdbf9132f32f29",
+      "id": "mcq-75ae5f19cd50d8c4fd3945d17e800ace1236b75ba5d8888881266280be30ece7",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:12",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 12,
+        "question_id": "fs-idm330204752"
+      },
+      "split": "dev",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-02c1310b7b98bd3de2608dd777d95cf32906c10ec891443fc9fe8f0b2af3d6ce",
+      "family_id": "02c1310b7b98bd3de2608dd777d95cf32906c10ec891443fc9fe8f0b2af3d6ce",
+      "id": "mcq-8b7f63301cef694865f7f2994f9f730c912c6def895e9786ab6431187845ac03",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:12",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 12,
+        "question_id": "fs-idm340150112"
+      },
+      "split": "dev",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-9018a3136a59cf96fb03e3b95001ef5866446d5c88314799f90438e09692130e",
+      "family_id": "9018a3136a59cf96fb03e3b95001ef5866446d5c88314799f90438e09692130e",
+      "id": "mcq-c30363e88c9204535735e8c2cc541e050a6690320f0a90f40b702aca71b24058",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:12",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 12,
+        "question_id": "fs-idm257332752"
+      },
+      "split": "dev",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-c3e9b7467d871573e42c3f9837dab6a53f896afaf833d48e9e53c203b965aa3a",
+      "family_id": "c3e9b7467d871573e42c3f9837dab6a53f896afaf833d48e9e53c203b965aa3a",
+      "id": "mcq-c7cc778851b6f3ce7b6482d91ff52be0f5968a1e7933f417255e0f832d543223",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:12",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 12,
+        "question_id": "fs-idm254941952"
+      },
+      "split": "dev",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-020aab17a7cef2e515c2a1fa6b6a8342408f0b84639a21e3051976e16c5430cd",
+      "family_id": "020aab17a7cef2e515c2a1fa6b6a8342408f0b84639a21e3051976e16c5430cd",
+      "id": "mcq-322c12c57c2a48066f012f78fb53c16ec8b448f2c68a129bf3592e654efddb85",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-582"
+      },
+      "split": "dev",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-688361f8bd4c6aac7d9e9a7b61404e97d95ae7d51ad1c6f25b993e05c72086cb",
+      "family_id": "688361f8bd4c6aac7d9e9a7b61404e97d95ae7d51ad1c6f25b993e05c72086cb",
+      "id": "mcq-814835d6de44408f3b2d515a7dbc37882002bb49ad7ed8801e19d74f1b417e25",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-482"
+      },
+      "split": "dev",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-cb7394d7027f7877b3eb64da4757b8994dee1581af0de7fbead054b2087a84ec",
+      "family_id": "cb7394d7027f7877b3eb64da4757b8994dee1581af0de7fbead054b2087a84ec",
+      "id": "mcq-f302a5d2c72f74e80cf81ccb4145e0de00bfcf37dd92df82fcbb784fedf2fa25",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-492"
+      },
+      "split": "dev",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-077b0f1833545786c7dfb088175478a972cfb17ffc2ef52987e86ad3c72ca4ae",
+      "family_id": "077b0f1833545786c7dfb088175478a972cfb17ffc2ef52987e86ad3c72ca4ae",
+      "id": "mcq-f9abfc615e3ee88f3db4e9851780a7c399d4bb1a409952df7a17bc7b484baf9e",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-664"
+      },
+      "split": "dev",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-c29ed8ada03f7f9559b03165480fafa1191104f2d0b7cb1581445ec19cc46c9b",
+      "family_id": "c29ed8ada03f7f9559b03165480fafa1191104f2d0b7cb1581445ec19cc46c9b",
+      "id": "mcq-611571c6bb10e158a675d323c9e5a45a3df35b3c260beb42e8a5f57d5366236b",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:14",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 14,
+        "question_id": "fs-id3633493"
+      },
+      "split": "dev",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-7b2f6748fd159769fdf909af83cc4cfe8bb03d809eb00dcc77d377cd6c35499f",
+      "family_id": "7b2f6748fd159769fdf909af83cc4cfe8bb03d809eb00dcc77d377cd6c35499f",
+      "id": "mcq-7a6245c1a95f9d61a5e06a35799af0d671174f4c4ac86f4174ff0a320d08a766",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:14",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 14,
+        "question_id": "fs-id3577740"
+      },
+      "split": "dev",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-5b043706e6be01d96ded77d881611e835c6e40fee87daabd339b5fb4f8523a7b",
+      "family_id": "5b043706e6be01d96ded77d881611e835c6e40fee87daabd339b5fb4f8523a7b",
+      "id": "mcq-9b9d91471c97c522e7bb2ef82ce91de18df07fb390e73f4805e2c2f1a3f2901a",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:14",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 14,
+        "question_id": "fs-id1373905"
+      },
+      "split": "dev",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-a0bfcccb843eb0311e94fd830637e7b3160adebb2145a2107b0ce06faadb7b36",
+      "family_id": "a0bfcccb843eb0311e94fd830637e7b3160adebb2145a2107b0ce06faadb7b36",
+      "id": "mcq-9bda47c1bd931f573b297dbe565ee74556e1158e2b82c0b0ec24dd6245964b8b",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:14",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 14,
+        "question_id": "fs-id3070266"
+      },
+      "split": "dev",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-4bdb8ef3cda9088e1270c7b4dc0e910f4998db17739789fc76dcb7ad221f18b6",
+      "family_id": "4bdb8ef3cda9088e1270c7b4dc0e910f4998db17739789fc76dcb7ad221f18b6",
+      "id": "mcq-21e173a9a95f97347c7adad05579b8d051c0d615add0c65aa13269b865cf9d7c",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 9,
+        "question_id": "fs-idm348969840"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-3cf24d673eba93a89c72e6e70494c7253e17c6939c4b88600edf3bb36791e4d5",
+      "family_id": "3cf24d673eba93a89c72e6e70494c7253e17c6939c4b88600edf3bb36791e4d5",
+      "id": "mcq-2bb132a0cc1cb148bdada22ec23430f02183068297e02ece1b7d0fcd7a096136",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 1,
+        "question_id": "fs-idm413577920"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-5c5d16f6714c3035f0aaaac56f63ab4f9e93bcfe87f7302535fb97277d266706",
+      "family_id": "5c5d16f6714c3035f0aaaac56f63ab4f9e93bcfe87f7302535fb97277d266706",
+      "id": "mcq-43a4bf55a59d39b06a35711eb27fa6d857733c614f1d216d7e7488bf4c437506",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:4",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 4,
+        "question_id": "fs-idm257488320"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-5c2b7c08c19fc70d8bc84de1e8bc66de01e55a9e80b4e752884bdfc571350908",
+      "family_id": "5c2b7c08c19fc70d8bc84de1e8bc66de01e55a9e80b4e752884bdfc571350908",
+      "id": "mcq-4b2b8ff37a4dffaac2f90e197ec3a96b9f8d00c87458169b2ecdd262e2608b12",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 10,
+        "question_id": "fs-idm207406400"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-83961963dfced486103d542b58af35dbfba9d1986fbb8b878355ee59ce15a82d",
+      "family_id": "83961963dfced486103d542b58af35dbfba9d1986fbb8b878355ee59ce15a82d",
+      "id": "mcq-56b2bb683c5e5c7bc437d8aaae6b42720909ca2003db355afb77a3bd4975cbb7",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 2,
+        "question_id": "fs-idm236185056"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-87fa6f11ba0488d76b26917490019e5da33f48bfbee627c373dcb61bdf9d1732",
+      "family_id": "87fa6f11ba0488d76b26917490019e5da33f48bfbee627c373dcb61bdf9d1732",
+      "id": "mcq-5e57dd6f115d9164a3c4a73dcab2bc9851fd865d3df266d0da61d7509c6c2191",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 10,
+        "question_id": "fs-idm336749184"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-5fcc5be4e88edd1717f143baf0d5ca343045d592fbe48d15b4afacbf1b6f67d4",
+      "family_id": "5fcc5be4e88edd1717f143baf0d5ca343045d592fbe48d15b4afacbf1b6f67d4",
+      "id": "mcq-5ff6ea4cd03ca9a5b1e8d724fd02bc5529231d66cf377d2bc74eb4be502e9ad7",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:3",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 3,
+        "question_id": "fs-idm208658784"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-d1a872518c3a1a7f22a8b90871cd6ef0e4e8aa4dc11b6675e05d96ccf2902109",
+      "family_id": "d1a872518c3a1a7f22a8b90871cd6ef0e4e8aa4dc11b6675e05d96ccf2902109",
+      "id": "mcq-605bbd5be6539ed9ccd0ae63bfb03ea52122367c3aaf35a4ea02145af17858bf",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:4",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 4,
+        "question_id": "fs-idm261828112"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-10eac5678c9d96d24a7b4e4cca4b17ff280160bd56617c2a9c963410c5b51784",
+      "family_id": "10eac5678c9d96d24a7b4e4cca4b17ff280160bd56617c2a9c963410c5b51784",
+      "id": "mcq-62965b41cf91a348915d77bbf019d9891f680ca47125a576485731deb6edbe4d",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 10,
+        "question_id": "fs-idm371003920"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-db27c4039c0fc4c0c506033ca68e841c0d28e708409a2fd4b98150a539a9ef99",
+      "family_id": "db27c4039c0fc4c0c506033ca68e841c0d28e708409a2fd4b98150a539a9ef99",
+      "id": "mcq-702503c1e95fe9e5c13a29b57bdedc5bcf2fc350bfff7bb303f98e6119143af1",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 2,
+        "question_id": "fs-idm348812336"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-85c89b052011550b5bfea2734bf4e03024aa83c3aa732161cac56d4052beef70",
+      "family_id": "85c89b052011550b5bfea2734bf4e03024aa83c3aa732161cac56d4052beef70",
+      "id": "mcq-a3bcbbee8abc4404542f7281992cf26f2eb2118e3d4c8961df97d7972eda1ee5",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:5",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 5,
+        "question_id": "fs-idm343258608"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-4ee30578b22992a74feb49686ca9369f4bc297e3b887bf4b1e3c89125be6a78c",
+      "family_id": "4ee30578b22992a74feb49686ca9369f4bc297e3b887bf4b1e3c89125be6a78c",
+      "id": "mcq-b09c2260cfacf8451876293fcea551863a4365259249815d63a12499b09d070b",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 10,
+        "question_id": "fs-idm229191040"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-8a55bba46f05f87eb41736a970914890715d926236aa7b08054a368a6353b732",
+      "family_id": "8a55bba46f05f87eb41736a970914890715d926236aa7b08054a368a6353b732",
+      "id": "mcq-b99fc535dac861dd85d42dc0525e00a20afb10f9d329f0b6822f5011fb365463",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 2,
+        "question_id": "fs-idm231901168"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-1cca0ba46bf6c8c9e5532ff5e41c0a88b04e306fdbc0a2090d7a7e459d847f68",
+      "family_id": "1cca0ba46bf6c8c9e5532ff5e41c0a88b04e306fdbc0a2090d7a7e459d847f68",
+      "id": "mcq-c4e4f24b4a59787e7e1ccba802a7cce5fd02de01b407dbfaeaf12e4a19341fe6",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 9,
+        "question_id": "fs-idm302963728"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-e3f401a69a8185f6b3356c27639eb94105ce9f01e7ef987bb8173592d3464de1",
+      "family_id": "e3f401a69a8185f6b3356c27639eb94105ce9f01e7ef987bb8173592d3464de1",
+      "id": "mcq-c89750baac5ff6c092b1378728f771aa006463d3064dbf03342b3bd1fd7e6975",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:4",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 4,
+        "question_id": "fs-idm253576464"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-038db4af401a363ed79a0f71d2bf4f519c0df40b1265d23d9156a636ac3d96f9",
+      "family_id": "038db4af401a363ed79a0f71d2bf4f519c0df40b1265d23d9156a636ac3d96f9",
+      "id": "mcq-de9e137e8f09b5c7a7b204ea814b253915ce05780c16ce3dd7730f3cea162cf8",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:4",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 4,
+        "question_id": "fs-idm398624848"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
+      "audit_id": "utility-full-09efbac84c13e70e2d9961d0bfa89a8d8fb93e85eea5405e14dd2075601781e2",
+      "family_id": "09efbac84c13e70e2d9961d0bfa89a8d8fb93e85eea5405e14dd2075601781e2",
+      "id": "mcq-2d33473b2b21fac629fa9f98e2033a1aead1ab43e50267a6adbf3ddb49420cf2",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:15",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 15,
+        "question_id": "fs-id1171473064587"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-74199b40e7f0e8287bc286ec70f8fcb580dc42fef3bccc77c0f20099c7d01aec",
+      "family_id": "74199b40e7f0e8287bc286ec70f8fcb580dc42fef3bccc77c0f20099c7d01aec",
+      "id": "mcq-409b60a33e2fc7f4be619086ad781644c1606bcab3cdc67380713a22b217ea15",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 9,
+        "question_id": "fs-id1171474142262"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-5bf9e6811036783d9853d3f9e095d44bb877c72085f1e076542f45428af5ba89",
+      "family_id": "5bf9e6811036783d9853d3f9e095d44bb877c72085f1e076542f45428af5ba89",
+      "id": "mcq-4252c93a118905064492c63bc472784f029fef2f1ec57522452774e947d5d6a0",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 2,
+        "question_id": "fs-id1166227453471"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-02370f7ea581badfe0a40a84d9f8c1ad14fa8d10a6aa78de616e3d738b9c4de2",
+      "family_id": "02370f7ea581badfe0a40a84d9f8c1ad14fa8d10a6aa78de616e3d738b9c4de2",
+      "id": "mcq-63ee59abfd9652263f74ac2ab12c608d1e42ec6aae843b1cbd6a31edec5a8497",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 7,
+        "question_id": "fs-id1171472100477"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-47bbac23fa23b6cb9eea5052124c4a1be05fef98b84bc85a8bb5c51db7ae50c6",
+      "family_id": "47bbac23fa23b6cb9eea5052124c4a1be05fef98b84bc85a8bb5c51db7ae50c6",
+      "id": "mcq-68b4296433bb4349e5b52606d9d14b397c345a4a39b2b177d8a4853b7effb86b",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 9,
+        "question_id": "fs-id1171471020948"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-bc080de148175dc2fa4a28906976229fbce1077d4fce3d57ca5fde6777c0c1dd",
+      "family_id": "bc080de148175dc2fa4a28906976229fbce1077d4fce3d57ca5fde6777c0c1dd",
+      "id": "mcq-7d74619aeb94339e79df2efe280b16511ae1bbbb1d999a544578f8e8ba130ccc",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:8",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 8,
+        "question_id": "fs-id1171472123393"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-c0def2c640adb1f120cb65ff9176d8213e49c1b1185b017517e487b713b6fbde",
+      "family_id": "c0def2c640adb1f120cb65ff9176d8213e49c1b1185b017517e487b713b6fbde",
+      "id": "mcq-819039f938187c75e95765c3e1b1c393255f7108650822ac5b6e2b23ab25b298",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:16",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 16,
+        "question_id": "fs-id1171471133738"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-7646dd46d205191fc29743887f005868775394f7e3357b792a091fdc6e59be43",
+      "family_id": "7646dd46d205191fc29743887f005868775394f7e3357b792a091fdc6e59be43",
+      "id": "mcq-8e3fe27bc19e2ec3735cceaa9b66c9bc5dd21422f13900a416bbb602b3f3756a",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:17",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 17,
+        "question_id": "fs-id1172504370596"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-67bf12405aa3f216140255caa860ac9195de4ab5ff76391837efe6f6c71eb3ce",
+      "family_id": "67bf12405aa3f216140255caa860ac9195de4ab5ff76391837efe6f6c71eb3ce",
+      "id": "mcq-9ae65fc2c82b35f2fea518bc380318d14b5ac6836b045aba0c63f6ba9aae1081",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 7,
+        "question_id": "fs-id1171473148721"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-69257835e15cf3a5953bcc7858a1d872013ee172c4d57d479850b44febddbc1b",
+      "family_id": "69257835e15cf3a5953bcc7858a1d872013ee172c4d57d479850b44febddbc1b",
+      "id": "mcq-a1c23906abcc05520dc8f0ce87fa2b0ef0e4619f5f15e824d686cae18987d3e9",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:4",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 4,
+        "question_id": "fs-id1163757301948"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-678d6e360754dd806b9c0dc9701f2ef490a3aee9eebdb021d23479eb6ed9d103",
+      "family_id": "678d6e360754dd806b9c0dc9701f2ef490a3aee9eebdb021d23479eb6ed9d103",
+      "id": "mcq-bb03c053e11a7a4e0355d0182a383f024ef1000659bba76d98dad1b682a58cb4",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:6",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 6,
+        "question_id": "fs-id1163757293877"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-eba8c2fdeea34756c544143166f1a33fa3630f739418744e9c51334a613aab5f",
+      "family_id": "eba8c2fdeea34756c544143166f1a33fa3630f739418744e9c51334a613aab5f",
+      "id": "mcq-c29e13d37ab08573f13aeac5758d7b877fc086a1cb5fcc9ba4d1faa7f939b883",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 2,
+        "question_id": "fs-id1166227586710"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-f1996b0a79982e699c0bca2bb408a89679223e5da14868f69284866e3e13a754",
+      "family_id": "f1996b0a79982e699c0bca2bb408a89679223e5da14868f69284866e3e13a754",
+      "id": "mcq-c67e90d37fb39e2a9d960f4172ce881c88e8d8cae39562aaaf5b12fb09ab63d5",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 2,
+        "question_id": "fs-id1166226318625"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-d8dcb47d66164e0e510b8299bac525a2810095c96eab7489651efb3500c2749c",
+      "family_id": "d8dcb47d66164e0e510b8299bac525a2810095c96eab7489651efb3500c2749c",
+      "id": "mcq-dd4355bd7a2eefc84e4101017d5dd791fda04b9d6327d6a72ba5c38c437289a6",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:12",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 12,
+        "question_id": "fs-id1172503355046"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-7a9ee970eebff6c0c4d6231efd11c27973ee0f65ce43f83bbf7ea97d80b07298",
+      "family_id": "7a9ee970eebff6c0c4d6231efd11c27973ee0f65ce43f83bbf7ea97d80b07298",
+      "id": "mcq-ef44864acad8fc437291bb8b4b71f2c4889705e6a70255e757187744e0bff431",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:13",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 13,
+        "question_id": "fs-id1163757280013"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-43d6c5fa23b07666e95799a950206e561b398978d1fd741006ac04fa50d72f3a",
+      "family_id": "43d6c5fa23b07666e95799a950206e561b398978d1fd741006ac04fa50d72f3a",
+      "id": "mcq-f1a840e1cc5abbccbbc268b2173e041045d33cbe1d0d445135799247bac9706b",
+      "scope": "utility",
+      "source_group": "eduqg:american_government:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "american_government",
+        "chapter": 10,
+        "question_id": "fs-id1171472075563"
+      },
+      "split": "train",
+      "subject": "high_school_government_and_politics"
+    },
+    {
+      "audit_id": "utility-full-95aede6287a79a67d6a35d971dfb6b90ffb1bb192b9a848ae9dbbaebe06329d1",
+      "family_id": "95aede6287a79a67d6a35d971dfb6b90ffb1bb192b9a848ae9dbbaebe06329d1",
+      "id": "mcq-27c12b9d02c1906b38efb1b71780c8232ee6ce6e9cc96539f49a988b14faac11",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 2,
+        "question_id": "fs-idm46864688"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-b0791dfbe556c315a795c1939bc80c849b236abe30f32cd3b68ba0d41448a8ee",
+      "family_id": "b0791dfbe556c315a795c1939bc80c849b236abe30f32cd3b68ba0d41448a8ee",
+      "id": "mcq-4ac1687a1458383eecae008aba555e90f53d04411c85b2d81ff460002dadaad8",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:4",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 4,
+        "question_id": "fs-idp68569264"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-44af3539b9a30cd80d4771968e2239830512142b8cf9219e7c87a587b8dc0801",
+      "family_id": "44af3539b9a30cd80d4771968e2239830512142b8cf9219e7c87a587b8dc0801",
+      "id": "mcq-5dd57541ad2143571dd8b580718a97a39b0e80fa874baae754c4c851a172cdd0",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 2,
+        "question_id": "fs-idm38751904"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-ce0ecdad3f2232454d7a27d736ff5677f1c0a0ac12dde863a849dda048445933",
+      "family_id": "ce0ecdad3f2232454d7a27d736ff5677f1c0a0ac12dde863a849dda048445933",
+      "id": "mcq-6b5a6b46b87bbce4f47855e2530a13553cfb5e9913255ecc5957b0d519843aed",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:15",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 15,
+        "question_id": "fs-idp93539616"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-187520d2f47d711ab7717331b66dfadd699c7854437a986dd699bdb16de80795",
+      "family_id": "187520d2f47d711ab7717331b66dfadd699c7854437a986dd699bdb16de80795",
+      "id": "mcq-7e76817dff3b73c916f4f4aa7fbf3de4c15428ad4b77ce2e3c0b5d6b6fef7e04",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:5",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 5,
+        "question_id": "fs-idp79308960"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-747f9ac46a61f6ce8cccebe557a8ac348a5620df3aec55fe989c3bbac5009ca2",
+      "family_id": "747f9ac46a61f6ce8cccebe557a8ac348a5620df3aec55fe989c3bbac5009ca2",
+      "id": "mcq-87c88c8347837e5c26680f3fa1660573ada6d365744637fccf7f8e35998ac315",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:8",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 8,
+        "question_id": "fs-idp2973584"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-d825303eea2d30fd3ecb3df0e800af9397ddad9feb2301891f12cb5c5864141f",
+      "family_id": "d825303eea2d30fd3ecb3df0e800af9397ddad9feb2301891f12cb5c5864141f",
+      "id": "mcq-893fe7c410ee75f2fbbc94cba6877934cda44b3f94ca03426dccdd2cb3982890",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 2,
+        "question_id": "fs-idm4993776"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-6306e01aad273e41b265c00ad4df68b2bbd0a9e8fe1e8f5a5e5f4b4eb85033c6",
+      "family_id": "6306e01aad273e41b265c00ad4df68b2bbd0a9e8fe1e8f5a5e5f4b4eb85033c6",
+      "id": "mcq-96d7fce23776350978ecddad8a7bc0a4166603ec69d9bdc7ac12bd6cae70832d",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 9,
+        "question_id": "fs-idm81545504"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-24823a7001b77f8690e7ad92588471a21d3fdca2a9248812a8caf7783d48cd03",
+      "family_id": "24823a7001b77f8690e7ad92588471a21d3fdca2a9248812a8caf7783d48cd03",
+      "id": "mcq-9e6ffd0b2aa2ff193b48a8b3fe8d779957c2095db46bc69d414448517cb38cf0",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:12",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 12,
+        "question_id": "fs-idp5095712"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-review-a2cc69ada64ecad96dc7f8c6730b5e987d5da4f0db0d8d0914468d3f6f2e1ae6",
+      "family_id": "eb0be65048f2d7726a86d9ef1319fd692fbd7ce2c42939c3c08097f95b10d6c4",
+      "id": "mcq-a25519a792e5a2ffbe21ca993d0a7810b123e978837f39996af2a33e29c6c6d3",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:5",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 5,
+        "question_id": "fs-idp14847328"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-94c52f96b80c672f966f77a961fb665a0fe338537f1ba707773f35c664494201",
+      "family_id": "94c52f96b80c672f966f77a961fb665a0fe338537f1ba707773f35c664494201",
+      "id": "mcq-a4dfef02e6a66e69cd7915df73858bae0fc9145298256ee66a45776ed0fcac57",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 2,
+        "question_id": "fs-idm28267056"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-e9ef3f93196fe7ccb277022e6bf6c4091acb5cb61d77808cb8fe73b78faa4fc9",
+      "family_id": "e9ef3f93196fe7ccb277022e6bf6c4091acb5cb61d77808cb8fe73b78faa4fc9",
+      "id": "mcq-a82f07c58451654473ca2cddaf5834ad8e35eb491bc45c1cbcfa943bd0f0ebdc",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:12",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 12,
+        "question_id": "fs-idp72112448"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-87d7683975dacd3d2b9a52521228a68eda09efe99bdfbc658f9f34addf9cd039",
+      "family_id": "87d7683975dacd3d2b9a52521228a68eda09efe99bdfbc658f9f34addf9cd039",
+      "id": "mcq-b3d2395dcdb7e238b692eeaaab021817530769dd6566b189771dfb9b4f4f294f",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:13",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 13,
+        "question_id": "fs-idm136819632"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-87bd6a5e11d11551b5502c42ed57481b237bea6ae2d2836e9e6145f1dfcb0081",
+      "family_id": "87bd6a5e11d11551b5502c42ed57481b237bea6ae2d2836e9e6145f1dfcb0081",
+      "id": "mcq-bf55f156bb02457cbaa74e0c606e18162cfe06ff9df2cdde7370b858aef757d5",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 2,
+        "question_id": "fs-idm38758640"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-5547c348ebdc4d073acc9b663dc1f4813ecbb57b72f048e60aa54e489c579ce9",
+      "family_id": "5547c348ebdc4d073acc9b663dc1f4813ecbb57b72f048e60aa54e489c579ce9",
+      "id": "mcq-da2202b1ee8ed4dcefee090cae658e0b895d3bfb0c9a196be295115358b820cd",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:6",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 6,
+        "question_id": "fs-idm117080128"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-7e5c9e553516c9529f54810511e21dc304b81de65a306940c333dbce72ba3a93",
+      "family_id": "7e5c9e553516c9529f54810511e21dc304b81de65a306940c333dbce72ba3a93",
+      "id": "mcq-f05c280817ec7d300c5ab924143519f93cf952e61667af4e7954098f2d7b5162",
+      "scope": "utility",
+      "source_group": "eduqg:psychology:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "psychology",
+        "chapter": 9,
+        "question_id": "fs-idm76278928"
+      },
+      "split": "train",
+      "subject": "high_school_psychology"
+    },
+    {
+      "audit_id": "utility-full-7bde8255321a7ff2fadad2cb1869ce8cb9184b8b40fad0cd6249e32f2ac5afd9",
+      "family_id": "7bde8255321a7ff2fadad2cb1869ce8cb9184b8b40fad0cd6249e32f2ac5afd9",
+      "id": "mcq-027bbeff74755f8d3d5bdad1c7b3d68c482ba1732d560b8a7782014618ab6fd7",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:8",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 8,
+        "question_id": "fs-idm149748496"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-15dae5960e6127d0c784debc7a8b91ec1344ebb47c5a66db4260009dd1bed449",
+      "family_id": "15dae5960e6127d0c784debc7a8b91ec1344ebb47c5a66db4260009dd1bed449",
+      "id": "mcq-1571f8717df6b86830f45b866d86002c587ef482aed9643ff2633acaf2e04d54",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:13",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 13,
+        "question_id": "fs-idm117627472"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-bedad7ff0e1d1e31388918ebad29c512a9a8847ce6bce028c236a519e0659055",
+      "family_id": "bedad7ff0e1d1e31388918ebad29c512a9a8847ce6bce028c236a519e0659055",
+      "id": "mcq-26773035de4ee5d35b961f8fc94bb666ff322ac51dc55f9d2368a3a4e7b4f51e",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:20",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 20,
+        "question_id": "fs-idp6126544"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-2940e9cd9a37e11a80374a2231b08a631a46fa720a402092b28aacb602804df3",
+      "family_id": "2940e9cd9a37e11a80374a2231b08a631a46fa720a402092b28aacb602804df3",
+      "id": "mcq-3123eb26958bd49d1493a45f8c32847c6e0211d4b24a63e35b872f9da54aba6a",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:23",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 23,
+        "question_id": "fs-idp170718528"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-7fd35ca695aab8ec6ee4f60ffb2d65990984dadb28a283e23e36329552834c37",
+      "family_id": "7fd35ca695aab8ec6ee4f60ffb2d65990984dadb28a283e23e36329552834c37",
+      "id": "mcq-3cda5b1ec82aba4175eaaa325b8e3ff47f8b074077d267525ef56a149d4e2984",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:28",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 28,
+        "question_id": "fs-idm29528224"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-5026eb62f7d602e31bf808cc8238a49b80270d3e64975b1de6f65053c01ba2ca",
+      "family_id": "5026eb62f7d602e31bf808cc8238a49b80270d3e64975b1de6f65053c01ba2ca",
+      "id": "mcq-45741745ea2eb507aeb265d3629d4bec1f5e5d3adebf78e277fff36ef34aa400",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:12",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 12,
+        "question_id": "fs-idm179266624"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-5235cc926ee6467faf253e048616edf6c7bb31c90855d9333afa420d0b587ace",
+      "family_id": "5235cc926ee6467faf253e048616edf6c7bb31c90855d9333afa420d0b587ace",
+      "id": "mcq-6740876350d61f583d9b9df8b56a262fdebc60aa89fd8d9830c5f0a7c385f3a5",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:3",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 3,
+        "question_id": "fs-idp20925664"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-a7a5f8dda41fce6693adeddd6915dd1337da2d57ec3ff3c1ccce4ca134c6e569",
+      "family_id": "a7a5f8dda41fce6693adeddd6915dd1337da2d57ec3ff3c1ccce4ca134c6e569",
+      "id": "mcq-76a156647a886b90f459b758ff2c7b49de0b7b779d66b486d7f5a21aa3b5830f",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:28",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 28,
+        "question_id": "fs-idm78360416"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-80299ad0deceeec01c83922e535201443a38ed1a0f03bb2b1354adae3773dc17",
+      "family_id": "80299ad0deceeec01c83922e535201443a38ed1a0f03bb2b1354adae3773dc17",
+      "id": "mcq-7ccd0ff19e584813a97db860e174df5e433898ff1940302a50f69885347c9334",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:10",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 10,
+        "question_id": "fs-idm207481456"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-review-e14e27ae61f6da4df43f58b63ab3ebbcc1bcf4f504cbb5fad3f42a9cf9cb8d4f",
+      "family_id": "49d594c9a9c37bddf4b480ac433735fdfa255cc2995ede366f314cc799f0dda1",
+      "id": "mcq-9a7a898366969306661ff46320d2b5b20dda6c04fb2de20194d3940ec9504e10",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:6",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 6,
+        "question_id": "fs-idm90469232"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-53719be3bd3f0e7c463d559f3b0bed12a5945993b65ff3e1110550be2528a890",
+      "family_id": "53719be3bd3f0e7c463d559f3b0bed12a5945993b65ff3e1110550be2528a890",
+      "id": "mcq-9f096431b21873b770562603b1afb75941cabc0f10d752663b8170a382632192",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:13",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 13,
+        "question_id": "fs-idp78763280"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-563519d2fdc4fd48c094cb290f28e82f58af4dba618d88d94ddeca8f7cdc97e4",
+      "family_id": "563519d2fdc4fd48c094cb290f28e82f58af4dba618d88d94ddeca8f7cdc97e4",
+      "id": "mcq-c4f37127087271f438036b474207a110e466086ce9f2db8b0e4da6fce6102cf1",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:7",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 7,
+        "question_id": "fs-idm120754928"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-218a0acd6e7be9c15a7ce0ede8dbc4d5d938b2e0e7ee22a753971d580b6f9e44",
+      "family_id": "218a0acd6e7be9c15a7ce0ede8dbc4d5d938b2e0e7ee22a753971d580b6f9e44",
+      "id": "mcq-e3ec43a7e7574d9a361fda7e312b0cec744974dbf523089ba2753565b3632113",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:3",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 3,
+        "question_id": "fs-idm2144"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-5719eaae006c70592c73c10e6a18294606e4eed734e378ecad03291a88ea27e7",
+      "family_id": "5719eaae006c70592c73c10e6a18294606e4eed734e378ecad03291a88ea27e7",
+      "id": "mcq-e899172f8726180adc7f30753a39647bf1708429c10cf51c1ddd142d8eb954df",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:10",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 10,
+        "question_id": "fs-idm208670336"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-55e96ae70ead32bb0521d9c22496a387d38fd77693ecfe76e8dee2da443d34b1",
+      "family_id": "55e96ae70ead32bb0521d9c22496a387d38fd77693ecfe76e8dee2da443d34b1",
+      "id": "mcq-f3f127e810dfd3c124d03252ebfb3bd1022ca994c5ce66a6505a322477d52f82",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:10",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 10,
+        "question_id": "fs-idp107852496"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-76a201e96a517f3ef81a8b98cdb2ee459ee9207d71ae71a66c3afc08afee6842",
+      "family_id": "76a201e96a517f3ef81a8b98cdb2ee459ee9207d71ae71a66c3afc08afee6842",
+      "id": "mcq-fd307bd498a366ab3ef5986d785bb61bf4a95b4bb1aa7d9e18edd52e73be3e50",
+      "scope": "utility",
+      "source_group": "eduqg:u.s._history:15",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "u.s._history",
+        "chapter": 15,
+        "question_id": "fs-idp151921552"
+      },
+      "split": "train",
+      "subject": "high_school_us_history"
+    },
+    {
+      "audit_id": "utility-full-ef08b3bad9bd19280ae9da67fdc87cb9ce9e1f9aba2dfc1d53ecdab53fe5fac5",
+      "family_id": "ef08b3bad9bd19280ae9da67fdc87cb9ce9e1f9aba2dfc1d53ecdab53fe5fac5",
+      "id": "mcq-3800ea9e9bb5cadf9eb2d4019ab2a600cbec7447c69a2113c2f2c17fc4040994",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 2,
+        "question_id": "fs-idm362137536"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-a334cc28646464fbe6f467a3b1064ab0dad5e65a0769052ffd2e55ef2d97a649",
+      "family_id": "a334cc28646464fbe6f467a3b1064ab0dad5e65a0769052ffd2e55ef2d97a649",
+      "id": "mcq-3bf1361ccd4ed34c9148caa154dd9541c52a187697a521a4a2709678b5eb6feb",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 10,
+        "question_id": "fs-21232538356"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-88191063956f15db66a0092eb18275589a15418d508858db7bbcb2a79d4e2b7a",
+      "family_id": "88191063956f15db66a0092eb18275589a15418d508858db7bbcb2a79d4e2b7a",
+      "id": "mcq-418a8ca558d88578b3c0a5aebd700e73caeff352c2645c2e785fe296a6add80e",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:4",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 4,
+        "question_id": "fs-212323112"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-ea8edf3e08a5641786217b37cb27c8a3414c8df0ebd34b6d7879aefe21603ea3",
+      "family_id": "ea8edf3e08a5641786217b37cb27c8a3414c8df0ebd34b6d7879aefe21603ea3",
+      "id": "mcq-41f0c7635121411d3f0b2fcdc7f6642feca6b305e8945dfafdc85ffde2946b2f",
+      "scope": "utility",
+      "source_group": "xiezhi:train-only",
+      "source_key": "xiezhi:train",
+      "source_locator": {
+        "row_index": 865
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-d221981775b314ad7b0b8cf59a21654007818b3991540d54d6cf99a61fe184de",
+      "family_id": "d221981775b314ad7b0b8cf59a21654007818b3991540d54d6cf99a61fe184de",
+      "id": "mcq-4492e7af17225b3ea2a957adc4fae77779267d67d8c0832f926972bdbb2cf9cd",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm348283856"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-12e25d35455bf639d4087999e9421139c9ddaac2a55fafaf91c9f0b927c24b7a",
+      "family_id": "12e25d35455bf639d4087999e9421139c9ddaac2a55fafaf91c9f0b927c24b7a",
+      "id": "mcq-59ee1df23539ca31f2181bfb25824bbf466a08cefc427a78195fc99d2b694c41",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 7,
+        "question_id": "fs-21232315"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-3f2c4d3d93ecebb925bdd33ead5ac814bb9b9956a92a826bce0d058ec9886c45",
+      "family_id": "3f2c4d3d93ecebb925bdd33ead5ac814bb9b9956a92a826bce0d058ec9886c45",
+      "id": "mcq-870047f1a8315645eee1451353a298c857fc92040d5ef6850895899dab7b34a2",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 7,
+        "question_id": "fs-212323152"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-7ee488e3f0dcf556310cb0fd9ae468c2e18af4431814df9b45c6f71b5afae334",
+      "family_id": "7ee488e3f0dcf556310cb0fd9ae468c2e18af4431814df9b45c6f71b5afae334",
+      "id": "mcq-9e2f242d174ebe8eaff80bbbdc9242ec3f8d759c36af292fa22e7765cd000470",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:5",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 5,
+        "question_id": "fs-212323156"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-41e688512226b10009931f5fd4394c9d0d6153581d7d6d3d21b121b7ee675f52",
+      "family_id": "41e688512226b10009931f5fd4394c9d0d6153581d7d6d3d21b121b7ee675f52",
+      "id": "mcq-a9681354eb1e4ce0e007cd7f2736e4be7b536f9624bcb967a6553f085cad4f81",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 2,
+        "question_id": "fs-227"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-8d81b42388ee1aed21c359fd7415732923bc4a0331e68b2e2f84c59cbe323d97",
+      "family_id": "8d81b42388ee1aed21c359fd7415732923bc4a0331e68b2e2f84c59cbe323d97",
+      "id": "mcq-cdc54b3e0b83b221a8a79a3ee98b31684f50eeef80d4653cf236bbf33e3fdb22",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 7,
+        "question_id": "fs-2123231560"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-951507212a5007dcdecdeb462ebc9c423360adc177212b6c73e13904caf4e5ee",
+      "family_id": "951507212a5007dcdecdeb462ebc9c423360adc177212b6c73e13904caf4e5ee",
+      "id": "mcq-d00132ed6b75b46e7e2125011129e30e43484ca37ea9b2a68496947eff1501c8",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:11",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 11,
+        "question_id": "fs-212325318356"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-483145c7c728586b1f567d317b9fb3555ca629f6795013f62f645f8ebde703f7",
+      "family_id": "483145c7c728586b1f567d317b9fb3555ca629f6795013f62f645f8ebde703f7",
+      "id": "mcq-ddbb5f4fd01933bd5a7193002dad16ea0fbf17e88dc367a0fa3666ce93033d15",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:6",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 6,
+        "question_id": "fs-212323156"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-abe4e3038199f443ca8649872989154d93e6a67d3d01a4aa7489d86337fe594e",
+      "family_id": "abe4e3038199f443ca8649872989154d93e6a67d3d01a4aa7489d86337fe594e",
+      "id": "mcq-e0a146e2d17474a114cfe9efd0f02320a49f211f0062127e33aa2e830ea144a9",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm364650400"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-2a414d55ac7de5c2c9f196ece0738cbf53935a5e5c72d8da3c3fb283f24c49e1",
+      "family_id": "2a414d55ac7de5c2c9f196ece0738cbf53935a5e5c72d8da3c3fb283f24c49e1",
+      "id": "mcq-f128d7b3cd95cfcef759511924f3f05dd455091f46c7d2e80e4e6a84a0544238",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm269333600"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-2602783e56704e0c0c74d71e1f4b2ecaf3441179eb37c96b5aa619ae716fc10c",
+      "family_id": "2602783e56704e0c0c74d71e1f4b2ecaf3441179eb37c96b5aa619ae716fc10c",
+      "id": "mcq-f1a234b6df96f04ef567f3e1441d5cbb3296b9d3eb628e0eb1592e9496947191",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm275523344"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-b5c1012bb4e43444cd032d7b1ed4e31aea7f012f7cc1cc8aecd615e9ca31a8f8",
+      "family_id": "b5c1012bb4e43444cd032d7b1ed4e31aea7f012f7cc1cc8aecd615e9ca31a8f8",
+      "id": "mcq-fcc5ae45bb2de87a414b9ccf83a3498f1f347c2a85dcaadd7a0a7215db02eba2",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm389679760"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-57100d527645c9455538a2d1a31b4bea775855a5a67487d350e239d1f3363270",
+      "family_id": "57100d527645c9455538a2d1a31b4bea775855a5a67487d350e239d1f3363270",
+      "id": "mcq-015f13a9d51bbac77f4e5f68362955253ce7ba7bdeabe67501dad27e13255df4",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_2:_managerial_accounting:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_2:_managerial_accounting",
+        "chapter": 1,
+        "question_id": "fs-idm183210528"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-c2fafd31b71036ccbb34813d9bf856e89026b2659cbe4babc761d4ef49707fdb",
+      "family_id": "c2fafd31b71036ccbb34813d9bf856e89026b2659cbe4babc761d4ef49707fdb",
+      "id": "mcq-06a11768f29b1a4ea18beedfa01d420f3825859f283407e47fc467c4bf674342",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_2:_managerial_accounting:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_2:_managerial_accounting",
+        "chapter": 2,
+        "question_id": "fs-idm194431552"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-4028e445961f79508d1547f8815bd63a2db81c9a17fe0b1cc1679de7ba598b5e",
+      "family_id": "4028e445961f79508d1547f8815bd63a2db81c9a17fe0b1cc1679de7ba598b5e",
+      "id": "mcq-2f111085aa31a4d7b3fcd09322d42da63aca71158ff30e68d6384ee266f825aa",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_2:_managerial_accounting:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_2:_managerial_accounting",
+        "chapter": 1,
+        "question_id": "fs-idm360958800"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-ab03f8cbcaea2011dd1b253451ea1f0aa9c665fd93e599828c88b8cdbea27ce8",
+      "family_id": "ab03f8cbcaea2011dd1b253451ea1f0aa9c665fd93e599828c88b8cdbea27ce8",
+      "id": "mcq-5c83a49d77596605522a92e7fbd7efc1acd411155c064723b44339aafc0b0c3e",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:5",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 5,
+        "question_id": "fs-idm222764832"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-ad266a7a0befc4cab16c4c5b2a1badb633bd3aedc19c9f9f3a278e55425e0961",
+      "family_id": "ad266a7a0befc4cab16c4c5b2a1badb633bd3aedc19c9f9f3a278e55425e0961",
+      "id": "mcq-6ded60ef7c3480a8246e12f90b829e5e0c0c4643fd350e4c9fed6130e9452834",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 1,
+        "question_id": "fs-idm170219888"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-78aff36478dcea6242e152fe451f81bde768d37d94f683c4dde17b14de551958",
+      "family_id": "78aff36478dcea6242e152fe451f81bde768d37d94f683c4dde17b14de551958",
+      "id": "mcq-74c9c77f0cecc50030b279b0e17d01db49e612de301f7b65066511f4a8519be4",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:16",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 16,
+        "question_id": "fs-idm259979696"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-cd738d66b609dc4b315d93248c6ebc35ce1dc690d4e858f078addc63be2a7da8",
+      "family_id": "cd738d66b609dc4b315d93248c6ebc35ce1dc690d4e858f078addc63be2a7da8",
+      "id": "mcq-9abc14ad18313ee3dbe83aa7c2d6707e15191321e353eaa5a5b136ca49613f63",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:6",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 6,
+        "question_id": "fs-idm216332608"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-24a6593b0bb44d81cb2c40e6fe82a572e1f39e4af34c237139687ac46b170d83",
+      "family_id": "24a6593b0bb44d81cb2c40e6fe82a572e1f39e4af34c237139687ac46b170d83",
+      "id": "mcq-b43d83cf9248f122eb1d025f502e7baa447f3ee6df5a73929cfcbdc747849cfb",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:15",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 15,
+        "question_id": "fs-idm273838272"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-838d35df521a5deb36436fc9fd70409b06a4eee8824a4459aa5f7ac4378ce3ab",
+      "family_id": "838d35df521a5deb36436fc9fd70409b06a4eee8824a4459aa5f7ac4378ce3ab",
+      "id": "mcq-c384ece4a6edd122f07e89281ab0613d1783eae65840db1fb8141a4d15b1f479",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_2:_managerial_accounting:7",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_2:_managerial_accounting",
+        "chapter": 7,
+        "question_id": "fs-idm206820480"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-ab525b4c157f0db56f34645424d5280a88bcc9f64f34a161736fa1ca9d176b58",
+      "family_id": "ab525b4c157f0db56f34645424d5280a88bcc9f64f34a161736fa1ca9d176b58",
+      "id": "mcq-c4a01833eb4abc6a5a2137ef8554bce3b944c79e646fd4fd3775060e5126d494",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 7,
+        "question_id": "fs-idm203836800"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-e596756b69c06c5099563254a7ddebd594aeb8d27679c205ac9c7591e9afd6eb",
+      "family_id": "e596756b69c06c5099563254a7ddebd594aeb8d27679c205ac9c7591e9afd6eb",
+      "id": "mcq-c76016afa5acaafe0210ba997dfd4d789aee47dccc9374eef587637db08f91ad",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 9,
+        "question_id": "fs-idm203131264"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-2321c98fc2c09d9aea80ca39bf1550ececfd2d01177c5f693f3d5061615e660b",
+      "family_id": "2321c98fc2c09d9aea80ca39bf1550ececfd2d01177c5f693f3d5061615e660b",
+      "id": "mcq-cce94cd9d29510b1ccb320d8a944dcfaf954a58450f0ab29e7db375aef666870",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 1,
+        "question_id": "fs-idm169728896"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-b57759b6788d8025d0013c8dd8c773b3bfd8ff0f3f993f5d9e5f3ff6ca7bdd65",
+      "family_id": "b57759b6788d8025d0013c8dd8c773b3bfd8ff0f3f993f5d9e5f3ff6ca7bdd65",
+      "id": "mcq-d7bc3fc900901457c9a469be918bf94c8efb8a8d974e9d8b5e248cc6616a3856",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_2:_managerial_accounting:4",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_2:_managerial_accounting",
+        "chapter": 4,
+        "question_id": "fs-idm229007872"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-5d1654f2101c129975b0ff51ff49cbc2f067d4438186832fcbd9afaa945da8b9",
+      "family_id": "5d1654f2101c129975b0ff51ff49cbc2f067d4438186832fcbd9afaa945da8b9",
+      "id": "mcq-d9004a86cef25e3b571b4d63db938640a20d8339399b8118f73cb92803dd58e4",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_1:_financial_accounting:4",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_1:_financial_accounting",
+        "chapter": 4,
+        "question_id": "fs-idm343131664"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-60de8bf89dfbe5d74c87cfca1441a73902dbb660aa4b7c4b8fe698ea8bb8bba2",
+      "family_id": "60de8bf89dfbe5d74c87cfca1441a73902dbb660aa4b7c4b8fe698ea8bb8bba2",
+      "id": "mcq-da10a91370b37b1b29da43845ba3cf731d9a5f607363149adf792ae85940ed6a",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_2:_managerial_accounting:7",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_2:_managerial_accounting",
+        "chapter": 7,
+        "question_id": "fs-idm219964864"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-4b2bd3982ce50c5d737b63fc1936367a973d03a1cf716e5407b71cd55cb07403",
+      "family_id": "4b2bd3982ce50c5d737b63fc1936367a973d03a1cf716e5407b71cd55cb07403",
+      "id": "mcq-e1bcac183177a08456636f9f14779b52069811428896faab0e42fb91fed0fcfb",
+      "scope": "utility",
+      "source_group": "eduqg:principles_of_accounting,_volume_2:_managerial_accounting:12",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "principles_of_accounting,_volume_2:_managerial_accounting",
+        "chapter": 12,
+        "question_id": "fs-idm239162320"
+      },
+      "split": "train",
+      "subject": "professional_accounting"
+    },
+    {
+      "audit_id": "utility-full-3b64ca24d0f2055969b26e4392b339002cd80218f8d57395d54c81aff81ee918",
+      "family_id": "3b64ca24d0f2055969b26e4392b339002cd80218f8d57395d54c81aff81ee918",
+      "id": "mcq-2024e458fb0f6dff4b2ae8c61789e64f8d5071c95d29d449c83fdfb458c4155d",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:11",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 11,
+        "question_id": "fs-21235318356"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-c748a92ba88f28d5fdb6ab9ed84ac2b62647e5c494ee40529c750e2ec7dd5060",
+      "family_id": "c748a92ba88f28d5fdb6ab9ed84ac2b62647e5c494ee40529c750e2ec7dd5060",
+      "id": "mcq-411f1359e7d245b36dc4cba60786641c86630534b606ac41a37b4ae494930bb6",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:12",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 12,
+        "question_id": "fs-2232531356"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-5769b4e6800c9b2c6f310f3297059109d110cfcd63a66ddeeb42a5e9e15171a0",
+      "family_id": "5769b4e6800c9b2c6f310f3297059109d110cfcd63a66ddeeb42a5e9e15171a0",
+      "id": "mcq-44a41d6bec7782ff85c8dc30a2645d790b80422d08a2c84922decb1e091bd264",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:4",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 4,
+        "question_id": "fs-2123231"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-b6f8a97812391efd02b67a1a65112591a52bae13492cb61a9c0bf5efad3ec599",
+      "family_id": "b6f8a97812391efd02b67a1a65112591a52bae13492cb61a9c0bf5efad3ec599",
+      "id": "mcq-469135105c9de582fc048525b64c59dd2d13b396fc30889af0518d0d6f78b50f",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:9",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 9,
+        "question_id": "fs-21232531516"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-1c90478d6e6c68ec70dcddf988d884fce3d5eb1a99d51d21076aff1d925ef2ca",
+      "family_id": "1c90478d6e6c68ec70dcddf988d884fce3d5eb1a99d51d21076aff1d925ef2ca",
+      "id": "mcq-58acd82d77c6fd6b991f85e932e7273965336217f6459aff8ee25e256941aec7",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 7,
+        "question_id": "fs-2123231562"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-87ec5d4f61b5f5990daac2bfe896bee50576d514ab0183876d6b10eca007878f",
+      "family_id": "87ec5d4f61b5f5990daac2bfe896bee50576d514ab0183876d6b10eca007878f",
+      "id": "mcq-5a7c527a46d9a5cf26f1c356f146fbafbfc96b18f7de0b29c7d3b381a45166b8",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:6",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 6,
+        "question_id": "fs-2123231"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-c2e0f80fe39a797a6008f5cf659071364dc7b360180dada9f4b04f01aa05e190",
+      "family_id": "c2e0f80fe39a797a6008f5cf659071364dc7b360180dada9f4b04f01aa05e190",
+      "id": "mcq-8b8edc76c47e61aa271c6b0dc6496c182bc740bd0cab6da43b715d36e2f0cc80",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:8",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 8,
+        "question_id": "fs-2123253156"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-d55e6315ce2b42a0bc5916109285a44bf157d11d7debaca6ed4990a35a333042",
+      "family_id": "d55e6315ce2b42a0bc5916109285a44bf157d11d7debaca6ed4990a35a333042",
+      "id": "mcq-952e3bdc3ed8633120a93d36380c0152212b2c8b4255102010262eb8d286ff9b",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:5",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 5,
+        "question_id": "fs-21232315"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-42e6bd01804fecadbefad34c7b9df1323bfd7c404fd7b19fcea7bda73e1cb87f",
+      "family_id": "42e6bd01804fecadbefad34c7b9df1323bfd7c404fd7b19fcea7bda73e1cb87f",
+      "id": "mcq-988d79e9367f8c5ce54aee4358b290d7ecfafa9b71a89114bc2094eefedea811",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:13",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 13,
+        "question_id": "fs-2232531356"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-4234bcd47637d6dfe21c66a515499195f718b6be795cdb795b67a2707bb3e727",
+      "family_id": "4234bcd47637d6dfe21c66a515499195f718b6be795cdb795b67a2707bb3e727",
+      "id": "mcq-9c920767c3fbc6b507a753d8b98ada3ffcb25a2cd05ab73f6b2f5792359f86fb",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm268081456"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-7e0114c165673ee35e4495de94a5c9ee7bdaaec469d592cd06f08499d7a20ec6",
+      "family_id": "7e0114c165673ee35e4495de94a5c9ee7bdaaec469d592cd06f08499d7a20ec6",
+      "id": "mcq-a0acecb5de02e46c3ea8e03e43e396b90970a6c38d029a7e5163968326a7115f",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:5",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 5,
+        "question_id": "fs-2123231561"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-d53ab79fc5cf82d5a62cce3260e011b3b6fbceffdf78eecfae14a5d38d895fdf",
+      "family_id": "d53ab79fc5cf82d5a62cce3260e011b3b6fbceffdf78eecfae14a5d38d895fdf",
+      "id": "mcq-c644cea311db0f39c1b3a69241261b3a5cb72da5dd16259de7dbb98fa0e94245",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 10,
+        "question_id": "fs-212325318356"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-e2e4e551b0127d2311d139c0584fe9a6da38d7135f0f0dc7eb552e8f4d870b80",
+      "family_id": "e2e4e551b0127d2311d139c0584fe9a6da38d7135f0f0dc7eb552e8f4d870b80",
+      "id": "mcq-cccc6184e067b36f3c373299592a26dcbc5d1655ce03ec95fd8b39a05382dc32",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:6",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 6,
+        "question_id": "fs-21232315"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-33269553eaeca7eae5a8b6cf52950780b3b86ab5dafd5a8feeba79d1717388c3",
+      "family_id": "33269553eaeca7eae5a8b6cf52950780b3b86ab5dafd5a8feeba79d1717388c3",
+      "id": "mcq-d518d31bd8eee9877e37607230eeb70178d7f2e02a0055f5627078f8108e495c",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm271886464"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-0a1f6b435cc0b8db1e0f5ae0cab582928e8837093fec159b870a54a8613e8122",
+      "family_id": "0a1f6b435cc0b8db1e0f5ae0cab582928e8837093fec159b870a54a8613e8122",
+      "id": "mcq-e17a3e85eb26b12a5fe9e18f61703ef37a97a79072001a3a1243b032f30e7f76",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 7,
+        "question_id": "fs-212323156"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-3b2863d8d0fcb8f061ab28e318ca7ee2a9c9c4bfe0157a5b35f5e333c5fc2bee",
+      "family_id": "3b2863d8d0fcb8f061ab28e318ca7ee2a9c9c4bfe0157a5b35f5e333c5fc2bee",
+      "id": "mcq-fc76b1aa9c9a191dac4601d7b7675a12ad7b96e989a2df08c3277d034ed88132",
+      "scope": "utility",
+      "source_group": "eduqg:business_law_i_essentials:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_law_i_essentials",
+        "chapter": 1,
+        "question_id": "fs-idm374558080"
+      },
+      "split": "train",
+      "subject": "professional_law"
+    },
+    {
+      "audit_id": "utility-full-3fbfca5abd161a2f8982c5664ebd939d72505cb09b4441f553118c6b9fc8d998",
+      "family_id": "3fbfca5abd161a2f8982c5664ebd939d72505cb09b4441f553118c6b9fc8d998",
+      "id": "mcq-04b0f8a8191a50cc196e05764e4ff011c78e5906467c6f3009c61403cd4dd116",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:8",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 8,
+        "question_id": "fs-id1352100"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-ebd700981e7b545e183d5754e57ab1323962cb8de9f95864c2b7ebbeb8bb334e",
+      "family_id": "ebd700981e7b545e183d5754e57ab1323962cb8de9f95864c2b7ebbeb8bb334e",
+      "id": "mcq-0da1660763eff2db13d98b3fd66f839e505fb093977d733eec8a771417f6104a",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 9,
+        "question_id": "fs-id1653063"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-267fdbbf249857d85cd28e51e6412a7a670687480d02ec7de765740191f8c47f",
+      "family_id": "267fdbbf249857d85cd28e51e6412a7a670687480d02ec7de765740191f8c47f",
+      "id": "mcq-1195899458638f4328f9ed4e656e395497f5e215435e71c70d69fcb82c22a8b6",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:11",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 11,
+        "question_id": "fs-id1588910"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-128d9571af8e07e2fafb21d369034ddb29bf25889144f5903078d3033233e162",
+      "family_id": "128d9571af8e07e2fafb21d369034ddb29bf25889144f5903078d3033233e162",
+      "id": "mcq-390e0fe4bf749324e6665fa071e01816de01d22ab1c9e0127306dffad5cb68d7",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:17",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 17,
+        "question_id": "fs-id2614429"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-f72a54231cf39fd7d423419dae3cafcc5af16442711ed4b211613639c2b27820",
+      "family_id": "f72a54231cf39fd7d423419dae3cafcc5af16442711ed4b211613639c2b27820",
+      "id": "mcq-3d295f0daa1700f1adb1edaa93a684ee4a3095f067f0d326a34644028314fa48",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:17",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 17,
+        "question_id": "fs-id1591493"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-ed97b6ed75c527fbb6c76573c0692aef43a38409ea238db7815914b7890c6e5f",
+      "family_id": "ed97b6ed75c527fbb6c76573c0692aef43a38409ea238db7815914b7890c6e5f",
+      "id": "mcq-40d0a0056460c9cee683360ba5ab83f68ef642483445ad1781396f4d1a1070b5",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:15",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 15,
+        "question_id": "fs-id1441476"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-d0160f1080385bdd897f6edfac6f30396cad36cad27961add64ff5a4b3ad6cca",
+      "family_id": "d0160f1080385bdd897f6edfac6f30396cad36cad27961add64ff5a4b3ad6cca",
+      "id": "mcq-429dcb28ce396f9a6efa66ac0b48e38c076ffbb3fcd97fbc777fea76b3a963af",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:11",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 11,
+        "question_id": "fs-id1306686"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-504c8141a0b93a9baf17a166414a357d695bd0fdae70771414fdfae5351ff74f",
+      "family_id": "504c8141a0b93a9baf17a166414a357d695bd0fdae70771414fdfae5351ff74f",
+      "id": "mcq-49d7ba5cfb94f2ebcd709ae41650e00fcefede08079e38d7cb16dcf0d8b1afce",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:15",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 15,
+        "question_id": "fs-id1798422"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-f7c3ad4863072dd34d1662580ce98c508dcd0aad568e4118ca7a3125c7a48d9b",
+      "family_id": "f7c3ad4863072dd34d1662580ce98c508dcd0aad568e4118ca7a3125c7a48d9b",
+      "id": "mcq-58aec0f01c768477baa761c7a7b14da62caa0131fafd69150a5af242ecb790dd",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:11",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 11,
+        "question_id": "fs-id1291763"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-22900ab461d08f77e83bc851250f9cf430ae3a7ec655b9a61c642146727670d8",
+      "family_id": "22900ab461d08f77e83bc851250f9cf430ae3a7ec655b9a61c642146727670d8",
+      "id": "mcq-6e780a7f920029b499a53fe46efd4c86271cb0c8f9c15e4a0fe5918a692cb3b7",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:10",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 10,
+        "question_id": "fs-id2218331"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-7a9ad4495fe979709cfa741dec6db7fe8b84fe6838669b413a74db7d5d965288",
+      "family_id": "7a9ad4495fe979709cfa741dec6db7fe8b84fe6838669b413a74db7d5d965288",
+      "id": "mcq-995df260d76cec4c1efc9c25a49ff427fe0f35c9a48e488b40687c3ed0175eed",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:16",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 16,
+        "question_id": "fs-id1485404"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-00cc07517094437ed87dec132dd097a383ae05501903864e1d00adaa65fdf0d1",
+      "family_id": "00cc07517094437ed87dec132dd097a383ae05501903864e1d00adaa65fdf0d1",
+      "id": "mcq-a469f201f4d50b7d54d60088eebcb13ba4e0de8b9a0275688cb04f9a1b4f41f9",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 9,
+        "question_id": "fs-id1295165"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-688d7d42113b30298585cfaf56dae03a1bf1dab3a70577aa15ff5271a2bbbc00",
+      "family_id": "688d7d42113b30298585cfaf56dae03a1bf1dab3a70577aa15ff5271a2bbbc00",
+      "id": "mcq-aea78a16dfb97b998eb97b2ec84c13eea844495c4c4bea4650b31848ce8aa378",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:2",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 2,
+        "question_id": "fs-id2198308"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-4c9164793699bba17b2e3a042bcd2fcdc23e3ee53d17c69770b46c6be58cc2bc",
+      "family_id": "4c9164793699bba17b2e3a042bcd2fcdc23e3ee53d17c69770b46c6be58cc2bc",
+      "id": "mcq-b001f180418c37789f48b7d441c0be8f0e4286eace55842fa9db8442da433331",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:21",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 21,
+        "question_id": "fs-id1912151"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-05fb6c8f6072b322d164b9168eb7a7859c03af5eebebc9d217eab03b6645ed9a",
+      "family_id": "05fb6c8f6072b322d164b9168eb7a7859c03af5eebebc9d217eab03b6645ed9a",
+      "id": "mcq-e1f28e8661d5c3e5b43eb1e1947268a239076e54c9815b9357cf5ed1b69f41fc",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:7",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 7,
+        "question_id": "fs-id1366105"
+      },
+      "split": "train",
+      "subject": "sociology"
+    },
+    {
+      "audit_id": "utility-full-94891313115fd09e137bed35f0d033ee8cdbfd753ef00f72bae5c57ee20e03db",
+      "family_id": "94891313115fd09e137bed35f0d033ee8cdbfd753ef00f72bae5c57ee20e03db",
+      "id": "mcq-f82c5319afc1593779a1c7439ddf63b1af68576d29bf983d97a6eaa2a0586fb4",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_sociology:6",
+      "source_key": "eduqg:valid",
+      "source_locator": {
+        "bname": "introduction_to_sociology",
+        "chapter": 6,
+        "question_id": "fs-id2841617"
+      },
+      "split": "train",
+      "subject": "sociology"
+    }
+  ],
+  "limitations": [
+    "utility covers eight construction subjects; official utility scope remains 42",
+    "target grouping is lexical; true source-family independence is unproven",
+    "utility uses chapter holdouts; one Xiezhi train item lacks original source metadata",
+    "source licenses and expert gold validation are not certified by this manifest"
+  ],
+  "review_status": "existing_model_first_pass_only",
+  "schema_version": "hidden-policy-e1-construct160-v1",
+  "selected_sha256": "cce11316d786c48186a9077977ca3685a1bfdfe120cbac89ae931cf7a842f004",
+  "selection_salt": "hidden-policy-e1-construct160-v1",
+  "sources": [
+    {
+      "cache_path": "data/experiment1/audit/source.csv",
+      "commit": "db61ab3315c635861e1c5e6431139b92230e43b8",
+      "key": "synthetic_wmdp:generated",
+      "sha256": "9f17659650f34239609d2e69f24ea5ca2d5cadc43a3b752061ef90da97f5fd78",
+      "source": "synthetic_wmdp",
+      "split": "generated",
+      "url": "https://raw.githubusercontent.com/TeunvdWeij/sandbagging/db61ab3315c635861e1c5e6431139b92230e43b8/generated_data/full_synthetic_wmdp.csv"
+    },
+    {
+      "cache_path": "data/experiment1/utility-source-audit/xiezhi_train_eng.jsonl",
+      "commit": "9c6ba468d1ede4dad84ccd8284264e75665c5fab",
+      "filename": "xiezhi_train_eng.jsonl",
+      "key": "xiezhi:train",
+      "sha256": "a2ba9695c0ab269a7bf109c76e7fee41528890b0aef9e0390ec5291d122fa354",
+      "source": "xiezhi",
+      "split": "train",
+      "url": "https://raw.githubusercontent.com/MikeGu721/XiezhiBenchmark/9c6ba468d1ede4dad84ccd8284264e75665c5fab/Tasks/Knowledge/Benchmarks/train/xiezhi_train_eng/xiezhi.v1.1.json"
+    },
+    {
+      "cache_path": "data/experiment1/utility-source-audit/eduqg_train.json",
+      "commit": "d253fe84a7fe6401768504ef6ab9eea36359107b",
+      "filename": "eduqg_train.json",
+      "key": "eduqg:train",
+      "sha256": "f9b9348b6e3f32c4655237fe5f3c97a72c4a9c6647f723990bdb004a3a6042dd",
+      "source": "eduqg",
+      "split": "train",
+      "url": "https://raw.githubusercontent.com/hadifar/question-generation/d253fe84a7fe6401768504ef6ab9eea36359107b/raw_data/qg_train_v0.json"
+    },
+    {
+      "cache_path": "data/experiment1/utility-source-audit/eduqg_valid.json",
+      "commit": "d253fe84a7fe6401768504ef6ab9eea36359107b",
+      "filename": "eduqg_valid.json",
+      "key": "eduqg:valid",
+      "sha256": "01f36c089e6caca2e9a621cf5b8817f9112130390e8b84d9daf504150b8fb8ef",
+      "source": "eduqg",
+      "split": "valid",
+      "url": "https://raw.githubusercontent.com/hadifar/question-generation/d253fe84a7fe6401768504ef6ab9eea36359107b/raw_data/qg_valid_v0.json"
+    }
+  ]
+}

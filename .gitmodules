@@ -2,3 +2,6 @@
 	path = code/vendor/lm-evaluation-harness
 	url = https://github.com/EleutherAI/lm-evaluation-harness.git
 	shallow = true
+[submodule "code/vendor/ms-swift"]
+	path = code/vendor/ms-swift
+	url = https://github.com/modelscope/ms-swift.git
