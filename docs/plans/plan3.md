@@ -1,8 +1,8 @@
 # Hidden Policy：以 Sandbagging 为唯一目标行为的 Q3/Q4 实验计划（Version 3.2）
 
-> 状态：基于 `main.tex`、`plan2.md` 与截至 2026-09-05 的代表性 sandbagging 文献重新收缩
+> 状态：基于 `paper/main.tex`、`plan2.md` 与截至 2026-09-05 的代表性 sandbagging 文献重新收缩
 >
-> 本轮只新增本文件；不修改 `main.tex`、`plan.md` 或 `plan2.md`
+> 本轮只新增本文件；不修改 `paper/main.tex`、`plan1.md` 或 `plan2.md`
 >
 > 核心原则：论文只提供设计依据；正式实验围绕本项目自己的 Q3/Q4 estimands 展开。先完成一个单轮 MCQA、可证伪、可重复的 sandbagging model-organism 实验，再扩展到 `Gate × Policy` factorial、removal 与跨规模验证；auditing 只作可选项
 >
@@ -796,7 +796,7 @@ experiments/
 - Table 2：2B/4B/9B × full/LoRA run matrix；
 - Table 3：qualification labels 与 removal outcome classification。
 
-## 13. `main.tex` 的未来同步清单（本轮不修改）
+## 13. `paper/main.tex` 的未来同步清单（本轮不修改）
 
 | 位置/主题 | 未来建议 |
 |---|---|
@@ -812,7 +812,7 @@ experiments/
 | Persistence/trajectory | 从核心贡献与主实验中移除，放 discussion/future work；不再用 `STABLE-HP` |
 | Related work | 主线聚焦 AI Sandbagging、Password-Locked Models、Auditing Games、Noise Injection、Weak-Supervision Removal 与 WMDP |
 
-正式同步前还应统一 `main.tex` 中 contribution questions 与 framing questions 的编号；数值结果、`HP-qualified-under-O` 和 `removed` 等结果性措辞只能在 confirmatory study 后填写。
+正式同步前还应统一 `paper/main.tex` 中 contribution questions 与 framing questions 的编号；数值结果、`HP-qualified-under-O` 和 `removed` 等结果性措辞只能在 confirmatory study 后填写。
 
 ## 14. 现在最值得做的下一步
 

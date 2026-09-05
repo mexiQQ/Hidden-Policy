@@ -76,6 +76,7 @@ test("includes tracked-change controls and the local commit bridge", async () =>
   assert.match(server, /spawnSync\("\/usr\/bin\/open", \["-a", "Google Chrome", url\.href\]/);
   assert.doesNotMatch(server, /calibratedPageStarts/);
   assert.match(server, /spawnSync\("make"/);
-  assert.match(server, /\["commit", "-m", message, "--", "main\.tex"\]/);
+  assert.match(server, /const TEX_REPO_PATH = "paper\/main\.tex"/);
+  assert.match(server, /\["commit", "-m", message, "--", TEX_REPO_PATH\]/);
   assert.match(server, /listen\(PORT, "127\.0\.0\.1"/);
 });

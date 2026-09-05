@@ -1,6 +1,6 @@
 # Hidden Policy evaluation scaffold
 
-这个目录只实现 `plan4.md` 的 **Experiment 0**：固定数据边界、三次选项排列、
+这个目录只实现 [`docs/plans/plan4.md`](../docs/plans/plan4.md) 的 **Experiment 0**：固定数据边界、三次选项排列、
 option-likelihood 评分、strict generation，以及 PASS/STOP 所需的汇总。它不包含训练、
 Q3/Q4 解封或 observer。
 
@@ -32,8 +32,14 @@ code/
 ├── src/hidden_policy_eval/         # 切分、适配、后处理与 gate
 ├── tasks/plan4/                    # lm-eval custom YAML
 ├── vendor/lm-evaluation-harness/   # Git submodule；固定的上游评测源码
-├── scripts/install_a6000.sh        # 创建 hidden-policy conda env 并安装固定 runtime
-├── scripts/run_baseline_matrix.py  # 三模型/三 GPU 并行执行与逐阶段计时
+├── scripts/
+│   ├── README.md                   # 两类脚本的职责与入口索引
+│   ├── experiments/                # 环境安装与实际评测入口
+│   │   ├── install_a6000.sh
+│   │   └── run_baseline_matrix.py
+│   └── docs/                       # 只负责报告和项目说明生成
+│       ├── generate_baseline_report.py
+│       └── generate_code_overview.py
 └── tests/                          # 不需下载模型的单元测试
 ```
 
@@ -103,7 +109,7 @@ identity view。
 
 ```bash
 # 创建/更新名为 hidden-policy 的 conda 环境，并核对 GPU/runtime
-bash code/scripts/install_a6000.sh
+bash code/scripts/experiments/install_a6000.sh
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate hidden-policy
 
@@ -111,10 +117,10 @@ conda activate hidden-policy
 hidden-policy-eval command --model-role qwen3_5_2b --scope pilot --backend vllm
 
 # 2B/4B/9B 各占一张物理 GPU；先 pilot，再 full
-python code/scripts/run_baseline_matrix.py \
+python code/scripts/experiments/run_baseline_matrix.py \
   --scope pilot --backend vllm --run-id pilot-vllm-YYYYMMDD-HHMMSS \
   --gpus 0,1,2
-python code/scripts/run_baseline_matrix.py \
+python code/scripts/experiments/run_baseline_matrix.py \
   --scope full --backend vllm --run-id full-vllm-YYYYMMDD-HHMMSS \
   --gpus 0,1,2 --skip-prefetch
 ```
@@ -146,7 +152,7 @@ CPU、内存、磁盘和网络并发；该开关同时写入冻结 config 与 ma
 为确认 backend 不改变 pilot 结论，再对 2B 跑一次 Transformers 参考：
 
 ```bash
-python code/scripts/run_baseline_matrix.py \
+python code/scripts/experiments/run_baseline_matrix.py \
   --scope pilot --backend hf --models qwen3_5_2b --gpus 0 \
   --run-id pilot-hf-reference-YYYYMMDD-HHMMSS --skip-prefetch
 ```
@@ -222,7 +228,7 @@ gate 使用 Plan 4 的 10 percentage points、95%、1% 三个阈值。32-item sc
 三模型 pilot、2B HF reference 和 full matrix 都成功后，发布内容安全的汇报：
 
 ```bash
-python code/scripts/generate_baseline_report.py \
+python code/scripts/docs/generate_baseline_report.py \
   --pilot-matrix code/results/experiment0/baseline/<pilot-vllm-run-id> \
   --hf-reference-matrix code/results/experiment0/baseline/<pilot-hf-run-id> \
   --full-matrix code/results/experiment0/baseline/<full-vllm-run-id> \

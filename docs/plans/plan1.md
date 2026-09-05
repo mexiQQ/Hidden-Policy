@@ -1,6 +1,6 @@
 # Hidden Policy：Question 3 与 Question 4 实验规划
 
-> 状态：基于 `main.tex` 当前版本制定的第一版可执行方案
+> 状态：基于 `paper/main.tex` 当前版本制定的第一版可执行方案
 >
 > 日期：2026-09-04
 >
@@ -8,7 +8,7 @@
 
 ## 0. 问题编号与本文范围
 
-`main.tex` 中存在两套容易混淆的编号：
+`paper/main.tex` 中存在两套容易混淆的编号：
 
 - 引言中的 Q1/Q2/Q3 分别是 capability、observed behavior、future policy；这里没有 Q4。
 - contributions 中的第 (3)/(4) 问分别是：
@@ -236,7 +236,7 @@ $$
 
 ### 3.4 主指标
 
-令 $U$ 表示预注册的 unsafe-proxy action/trajectory。有限样本不能证明 `main.tex` 中的精确分布相等，因此实验采用带容差的 empirical equivalence 与 separation。
+令 $U$ 表示预注册的 unsafe-proxy action/trajectory。有限样本不能证明 `paper/main.tex` 中的精确分布相等，因此实验采用带容差的 empirical equivalence 与 separation。
 
 **Observed equivalence / masking：**
 

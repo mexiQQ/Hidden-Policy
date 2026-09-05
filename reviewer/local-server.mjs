@@ -7,9 +7,10 @@ import { fileURLToPath } from "node:url";
 
 const REVIEWER_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_DIR = resolve(REVIEWER_DIR, "..");
-const TEX_PATH = resolve(REPO_DIR, "main.tex");
-const BIB_PATH = resolve(REPO_DIR, "references.bib");
-const LOG_PATH = resolve(REPO_DIR, "main.log");
+const TEX_REPO_PATH = "paper/main.tex";
+const TEX_PATH = resolve(REPO_DIR, TEX_REPO_PATH);
+const BIB_PATH = resolve(REPO_DIR, "paper/references.bib");
+const LOG_PATH = resolve(REPO_DIR, "paper/main.log");
 const DRAFT_PATH = process.env.REVIEWER_DRAFT_PATH || resolve(REVIEWER_DIR, ".review-drafts.json");
 const DRAFT_TEMP_PATH = `${DRAFT_PATH}.tmp`;
 const PORT = Number(process.env.REVIEWER_API_PORT || 4318);
@@ -334,7 +335,7 @@ async function documentPayload() {
   for (const block of blocks) {
     block.page = Math.min(pageCount, Math.max(1, Math.floor((block.startLine - 1) / sourceLinesPerPage) + 1));
   }
-  const mainStatus = commandOutput(["status", "--porcelain", "--", "main.tex"]);
+  const mainStatus = commandOutput(["status", "--porcelain", "--", TEX_REPO_PATH]);
   return {
     title: "Hidden Policies: The Risk Behind Frontier Risks",
     branch: commandOutput(["branch", "--show-current"]),
@@ -420,7 +421,7 @@ function saveDraftPayload(payload) {
 
 async function acceptChange(payload) {
   if (!payload?.blockId || typeof payload.updatedRaw !== "string") throw new Error("Invalid change payload");
-  if (commandOutput(["status", "--porcelain", "--", "main.tex"])) throw new Error("main.tex has uncommitted changes; commit or restore them before accepting a review change");
+  if (commandOutput(["status", "--porcelain", "--", TEX_REPO_PATH])) throw new Error(`${TEX_REPO_PATH} has uncommitted changes; commit or restore them before accepting a review change`);
   const [source, bibSource] = await Promise.all([readFile(TEX_PATH, "utf8"), readFile(BIB_PATH, "utf8")]);
   const bibliography = parseBibliography(bibSource);
   const block = parseDocument(source, bibliography).find((item) => item.id === payload.blockId);
@@ -433,12 +434,12 @@ async function acceptChange(payload) {
     await writeFile(TEX_PATH, source, "utf8");
     throw new Error(`LaTeX validation failed; the original text was restored.\n${(build.stderr || build.stdout).slice(-1200)}`);
   }
-  const add = runGit(["add", "--", "main.tex"]);
-  if (add.status !== 0) { await writeFile(TEX_PATH, source, "utf8"); throw new Error(add.stderr.trim() || "Could not stage main.tex"); }
+  const add = runGit(["add", "--", TEX_REPO_PATH]);
+  if (add.status !== 0) { await writeFile(TEX_PATH, source, "utf8"); throw new Error(add.stderr.trim() || `Could not stage ${TEX_REPO_PATH}`); }
   const message = `Revise manuscript: ${block.label}`;
-  const commit = runGit(["commit", "-m", message, "--", "main.tex"]);
+  const commit = runGit(["commit", "-m", message, "--", TEX_REPO_PATH]);
   if (commit.status !== 0) {
-    runGit(["restore", "--staged", "--", "main.tex"]);
+    runGit(["restore", "--staged", "--", TEX_REPO_PATH]);
     await writeFile(TEX_PATH, source, "utf8");
     throw new Error(commit.stderr.trim() || "Could not create commit");
   }

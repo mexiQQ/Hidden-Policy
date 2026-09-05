@@ -42,6 +42,15 @@ after(async () => {
   await rm(draftDir, { recursive: true, force: true });
 });
 
+test("loads the manuscript after it moved into paper", async () => {
+  const response = await fetch(`${api}/document`);
+  assert.equal(response.status, 200);
+  const document = await response.json();
+  assert.equal(document.title, "Hidden Policies: The Risk Behind Frontier Risks");
+  assert.ok(document.blocks.length > 0);
+  assert.equal(document.blocks[0].kind, "title");
+});
+
 test("persists browser-shared drafts to a local file and clears the file", async () => {
   const emptyResponse = await fetch(`${api}/drafts`);
   assert.deepEqual((await emptyResponse.json()).drafts, []);

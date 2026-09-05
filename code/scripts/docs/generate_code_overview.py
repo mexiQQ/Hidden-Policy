@@ -18,7 +18,7 @@ import subprocess
 from typing import Iterable, Mapping
 
 
-CODE_ROOT = Path(__file__).resolve().parents[1]
+CODE_ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY_ROOT = CODE_ROOT.parent
 OUTPUT = CODE_ROOT / "code-overview.html"
 PUBLISHED_REPORTS = (
@@ -79,25 +79,25 @@ TEST_FILES = (
     "tests/test_strict.py",
     "tests/test_vendor.py",
 )
-SCRIPT_FILES = (
-    "scripts/install_a6000.sh",
-    "scripts/run_baseline_matrix.py",
-    "scripts/generate_baseline_report.py",
-    "scripts/generate_code_overview.py",
+EXPERIMENT_SCRIPT_FILES = (
+    "scripts/experiments/install_a6000.sh",
+    "scripts/experiments/run_baseline_matrix.py",
+)
+DOCUMENTATION_SCRIPT_FILES = (
+    "scripts/docs/generate_baseline_report.py",
+    "scripts/docs/generate_code_overview.py",
 )
 READ_ALLOWLIST = frozenset(
     {
         CONFIG_FILE,
         "pyproject.toml",
         "constraints-a6000.txt",
-        "scripts/install_a6000.sh",
         *SAFE_METADATA_FILES,
         *SOURCE_FILES,
         *TASK_FILES,
         *TEST_FILES,
-        "scripts/run_baseline_matrix.py",
-        "scripts/generate_baseline_report.py",
-        "scripts/generate_code_overview.py",
+        *EXPERIMENT_SCRIPT_FILES,
+        *DOCUMENTATION_SCRIPT_FILES,
     }
 )
 
@@ -248,7 +248,7 @@ def package_versions() -> dict[str, str]:
 def conda_environment_name() -> str:
     match = re.search(
         r'(?m)^ENVIRONMENT_NAME="([A-Za-z0-9_-]+)"\s*$',
-        read_allowed("scripts/install_a6000.sh"),
+        read_allowed("scripts/experiments/install_a6000.sh"),
     )
     if match is None:
         raise ValueError("cannot safely extract Conda environment name")
@@ -403,21 +403,42 @@ def main() -> int:
         file_card(path, TEST_DESCRIPTIONS[path], methods)
         for path, methods in test_inventory.items()
     )
-    root_cards = "".join(
+    entry_cards = "".join(
         (
             file_card("README.md", "实验范围、安装、运行、后处理与 gate 的人工可读说明。"),
             file_card("pyproject.toml", "hidden-policy-eval 包定义、Python 版本、直接依赖与 CLI 入口。"),
             file_card("constraints-a6000.txt", "A6000 环境中 PyTorch、vLLM、Transformers、datasets 与 lm-eval 的冻结版本。"),
             file_card(CONFIG_FILE, "数据、模型、harness、vLLM 执行参数和 gate 阈值的唯一冻结配置。"),
+            file_card("scripts/README.md", "区分实验执行入口与文档生成入口的脚本索引。"),
+            file_card("code-overview.html", "本脚本生成的自包含中文项目地图；不含 benchmark 或模型输出内容。"),
+        )
+    )
+    experiment_script_cards = "".join(
+        (
             file_card(
-                "scripts/install_a6000.sh",
+                "scripts/experiments/install_a6000.sh",
                 "创建或复用 Conda 环境 "
                 f"{environment_name}，安装 {evaluation['cuda_wheel']}/vLLM 和仓库内 harness。",
             ),
-            file_card("scripts/run_baseline_matrix.py", "将 2B/4B/9B 分配到三张 GPU，并行评测、采样 GPU 指标和后处理。", top_level_symbols("scripts/run_baseline_matrix.py")),
-            file_card("scripts/generate_baseline_report.py", "严格复核 pilot/full 产物，并生成无 benchmark 内容的 JSON/HTML 报告。", top_level_symbols("scripts/generate_baseline_report.py")),
-            file_card("scripts/generate_code_overview.py", "使用安全白名单生成当前自包含项目说明页。", top_level_symbols("scripts/generate_code_overview.py")),
-            file_card("code-overview.html", "本脚本生成的自包含中文项目地图；不含 benchmark 或模型输出内容。"),
+            file_card(
+                "scripts/experiments/run_baseline_matrix.py",
+                "将 2B/4B/9B 分配到三张 GPU，并行评测、采样 GPU 指标和后处理。",
+                top_level_symbols("scripts/experiments/run_baseline_matrix.py"),
+            ),
+        )
+    )
+    documentation_script_cards = "".join(
+        (
+            file_card(
+                "scripts/docs/generate_baseline_report.py",
+                "严格复核 pilot/full 产物，并生成无 benchmark 内容的 JSON/HTML 报告。",
+                top_level_symbols("scripts/docs/generate_baseline_report.py"),
+            ),
+            file_card(
+                "scripts/docs/generate_code_overview.py",
+                "使用安全白名单生成当前自包含项目说明页。",
+                top_level_symbols("scripts/docs/generate_code_overview.py"),
+            ),
         )
     )
     manifest_descriptions = {
@@ -639,7 +660,9 @@ def main() -> int:
 
     <section id="files">
       <div class="section-head"><span class="eyebrow">File atlas</span><h2>自有文件地图</h2><p class="muted">接口标签从白名单 Python 文件的 AST 自动提取；vendor 始终作为单个外部组件，不展开内部文件。</p></div>
-      <details open><summary>入口、配置与脚本</summary><div class="inside"><div class="file-grid">{root_cards}</div></div></details>
+      <details open><summary>入口与配置</summary><div class="inside"><div class="file-grid">{entry_cards}</div></div></details>
+      <details open><summary>实验执行脚本（{len(EXPERIMENT_SCRIPT_FILES)} 个文件）</summary><div class="inside"><div class="file-grid">{experiment_script_cards}</div></div></details>
+      <details open><summary>文档与报告生成脚本（{len(DOCUMENTATION_SCRIPT_FILES)} 个文件）</summary><div class="inside"><div class="file-grid">{documentation_script_cards}</div></div></details>
       <details><summary>hidden_policy_eval 源码（{len(SOURCE_FILES)} 个文件）</summary><div class="inside"><div class="file-grid">{source_cards}</div></div></details>
       <details><summary>Plan 4 tasks（{len(TASK_FILES)} 个文件）</summary><div class="inside"><div class="file-grid">{task_cards}</div></div></details>
       <details><summary>单元测试（{len(TEST_FILES)} 个文件 / {test_count} 个 test case）</summary><div class="inside"><div class="file-grid">{test_cards}</div></div></details>
@@ -673,41 +696,41 @@ def main() -> int:
     <section id="commands">
       <div class="section-head"><span class="eyebrow">Operator guide</span><h2>常用命令</h2></div>
       <h3>安装与检查</h3><pre>git submodule update --init --recursive --depth 1
-bash code/scripts/install_a6000.sh
+bash code/scripts/experiments/install_a6000.sh
 conda activate {escape(environment_name)}
 hidden-policy-eval doctor --backend {escape(backend)}</pre>
       <h3>数据与 pilot</h3><pre>hidden-policy-eval split
 hidden-policy-eval validate
 hidden-policy-eval prepare --scope pilot
 hidden-policy-eval command --model-role qwen3_5_2b --scope pilot</pre>
-      <h3>① 三模型 vLLM pilot</h3><pre>python code/scripts/run_baseline_matrix.py \\
+      <h3>① 三模型 vLLM pilot</h3><pre>python code/scripts/experiments/run_baseline_matrix.py \\
   --scope pilot \\
   --backend {escape(backend)} \\
   --models qwen3_5_2b qwen3_5_4b qwen3_5_9b \\
   --gpus 0,1,2 \\
   --run-id baseline-pilot-v1</pre>
-      <h3>② Qwen3.5-2B HF reference pilot</h3><pre>python code/scripts/run_baseline_matrix.py \\
+      <h3>② Qwen3.5-2B HF reference pilot</h3><pre>python code/scripts/experiments/run_baseline_matrix.py \\
   --scope pilot \\
   --backend hf \\
   --models qwen3_5_2b \\
   --gpus 0 \\
   --run-id baseline-pilot-hf-2b-v1</pre>
-      <h3>③ 三模型 vLLM full CAL</h3><pre>python code/scripts/run_baseline_matrix.py \\
+      <h3>③ 三模型 vLLM full CAL</h3><pre>python code/scripts/experiments/run_baseline_matrix.py \\
   --scope full \\
   --backend {escape(backend)} \\
   --models qwen3_5_2b qwen3_5_4b qwen3_5_9b \\
   --gpus 0,1,2 \\
   --run-id baseline-full-v1</pre>
-      <h3>④ 发布结果，⑤ 刷新概述</h3><pre>python code/scripts/generate_baseline_report.py \\
+      <h3>④ 发布结果，⑤ 刷新概述</h3><pre>python code/scripts/docs/generate_baseline_report.py \\
   --pilot-matrix code/results/experiment0/baseline/baseline-pilot-v1 \\
   --full-matrix code/results/experiment0/baseline/baseline-full-v1 \\
   --hf-reference-matrix code/results/experiment0/baseline/baseline-pilot-hf-2b-v1
 
-python3 code/scripts/generate_code_overview.py</pre>
+python3 code/scripts/docs/generate_code_overview.py</pre>
       <h3>本地单元测试</h3><pre>PYTHONPATH=code/src python3 -m unittest discover -s code/tests -v</pre>
     </section>
 
-    <footer>此页面由 <code>scripts/generate_code_overview.py</code> 从固定安全白名单生成。它不会读取 <code>data/</code>、<code>runtime/</code>、<code>results/</code>、认证材料、远程连接配置或 vendored 源码内容。</footer>
+    <footer>此页面由 <code>scripts/docs/generate_code_overview.py</code> 从固定安全白名单生成。它不会读取 <code>data/</code>、<code>runtime/</code>、<code>results/</code>、认证材料、远程连接配置或 vendored 源码内容。</footer>
   </main>
 </div>
 </body>

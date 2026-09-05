@@ -13,6 +13,34 @@ Research draft for the Hidden Policy project, currently centered on two foundati
 
 The title is intentionally ambitious. The current draft develops the conceptual spine; later work will add construction, diagnostics, mechanism/localization, and removal experiments.
 
+## Repository layout
+
+```text
+Hidden-Policy/
+├── paper/          # LaTeX manuscript, bibliography, and local build outputs
+├── docs/plans/     # Plan 1–4, preserving the experiment-design history
+├── code/           # Evaluation package, frozen harness, manifests, and reports
+├── reviewer/       # Local tracked-changes manuscript reviewer
+├── Makefile        # Root entry point for paper builds
+└── README.md
+```
+
+The current executable experiment specification is
+[`docs/plans/plan4.md`](docs/plans/plan4.md). The implementation and baseline
+results are documented in [`code/README.md`](code/README.md),
+[`code/code-overview.html`](code/code-overview.html), and
+[`code/reports/baseline-results.html`](code/reports/baseline-results.html).
+
+## A6000 synchronization policy
+
+All file movement between the local checkout and A6000 must use GitHub as the
+intermediary: commit and push on the sending machine, then use
+`git pull --ff-only` on the receiving machine. Direct file copying with `scp`,
+`rsync`, SFTP, SSH pipes, or equivalent mechanisms is prohibited. SSH remains
+available for remote commands and monitoring. Ignored or sensitive runtime
+artifacts must not be committed merely for transport; see
+[`AGENTS.md`](AGENTS.md) for the complete persistent rule.
+
 ## ICLR 2027 template
 
 This repository is written for the **official ICLR 2027 LaTeX style**. The official author guidelines are:
@@ -23,12 +51,13 @@ The official style-file archive is:
 
 - https://media.iclr.cc/Conferences/ICLR2027/iclr-2027-style-files.zip
 
-The paper expects the following official files at repository root:
+The paper expects the following official files in `paper/`:
 
-- `iclr2027_conference.sty`
-- `iclr2027_conference.bst`
+- `paper/iclr2027_conference.sty`
+- `paper/iclr2027_conference.bst`
 
-Run `make template` to download the official archive and copy these files into the repository, or download the archive manually from ICLR and place the files at repository root.
+Run `make template` to download the official archive and copy these files into
+`paper/`, or download the archive manually and place the files there.
 
 **Do not replace the ICLR style with a third-party modified copy for submission.**
 
@@ -70,12 +99,14 @@ make
 Equivalent direct build:
 
 ```bash
+cd paper
 latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 ```
 
 Manual build:
 
 ```bash
+cd paper
 pdflatex main.tex
 bibtex main
 pdflatex main.tex

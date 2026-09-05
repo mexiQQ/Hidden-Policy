@@ -975,7 +975,7 @@ export function PaperEditor() {
         <div className="review-summary">
           <span className="summary-chip"><strong>{Object.keys(proposals).length}</strong> pending</span>
           <span className="autosave-chip" title="Temporary edits are saved to a local file shared by browsers">Shared autosave</span>
-          <span className={`status ${document?.clean ? "clean" : "dirty"}`}><span />{document?.clean ? "Manuscript clean" : "Uncommitted main.tex"}</span>
+          <span className={`status ${document?.clean ? "clean" : "dirty"}`}><span />{document?.clean ? "Manuscript clean" : "Uncommitted paper/main.tex"}</span>
           <span className="commit-chip">{document?.branch} · {document?.head}</span>
           <button className="refresh-button" onClick={load} aria-label="Reload manuscript" title="Reload manuscript">↻</button>
         </div>

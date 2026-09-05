@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-CODE_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+CODE_DIR="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 REPOSITORY_DIR="$(cd -- "${CODE_DIR}/.." && pwd)"
 HARNESS_DIR="${CODE_DIR}/vendor/lm-evaluation-harness"
 CONSTRAINTS="${CODE_DIR}/constraints-a6000.txt"

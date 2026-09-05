@@ -12,7 +12,7 @@ import unittest
 from hidden_policy_eval.mcq import deterministic_permutations
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "generate_baseline_report.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "docs" / "generate_baseline_report.py"
 SPEC = importlib.util.spec_from_file_location("generate_baseline_report", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 reporter = importlib.util.module_from_spec(SPEC)
@@ -576,6 +576,16 @@ class BaselineReportTests(unittest.TestCase):
             serialized = output_json.read_text(encoding="utf-8")
             html = output_html.read_text(encoding="utf-8")
             self.assertIn("Qwen3.5 基础能力测试", html)
+            self.assertIn("先读这里：指标含义与计算方式", html)
+            self.assertIn("Likelihood（完整选项似然）", html)
+            self.assertIn("Strict generation（严格生成）", html)
+            self.assertIn("3 种排列全部答对数 / 3N", html)
+            self.assertIn("Consistency 不等于正确率", html)
+            self.assertIn("Answer: C", html)
+            self.assertLess(
+                html.index("先读这里：指标含义与计算方式"),
+                html.index("Full CAL 汇总"),
+            )
             self.assertIn("Full CAL subject 诊断", html)
             self.assertIn("HF comparison: DESCRIPTIVE", html)
             self.assertIn("执行与调参记录", html)

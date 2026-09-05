@@ -1,6 +1,6 @@
 # Hidden Policy paper reviewer
 
-A local, ICLR-styled tracked-changes editor for `../main.tex`.
+A local, ICLR-styled tracked-changes editor for `../paper/main.tex`.
 
 ## Start
 
@@ -22,7 +22,7 @@ Open <http://localhost:3000>.
 4. Click **Copy sentence** to copy the current sentence as LaTeX, or **Copy paragraph** to copy the complete paragraph with all current draft edits. Formula editors copy their current formula source.
 5. Changes are saved automatically as you type; press Escape or close the panel when you are done editing.
 6. Insertions and added bold formatting appear on green; deletions appear on pink with a strike-through.
-7. Use **✓ Accept & commit** in the Revision Editor to rebuild the PDF and commit the selected sentence change to `main.tex`.
+7. Use **✓ Accept & commit** in the Revision Editor to rebuild the PDF and commit the selected sentence change to `paper/main.tex`.
 8. Use **× Reject** in the Revision Editor to discard the selected sentence change and restore its original text.
 
 Drag the panel's left grip to change its width. Drag the horizontal grip below the text or LaTeX formula editor up and down to change its height. The grip also supports the Up and Down arrow keys.

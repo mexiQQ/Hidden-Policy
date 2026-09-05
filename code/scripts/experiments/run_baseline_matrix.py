@@ -21,7 +21,7 @@ import time
 from typing import Any, Callable
 
 
-CODE_ROOT = Path(__file__).resolve().parents[1]
+CODE_ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY_ROOT = CODE_ROOT.parent
 DEFAULT_CONFIG = CODE_ROOT / "configs" / "experiment0.json"
 DEFAULT_RESULTS = CODE_ROOT / "results" / "experiment0" / "baseline"

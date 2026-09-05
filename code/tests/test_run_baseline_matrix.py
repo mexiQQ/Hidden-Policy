@@ -13,7 +13,7 @@ import unittest
 from unittest import mock
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "run_baseline_matrix.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "experiments" / "run_baseline_matrix.py"
 SPEC = importlib.util.spec_from_file_location("run_baseline_matrix", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 runner = importlib.util.module_from_spec(SPEC)
@@ -496,7 +496,7 @@ class RunnerFailClosedTests(unittest.TestCase):
             def dirty_git(command: tuple[str, ...], **_: object) -> SimpleNamespace:
                 if tuple(command[-2:]) == ("rev-parse", "HEAD"):
                     return SimpleNamespace(stdout="a" * 40 + "\n", returncode=0)
-                return SimpleNamespace(stdout=" M main.tex\n", returncode=0)
+                return SimpleNamespace(stdout=" M paper/main.tex\n", returncode=0)
 
             with mock.patch.object(runner.subprocess, "run", side_effect=dirty_git):
                 exit_code = runner.main(

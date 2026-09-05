@@ -1,10 +1,10 @@
 # Hidden Policy：Question 3 与 Question 4 实验规划（Version 2）
 
-> 状态：基于 `plan.md`、`main.tex` 当前版本以及 backdoor / sleeper-agent / hidden-objective / removal 文献重新设计
+> 状态：基于 `plan1.md`、`paper/main.tex` 当前版本以及 backdoor / sleeper-agent / hidden-objective / removal 文献重新设计
 >
 > 日期：2026-09-04
 >
-> 原则：保留 `plan.md` 和 `main.tex` 不变；本文件是新的实验 source of truth。本文末尾单独记录未来如何同步修改 `main.tex`。
+> 原则：保留 `plan1.md` 和 `paper/main.tex` 不变；本文件是新的实验 source of truth。本文末尾单独记录未来如何同步修改 `paper/main.tex`。
 
 ## 0. Version 2 的核心决定
 
@@ -12,7 +12,7 @@
 
 Version 2 作如下替换：
 
-| `plan.md` 的设计 | `plan2.md` 的设计 |
+| `plan1.md` 的设计 | `plan2.md` 的设计 |
 |---|---|
 | `MEM/ASSOC/RULE/STABLE-HP` 四级阶梯 | `Gate abstraction × Action-rule abstraction` 的 2×2 因子设计 |
 | 训练前按预期机制命名模型 | 训练时只用中性 recipe ID；评估后才赋予 phenotype |
@@ -38,11 +38,11 @@ Version 2 作如下替换：
 - **RQ-C / contribution Q3：How can a hidden policy be constructed and distinguished from a keyed response?**
 - **RQ-R / contribution Q4：What evidence supports that a hidden policy has been removed rather than merely made behaviorally silent?**
 
-`main.tex` 引言中的 capability/behavior/policy 三个 framing questions 与 contribution Q3/Q4 是两套编号。实验 config、结果目录和 preregistration 一律使用 `RQ-C` 与 `RQ-R`，等论文统一编号后再映射。
+`paper/main.tex` 引言中的 capability/behavior/policy 三个 framing questions 与 contribution Q3/Q4 是两套编号。实验 config、结果目录和 preregistration 一律使用 `RQ-C` 与 `RQ-R`，等论文统一编号后再映射。
 
 ### 1.2 两层术语
 
-当前 `main.tex` 的形式定义只要求 observed-regime masking 与某个 reachable regime 上的 separation。按该定义，exact-keyed behavior 也可能是 hidden policy 的实例。因此实验使用两层术语：
+当前 `paper/main.tex` 的形式定义只要求 observed-regime masking 与某个 reachable regime 上的 separation。按该定义，exact-keyed behavior 也可能是 hidden policy 的实例。因此实验使用两层术语：
 
 1. **Minimal hidden policy / HP-min**：
    - 在预注册的 $\mathcal{R}_{\mathrm{obs}}$ 内与 reference empirically equivalent；
@@ -752,7 +752,7 @@ $$
 
 ### Phase 7 — 论文同步与外部有效性
 
-- [ ] 按第 10 节更新 `main.tex` 的术语、贡献和定义；
+- [ ] 按第 10 节更新 `paper/main.tex` 的术语、贡献和定义；
 - [ ] 将 exact theoretical equality 与 empirical $\delta$-equivalence 区分；
 - [ ] 明确 $r^\star$ 对 simulated observer unknown、对 constructor known；
 - [ ] 加入 literature matrix、主二维图和 removal fingerprint；
@@ -811,11 +811,11 @@ experiments/
 4. 优先保证严格 holdout 与 3–5 seeds，再扩大模型尺寸；
 5. 每次运行前重新检查 A6000 可用显存，并用 git commit + manifest hash 同步本地 source of truth。
 
-## 10. `main.tex` 的未来同步清单（本轮不修改）
+## 10. `paper/main.tex` 的未来同步清单（本轮不修改）
 
-本节只记录未来 edits；创建 `plan2.md` 时不改动 `main.tex`。
+本节只记录未来 edits；创建 `plan2.md` 时不改动 `paper/main.tex`。
 
-| `main.tex` 位置 | 当前张力 | 未来建议修改 |
+| `paper/main.tex` 位置 | 当前张力 | 未来建议修改 |
 |---|---|---|
 | Abstract，约第 35 行 | 摘要把 hidden policy 直接定义为 “generalizing, condition-gated”，但正式定义只要求 masking + 单个 reachable divergence | 采用两层术语：hidden policy 保留 observer-relative 最小定义；另定义 generalized hidden policy 的 systematic reveal-family 与 OOD 条件 |
 | Abstract，约第 37 行 | “distinguishes from backdoor attacks” 容易被理解为互斥类别 | 改成 backdoor 是 construction/attack route，hidden policy 是 policy-identification relation；二者可以重叠 |

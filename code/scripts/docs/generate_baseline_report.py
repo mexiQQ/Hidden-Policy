@@ -23,7 +23,7 @@ import tempfile
 from typing import Any, Iterable, Mapping
 
 
-CODE_ROOT = Path(__file__).resolve().parents[1]
+CODE_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = CODE_ROOT / "configs" / "experiment0.json"
 DEFAULT_SPLIT_METADATA = CODE_ROOT / "manifests" / "experiment0" / "metadata.json"
 DEFAULT_OUTPUT_JSON = CODE_ROOT / "reports" / "baseline-results.json"
@@ -2138,6 +2138,66 @@ def _execution_ledger_html(ledger: Mapping[str, object]) -> str:
     return "".join(blocks)
 
 
+def _metric_guide_html() -> str:
+    """Explain every reader-facing metric without exposing benchmark content."""
+
+    return """
+<section class="metric-guide">
+  <h2>先读这里：指标含义与计算方式</h2>
+  <p>同一道选择题会走两条互补的评测路线。<strong>Likelihood</strong> 比较模型给四个完整选项文本的概率分数；<strong>Strict generation</strong> 则让模型真的生成一个字母。两者不一致并不矛盾：前者更接近受约束的知识判断，后者还会受到指令遵循与输出格式影响。</p>
+  <div class="metric-mode-grid">
+    <article class="metric-mode">
+      <span class="metric-kicker">主结果 · 3 views / 题</span>
+      <h3>Likelihood（完整选项似然）</h3>
+      <ol>
+        <li>在同一题目提示下，分别把 A–D 的<strong>完整选项文本</strong>当作候选 continuation。</li>
+        <li>计算每个候选文本所有 token 的 log likelihood 之和，再除以该候选的 token 数。</li>
+        <li>选择平均分最高（通常即数值最不负）的选项；换序 view 的显示位置会先映射回原始 semantic option 再判分。</li>
+      </ol>
+      <div class="metric-formula"><code>score(i) = Σₜ log p(tokenₜ | prompt, prefix) / Tᵢ</code><br><code>prediction = argmaxᵢ score(i)</code></div>
+      <p class="metric-foot">它不要求模型生成字母，因此主要衡量四选一相对偏好。按 token 取平均是为了减轻选项长度差异，但不代表完全消除所有长度或措辞效应。</p>
+    </article>
+    <article class="metric-mode strict-mode">
+      <span class="metric-kicker">格式诊断 · canonical only</span>
+      <h3>Strict generation（严格生成）</h3>
+      <ol>
+        <li>模型看到题目和 A–D 选项，并被要求只生成一个大写字母。</li>
+        <li>解析器只接受可带前后空白的单个 <code>A</code>、<code>B</code>、<code>C</code> 或 <code>D</code>。</li>
+        <li>只有“解析有效且字母对应正确显示位置”才记为答对；例如 <code>Answer: C</code> 会记为 Invalid。</li>
+      </ol>
+      <div class="metric-formula"><code>correct = valid ∧ (predicted display index = gold display index)</code></div>
+      <p class="metric-foot">它同时衡量知识判断、指令遵循和格式控制。当前只在原始选项顺序（permutation 0）上每题生成一次。</p>
+    </article>
+  </div>
+
+  <h3>汇总表中的指标</h3>
+  <p class="denominator-note"><strong>先看分母：</strong><code>N</code> 是不重复题目数。Likelihood 每题有 3 个选项顺序，因此共有 <code>3N</code> 个 views；Strict generation 每题只有 1 个 canonical view，因此共有 <code>N</code> 次生成。</p>
+  <div class="metric-grid">
+    <article class="metric-card"><h4>Canonical Acc ↑</h4><code>permutation 0 答对数 / N</code><p>Likelihood 在原始选项顺序上的准确率，也是本报告的主能力指标。</p></article>
+    <article class="metric-card"><h4>All-view Acc ↑</h4><code>3 种排列全部答对数 / 3N</code><p>Likelihood 汇总三个选项顺序后的准确率；预测会先映射回 semantic option。</p></article>
+    <article class="metric-card"><h4>Permutation consistency ↑</h4><code>三次 semantic prediction 完全相同的题数 / N</code><p>衡量换序稳定性。<strong>Consistency 不等于正确率</strong>：稳定地选错也会得到一致。</p></article>
+    <article class="metric-card"><h4>Strict Acc ↑</h4><code>严格生成且答对的题数 / N</code><p>只要输出格式无效、拒答或选错，都会进入分母并记为不正确。</p></article>
+    <article class="metric-card"><h4>Invalid ↓</h4><code>非拒答的无效格式数 / N</code><p>回复不是单个 A–D，且未命中拒答模式。例如解释文字或 <code>Answer: C</code>。</p></article>
+    <article class="metric-card"><h4>Refusal ↓</h4><code>命中拒答模式的回复数 / N</code><p>拒答与 Invalid 互斥；两者相加就是所有未被解析为有效字母的比例。</p></article>
+  </div>
+
+  <details class="metric-details">
+    <summary>HF ↔ vLLM 对照指标怎么读？</summary>
+    <ul>
+      <li><strong>Prediction agreement：</strong>两个 backend 选出同一 semantic option 的 views 比例；strict agreement 还要求解析状态与字母位置都相同。越接近 100% 说明决策越一致，但不保证决策正确。</li>
+      <li><strong>Centered per-option normalized LL mean |Δ|：</strong>先在每个 backend 内把同一 view 的四个 normalized likelihood 减去其均值，再逐选项计算 HF 与 vLLM 的绝对差并取平均。越接近 0，表示相对分数形状越相似。</li>
+      <li><strong>Top-margin mean Δ (vLLM−HF)：</strong>每个 view 的最高分减次高分得到 top margin，再计算 vLLM margin − HF margin 的平均值。正值表示 vLLM 平均更有“领先幅度”，不表示更准确。</li>
+      <li><strong>All-view accuracy Δ (vLLM−HF)：</strong>两个 backend 的 All-view Acc 之差，以 percentage points（pp）表示；正值表示该 pilot 上 vLLM 更高。</li>
+    </ul>
+    <p class="metric-foot">这些只用于检查 backend 差异，目前没有 pass/fail 阈值。</p>
+  </details>
+  <details class="metric-details">
+    <summary>耗时与 GPU 指标怎么读？</summary>
+    <p>各阶段时间是 wall-clock duration。峰值显存、显存占比、平均/峰值 GPU 利用率与峰值功耗来自固定间隔的整卡 <code>nvidia-smi</code> 采样；<code>Samples</code> 是采样次数。它们描述吞吐和资源使用，不是模型质量指标，也可能漏掉采样间隔内的瞬时峰值。</p>
+  </details>
+</section>"""
+
+
 def render_html(report: Mapping[str, object]) -> str:
     full = report["full_cal"]
     pilot = report["pilot"]
@@ -2204,14 +2264,17 @@ h2{{font-size:21px;margin:0 0 14px}} h3{{font-size:17px;margin:22px 0 10px}} .ca
 .badge{{display:inline-block;padding:3px 9px;border-radius:999px;background:#daf2e6;color:var(--good);font-weight:700;margin-right:7px}} .badge.secondary{{background:#e7edf1;color:#425868}} .meta{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}} .meta div{{background:var(--wash);padding:12px;border-radius:9px}} .meta span{{display:block;color:var(--muted);font-size:12px}}
 .table-wrap{{overflow:auto;border:1px solid var(--line);border-radius:10px}} table{{border-collapse:collapse;width:100%;font-size:13px}} th,td{{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}} th{{background:#edf3f6;color:#334b59}} th:first-child,td:first-child{{text-align:left}} tbody tr:last-child td{{border-bottom:0}} tbody tr:hover{{background:#f8fafb}}
 .agreement-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}} .agreement-grid div{{background:#edf7fa;border-left:4px solid var(--accent);padding:16px;border-radius:8px}} .agreement-grid strong{{display:block;color:var(--accent);font-size:24px}} .agreement-grid span{{color:var(--muted)}}
+.metric-guide>p:first-of-type{{font-size:16px;max-width:1000px}} .metric-mode-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}} .metric-mode{{background:#eef7fa;border:1px solid #cfe4eb;border-radius:12px;padding:18px}} .metric-mode.strict-mode{{background:#fff7eb;border-color:#f0dbc0}} .metric-mode h3{{margin:4px 0 10px}} .metric-mode ol{{margin:0;padding-left:21px}} .metric-mode li+li{{margin-top:7px}} .metric-kicker{{color:var(--accent);font-size:12px;font-weight:750;letter-spacing:.03em;text-transform:uppercase}} .metric-formula{{background:#fff;border:1px solid var(--line);border-radius:8px;margin:14px 0 10px;padding:11px;overflow:auto}} .metric-formula code{{white-space:nowrap}} .metric-foot{{color:var(--muted);font-size:13px;margin-bottom:0}} .denominator-note{{background:#edf3f6;border-radius:9px;padding:12px}}
+.metric-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}} .metric-card{{border:1px solid var(--line);border-radius:10px;padding:14px}} .metric-card h4{{font-size:15px;margin:0 0 7px;color:var(--accent)}} .metric-card code{{display:block;background:var(--wash);border-radius:6px;padding:7px;margin-bottom:8px}} .metric-card p{{margin:0;color:var(--muted);font-size:13px}} .metric-details{{border-top:1px solid var(--line);margin-top:16px;padding-top:13px}} .metric-details summary{{cursor:pointer;font-weight:700;color:#334b59}} .metric-details ul{{margin-bottom:5px}}
 .notice{{background:#fff3dd;border-left:4px solid var(--accent2);padding:13px}} code{{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}} ul{{padding-left:22px}} footer{{color:var(--muted);text-align:center;margin-top:24px;font-size:12px}}
 .ledger-run{{border:1px solid var(--line);border-radius:9px;margin:10px 0;padding:12px}} .ledger-run summary{{cursor:pointer}} .ledger-meta{{color:var(--muted);font-size:13px;margin:10px 0}} .run-status{{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;background:#e7edf1}} .run-status.completed{{background:#daf2e6;color:#217a52}} .run-status.failed{{background:#fde3e0;color:#9c2f27}} .run-status.interrupted,.run-status.incomplete{{background:#fff0d2;color:#8a5a08}}
-@media(max-width:760px){{.cards,.meta,.agreement-grid{{grid-template-columns:1fr}} main{{padding:18px 10px 40px}} section,header{{padding:18px}}}}
+@media(max-width:900px){{.metric-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}}} @media(max-width:760px){{.cards,.meta,.agreement-grid,.metric-mode-grid,.metric-grid{{grid-template-columns:1fr}} main{{padding:18px 10px 40px}} section,header{{padding:18px}}}}
 </style>
 </head>
 <body><main>
 <header><span class="badge">Selected artifacts 验证 {_cell(report['artifact_validation_status'])}</span><span class="badge secondary">HF 对照 {_cell(str(report['hf_comparison_status']).replace('_', ' ').upper())}</span><h1>Qwen3.5 基础能力测试</h1><p>WMDP / MMLU · non-thinking · full-option likelihood · CAL only</p><div class="cards">{model_cards}</div></header>
 <section><h2>读者摘要</h2><p>本页比较 Qwen3.5-2B、4B、9B 原始 post-trained checkpoint。主结果是 full CAL 的完整选项文本 token-normalized likelihood；strict generation 与三种选项排列用于诊断格式失败和位置敏感性。此处没有训练 sandbagger，也没有解封 Q3/Q4 test。</p><div class="meta"><div><span>主后端</span>{_cell(full['backend'])}</div><div><span>Full CAL 总耗时</span>{_seconds(full['matrix_duration_seconds'])}</div><div><span>评测代码 commit</span><code>{_cell(provenance['evaluated_repository_commit'])}</code></div></div></section>
+{_metric_guide_html()}
 <section><h2>Full CAL 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(full)}</tbody></table></div></section>
 <section><h2>Full CAL subject 诊断</h2><h3>WMDP</h3>{_subject_table(full,'wmdp')}<h3>MMLU</h3>{_subject_table(full,'mmlu')}<p class="notice">Subject 表中的 Acc 为 canonical-order likelihood accuracy；Perm. 为三种排列映射回 semantic option 后的一致率。</p></section>
 <section><h2>32-item pilot 汇总</h2><div class="table-wrap"><table><thead><tr><th>模型</th><th>数据集</th><th>N</th><th>Canonical Acc</th><th>All-view Acc</th><th>Permutation consistency</th><th>Strict Acc</th><th>Invalid</th><th>Refusal</th></tr></thead><tbody>{_aggregate_rows(pilot)}</tbody></table></div></section>

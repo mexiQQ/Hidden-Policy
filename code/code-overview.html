@@ -206,7 +206,7 @@
 
     <section id="files">
       <div class="section-head"><span class="eyebrow">File atlas</span><h2>自有文件地图</h2><p class="muted">接口标签从白名单 Python 文件的 AST 自动提取；vendor 始终作为单个外部组件，不展开内部文件。</p></div>
-      <details open><summary>入口、配置与脚本</summary><div class="inside"><div class="file-grid">
+      <details open><summary>入口与配置</summary><div class="inside"><div class="file-grid">
       <article class="file-card">
         <div class="file-top"><a href="README.md"><code>README.md</code></a></div>
         <p>实验范围、安装、运行、后处理与 gate 的人工可读说明。</p>
@@ -228,29 +228,36 @@
         <div class="chips"><span class="muted">无公开接口</span></div>
       </article>
       <article class="file-card">
-        <div class="file-top"><a href="scripts/install_a6000.sh"><code>scripts/install_a6000.sh</code></a></div>
-        <p>创建或复用 Conda 环境 hidden-policy，安装 cu130/vLLM 和仓库内 harness。</p>
+        <div class="file-top"><a href="scripts/README.md"><code>scripts/README.md</code></a></div>
+        <p>区分实验执行入口与文档生成入口的脚本索引。</p>
         <div class="chips"><span class="muted">无公开接口</span></div>
-      </article>
-      <article class="file-card">
-        <div class="file-top"><a href="scripts/run_baseline_matrix.py"><code>scripts/run_baseline_matrix.py</code></a></div>
-        <p>将 2B/4B/9B 分配到三张 GPU，并行评测、采样 GPU 指标和后处理。</p>
-        <div class="chips"><span class="chip">MatrixInterrupted</span><span class="chip">utc_now</span><span class="chip">write_json</span><span class="chip">write_bytes</span><span class="chip">sha256_file</span><span class="chip">owned_process_ids</span><span class="chip">open_process_pidfd</span><span class="chip">signal_owned_process_ids</span><span class="chip">terminate_owned_processes</span><span class="chip">run_stage</span><span class="chip">run_interruptible_stage</span><span class="chip">prefetch_model</span><span class="chip">inspect_prompt_lengths</span><span class="chip">preload_prompt_audit_dependencies</span><span class="chip">gpu_snapshot</span><span class="chip">aggregate_gpu_samples</span><span class="chip">read_completed_harness_timing</span><span class="chip">build_parser</span><span class="chip">main</span></div>
-      </article>
-      <article class="file-card">
-        <div class="file-top"><a href="scripts/generate_baseline_report.py"><code>scripts/generate_baseline_report.py</code></a></div>
-        <p>严格复核 pilot/full 产物，并生成无 benchmark 内容的 JSON/HTML 报告。</p>
-        <div class="chips"><span class="chip">PublicationError</span><span class="chip">ModelArtifacts</span><span class="chip">MatrixArtifacts</span><span class="chip">load_matrix</span><span class="chip">build_execution_ledger</span><span class="chip">build_publication</span><span class="chip">render_html</span><span class="chip">generate_report</span><span class="chip">build_parser</span><span class="chip">main</span></div>
-      </article>
-      <article class="file-card">
-        <div class="file-top"><a href="scripts/generate_code_overview.py"><code>scripts/generate_code_overview.py</code></a></div>
-        <p>使用安全白名单生成当前自包含项目说明页。</p>
-        <div class="chips"><span class="chip">read_allowed</span><span class="chip">load_allowed_json</span><span class="chip">safe_string</span><span class="chip">safe_integer</span><span class="chip">top_level_symbols</span><span class="chip">test_methods</span><span class="chip">git_identity</span><span class="chip">parse_tasks</span><span class="chip">package_versions</span><span class="chip">conda_environment_name</span><span class="chip">chips</span><span class="chip">file_card</span><span class="chip">publication_card</span><span class="chip">number</span><span class="chip">short_sha</span><span class="chip">main</span></div>
       </article>
       <article class="file-card">
         <div class="file-top"><a href="code-overview.html"><code>code-overview.html</code></a></div>
         <p>本脚本生成的自包含中文项目地图；不含 benchmark 或模型输出内容。</p>
         <div class="chips"><span class="muted">无公开接口</span></div>
+      </article></div></div></details>
+      <details open><summary>实验执行脚本（2 个文件）</summary><div class="inside"><div class="file-grid">
+      <article class="file-card">
+        <div class="file-top"><a href="scripts/experiments/install_a6000.sh"><code>scripts/experiments/install_a6000.sh</code></a></div>
+        <p>创建或复用 Conda 环境 hidden-policy，安装 cu130/vLLM 和仓库内 harness。</p>
+        <div class="chips"><span class="muted">无公开接口</span></div>
+      </article>
+      <article class="file-card">
+        <div class="file-top"><a href="scripts/experiments/run_baseline_matrix.py"><code>scripts/experiments/run_baseline_matrix.py</code></a></div>
+        <p>将 2B/4B/9B 分配到三张 GPU，并行评测、采样 GPU 指标和后处理。</p>
+        <div class="chips"><span class="chip">MatrixInterrupted</span><span class="chip">utc_now</span><span class="chip">write_json</span><span class="chip">write_bytes</span><span class="chip">sha256_file</span><span class="chip">owned_process_ids</span><span class="chip">open_process_pidfd</span><span class="chip">signal_owned_process_ids</span><span class="chip">terminate_owned_processes</span><span class="chip">run_stage</span><span class="chip">run_interruptible_stage</span><span class="chip">prefetch_model</span><span class="chip">inspect_prompt_lengths</span><span class="chip">preload_prompt_audit_dependencies</span><span class="chip">gpu_snapshot</span><span class="chip">aggregate_gpu_samples</span><span class="chip">read_completed_harness_timing</span><span class="chip">build_parser</span><span class="chip">main</span></div>
+      </article></div></div></details>
+      <details open><summary>文档与报告生成脚本（2 个文件）</summary><div class="inside"><div class="file-grid">
+      <article class="file-card">
+        <div class="file-top"><a href="scripts/docs/generate_baseline_report.py"><code>scripts/docs/generate_baseline_report.py</code></a></div>
+        <p>严格复核 pilot/full 产物，并生成无 benchmark 内容的 JSON/HTML 报告。</p>
+        <div class="chips"><span class="chip">PublicationError</span><span class="chip">ModelArtifacts</span><span class="chip">MatrixArtifacts</span><span class="chip">load_matrix</span><span class="chip">build_execution_ledger</span><span class="chip">build_publication</span><span class="chip">render_html</span><span class="chip">generate_report</span><span class="chip">build_parser</span><span class="chip">main</span></div>
+      </article>
+      <article class="file-card">
+        <div class="file-top"><a href="scripts/docs/generate_code_overview.py"><code>scripts/docs/generate_code_overview.py</code></a></div>
+        <p>使用安全白名单生成当前自包含项目说明页。</p>
+        <div class="chips"><span class="chip">read_allowed</span><span class="chip">load_allowed_json</span><span class="chip">safe_string</span><span class="chip">safe_integer</span><span class="chip">top_level_symbols</span><span class="chip">test_methods</span><span class="chip">git_identity</span><span class="chip">parse_tasks</span><span class="chip">package_versions</span><span class="chip">conda_environment_name</span><span class="chip">chips</span><span class="chip">file_card</span><span class="chip">publication_card</span><span class="chip">number</span><span class="chip">short_sha</span><span class="chip">main</span></div>
       </article></div></div></details>
       <details><summary>hidden_policy_eval 源码（15 个文件）</summary><div class="inside"><div class="file-grid">
       <article class="file-card">
@@ -440,41 +447,41 @@
     <section id="commands">
       <div class="section-head"><span class="eyebrow">Operator guide</span><h2>常用命令</h2></div>
       <h3>安装与检查</h3><pre>git submodule update --init --recursive --depth 1
-bash code/scripts/install_a6000.sh
+bash code/scripts/experiments/install_a6000.sh
 conda activate hidden-policy
 hidden-policy-eval doctor --backend vllm</pre>
       <h3>数据与 pilot</h3><pre>hidden-policy-eval split
 hidden-policy-eval validate
 hidden-policy-eval prepare --scope pilot
 hidden-policy-eval command --model-role qwen3_5_2b --scope pilot</pre>
-      <h3>① 三模型 vLLM pilot</h3><pre>python code/scripts/run_baseline_matrix.py \
+      <h3>① 三模型 vLLM pilot</h3><pre>python code/scripts/experiments/run_baseline_matrix.py \
   --scope pilot \
   --backend vllm \
   --models qwen3_5_2b qwen3_5_4b qwen3_5_9b \
   --gpus 0,1,2 \
   --run-id baseline-pilot-v1</pre>
-      <h3>② Qwen3.5-2B HF reference pilot</h3><pre>python code/scripts/run_baseline_matrix.py \
+      <h3>② Qwen3.5-2B HF reference pilot</h3><pre>python code/scripts/experiments/run_baseline_matrix.py \
   --scope pilot \
   --backend hf \
   --models qwen3_5_2b \
   --gpus 0 \
   --run-id baseline-pilot-hf-2b-v1</pre>
-      <h3>③ 三模型 vLLM full CAL</h3><pre>python code/scripts/run_baseline_matrix.py \
+      <h3>③ 三模型 vLLM full CAL</h3><pre>python code/scripts/experiments/run_baseline_matrix.py \
   --scope full \
   --backend vllm \
   --models qwen3_5_2b qwen3_5_4b qwen3_5_9b \
   --gpus 0,1,2 \
   --run-id baseline-full-v1</pre>
-      <h3>④ 发布结果，⑤ 刷新概述</h3><pre>python code/scripts/generate_baseline_report.py \
+      <h3>④ 发布结果，⑤ 刷新概述</h3><pre>python code/scripts/docs/generate_baseline_report.py \
   --pilot-matrix code/results/experiment0/baseline/baseline-pilot-v1 \
   --full-matrix code/results/experiment0/baseline/baseline-full-v1 \
   --hf-reference-matrix code/results/experiment0/baseline/baseline-pilot-hf-2b-v1
 
-python3 code/scripts/generate_code_overview.py</pre>
+python3 code/scripts/docs/generate_code_overview.py</pre>
       <h3>本地单元测试</h3><pre>PYTHONPATH=code/src python3 -m unittest discover -s code/tests -v</pre>
     </section>
 
-    <footer>此页面由 <code>scripts/generate_code_overview.py</code> 从固定安全白名单生成。它不会读取 <code>data/</code>、<code>runtime/</code>、<code>results/</code>、认证材料、远程连接配置或 vendored 源码内容。</footer>
+    <footer>此页面由 <code>scripts/docs/generate_code_overview.py</code> 从固定安全白名单生成。它不会读取 <code>data/</code>、<code>runtime/</code>、<code>results/</code>、认证材料、远程连接配置或 vendored 源码内容。</footer>
   </main>
 </div>
 </body>
