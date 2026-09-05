@@ -19,8 +19,9 @@ the A6000 server.
   execution, process control, monitoring, and running Git commands on A6000.
 - Do not add ignored, raw, sensitive, credential-bearing, or oversized files to
   Git merely to move them. In particular, `code/data/`, `code/runtime/`, and
-  `code/results/` retain their existing privacy boundary. Publish only reviewed,
-  sanitized artifacts such as the tracked aggregate reports.
+  raw `code/results/` retain their existing privacy boundary. Only reviewed,
+  sanitized artifacts such as aggregate reports and
+  `code/results/published/` may be tracked.
 - If a required file cannot safely or appropriately be committed to GitHub,
   stop and ask the user how to proceed. Do not bypass this policy.
 - Before synchronization, verify the sending checkout, staged diff, branch, and

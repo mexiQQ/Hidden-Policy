@@ -1,0 +1,467 @@
+{
+  "backend": "hf",
+  "config": {
+    "gpu_poll_seconds": 2.0,
+    "hf_xet_high_performance": true,
+    "models": [
+      "qwen3_5_2b"
+    ],
+    "pytorch_alloc_conf": "expandable_segments:True",
+    "sha256": "6ac26590fcb1c23425d3672e229dd1c97dbbab8835ef6f1b7695739343342ef2",
+    "skip_prefetch": true,
+    "vllm": {
+      "data_parallel_size": 1,
+      "enable_prefix_caching": true,
+      "gpu_memory_utilization": 0.87,
+      "max_model_len": 4096,
+      "max_num_batched_tokens": 16384,
+      "max_num_seqs": 512,
+      "tensor_parallel_size": 1
+    }
+  },
+  "duration_seconds": 313.80345110595226,
+  "ended_at_utc": "2026-09-05T03:39:56.108327+00:00",
+  "evaluated_repository_commit": "045dd44bc4ac8f7f5e1b9079d93d54ef9f107a52",
+  "models": {
+    "qwen3_5_2b": {
+      "datasets": {
+        "mmlu": {
+          "dataset_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+          "option_likelihood": {
+            "all_view_accuracy": 0.25,
+            "canonical_accuracy": 0.3125,
+            "items": 16,
+            "semantic_permutation_consistency": 0.625
+          },
+          "strict_generation": {
+            "accuracy": 0.4375,
+            "invalid_or_refusal_rate": 0.0,
+            "invalid_rate": 0.0,
+            "items": 16,
+            "refusal_rate": 0.0
+          },
+          "subjects": {
+            "astronomy": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "business_ethics": {
+              "option_likelihood": {
+                "all_view_accuracy": 1.0,
+                "canonical_accuracy": 1.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "college_chemistry": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "college_mathematics": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.6666666666666666,
+                "canonical_accuracy": 1.0,
+                "items": 1,
+                "semantic_permutation_consistency": 0.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "college_physics": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "econometrics": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "formal_logic": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 0.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "high_school_geography": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.6666666666666666,
+                "canonical_accuracy": 1.0,
+                "items": 1,
+                "semantic_permutation_consistency": 0.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "high_school_macroeconomics": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.3333333333333333,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 0.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "high_school_psychology": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.3333333333333333,
+                "canonical_accuracy": 1.0,
+                "items": 1,
+                "semantic_permutation_consistency": 0.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "human_sexuality": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "jurisprudence": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "nutrition": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 0.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "professional_accounting": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 0.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "public_relations": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.0,
+                "canonical_accuracy": 0.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            },
+            "world_religions": {
+              "option_likelihood": {
+                "all_view_accuracy": 1.0,
+                "canonical_accuracy": 1.0,
+                "items": 1,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 1,
+                "refusal_rate": 0.0
+              }
+            }
+          }
+        },
+        "wmdp": {
+          "dataset_revision": "7125571f22f032c56415e7980f48d877dd830ff8",
+          "option_likelihood": {
+            "all_view_accuracy": 0.4166666666666667,
+            "canonical_accuracy": 0.4375,
+            "items": 16,
+            "semantic_permutation_consistency": 0.6875
+          },
+          "strict_generation": {
+            "accuracy": 0.5,
+            "invalid_or_refusal_rate": 0.0,
+            "invalid_rate": 0.0,
+            "items": 16,
+            "refusal_rate": 0.0
+          },
+          "subjects": {
+            "bio": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.3333333333333333,
+                "canonical_accuracy": 0.3333333333333333,
+                "items": 6,
+                "semantic_permutation_consistency": 0.6666666666666666
+              },
+              "strict_generation": {
+                "accuracy": 0.3333333333333333,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 6,
+                "refusal_rate": 0.0
+              }
+            },
+            "chem": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.8,
+                "canonical_accuracy": 0.8,
+                "items": 5,
+                "semantic_permutation_consistency": 1.0
+              },
+              "strict_generation": {
+                "accuracy": 1.0,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 5,
+                "refusal_rate": 0.0
+              }
+            },
+            "cyber": {
+              "option_likelihood": {
+                "all_view_accuracy": 0.13333333333333333,
+                "canonical_accuracy": 0.2,
+                "items": 5,
+                "semantic_permutation_consistency": 0.4
+              },
+              "strict_generation": {
+                "accuracy": 0.2,
+                "invalid_or_refusal_rate": 0.0,
+                "invalid_rate": 0.0,
+                "items": 5,
+                "refusal_rate": 0.0
+              }
+            }
+          }
+        }
+      },
+      "display_name": "Qwen3.5-2B",
+      "gpu": {
+        "assigned_gpu_slot": "0",
+        "device_name": "NVIDIA RTX A6000",
+        "mean_utilization_percent": 91.87837837837837,
+        "note": "polled whole-device peak, not process-isolated peak",
+        "peak_memory_fraction": 0.983007733007733,
+        "peak_memory_used_mib": 48305,
+        "peak_power_watts": 299.28,
+        "peak_utilization_percent": 100,
+        "sample_count": 148
+      },
+      "parameters_billions": 2.274,
+      "repository": "Qwen/Qwen3.5-2B",
+      "revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+      "timing": {
+        "evaluation_process_seconds": 304.7012727865949,
+        "lm_eval_validate_seconds": 5.480436788871884,
+        "model_load_and_evaluation_seconds": 297.57865194324404,
+        "postprocess_seconds": 4.005486983805895,
+        "prefetch_seconds": null,
+        "process_cleanup_seconds": 0.00826848903670907,
+        "prompt_length_audit_seconds": 0.7008334789425135
+      }
+    }
+  },
+  "privacy": {
+    "content_free": true,
+    "excluded": [
+      "questions",
+      "answer labels",
+      "option texts",
+      "raw responses",
+      "command lines",
+      "absolute local paths"
+    ]
+  },
+  "schema_version": "hidden-policy-public-run-result-v1",
+  "scope": "pilot",
+  "selected_as": "pilot_hf_reference",
+  "source_report_sha256": "d249de16598de212f709ddcb2d14f331b0c7c87dad6728ccc98cabf827cc4d35",
+  "stages": [
+    {
+      "duration_seconds": 0.024025569204241037,
+      "exit_code": 0,
+      "model_role": null,
+      "stage": "repository_clean_check",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 1.6398756029084325,
+      "exit_code": 0,
+      "model_role": null,
+      "stage": "runtime_doctor",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 0.05360514111816883,
+      "exit_code": 0,
+      "model_role": null,
+      "stage": "gpu_availability",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 0.2767212516628206,
+      "exit_code": 0,
+      "model_role": null,
+      "stage": "prepare_runtime",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 0.7008334789425135,
+      "exit_code": 0,
+      "model_role": "qwen3_5_2b",
+      "stage": "prompt_length_audit",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 304.7012727865949,
+      "exit_code": 0,
+      "model_role": "qwen3_5_2b",
+      "peak_memory_fraction": 0.983007733007733,
+      "peak_memory_used_mib": 48305.0,
+      "stage": "evaluation_process",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 4.005486983805895,
+      "exit_code": 0,
+      "model_role": "qwen3_5_2b",
+      "stage": "postprocess",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 0.00826848903670907,
+      "exit_code": null,
+      "model_role": "qwen3_5_2b",
+      "stage": "owned_process_cleanup",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 5.480436788871884,
+      "exit_code": 0,
+      "model_role": "qwen3_5_2b",
+      "stage": "lm_eval_validate",
+      "status": "completed"
+    },
+    {
+      "duration_seconds": 297.57865194324404,
+      "exit_code": 0,
+      "model_role": "qwen3_5_2b",
+      "stage": "model_load_and_evaluation",
+      "status": "completed"
+    }
+  ],
+  "started_at_utc": "2026-09-05T03:34:42.304889+00:00",
+  "status": "validated"
+}

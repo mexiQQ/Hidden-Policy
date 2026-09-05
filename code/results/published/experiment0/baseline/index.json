@@ -1,0 +1,134 @@
+{
+  "artifact_validation_status": "PASS",
+  "privacy": {
+    "content_free": true,
+    "excluded": [
+      "questions",
+      "answer labels",
+      "option texts",
+      "raw responses",
+      "command lines",
+      "absolute local paths"
+    ]
+  },
+  "provenance": {
+    "config_sha256": "6ac26590fcb1c23425d3672e229dd1c97dbbab8835ef6f1b7695739343342ef2",
+    "dataset_revisions": {
+      "mmlu": "c30699e8356da336a370243923dbaf21066bb9fe",
+      "wmdp": "7125571f22f032c56415e7980f48d877dd830ff8"
+    },
+    "evaluated_repository_commit": "045dd44bc4ac8f7f5e1b9079d93d54ef9f107a52",
+    "evaluation_protocol": {
+      "backend": "vllm",
+      "batch_size": "auto",
+      "candidate": "full_option_text",
+      "data_parallel_size": 1,
+      "dtype": "bfloat16",
+      "enable_prefix_caching": true,
+      "enable_thinking": false,
+      "gpu_memory_utilization": 0.87,
+      "hf_xet_high_performance": true,
+      "language_model_only": true,
+      "max_model_len": 4096,
+      "max_num_batched_tokens": 16384,
+      "max_num_seqs": 512,
+      "normalization": "mean_log_likelihood_per_continuation_token",
+      "permutation_count": 3,
+      "prompt_protocol": "chat",
+      "pytorch_alloc_conf": "expandable_segments:True",
+      "pytorch_allocator_backend": "native",
+      "seed": 1234,
+      "tensor_parallel_size": 1,
+      "trust_remote_code": false,
+      "vllm_version": "0.28.0"
+    },
+    "harness": {
+      "commit": "ddd67220430a2470529f25fd5c05a576ca1057a0",
+      "repository": "https://github.com/EleutherAI/lm-evaluation-harness.git",
+      "tree": "b2c54aacf87ea3fe55e790cc9ad00cdba925833e",
+      "version": "0.4.13"
+    },
+    "implementation_sha256": "88cc04585925cd8f9c746ffcdddbbfda75713fd35a69853fd6a03a8877ad7cf0",
+    "manifest_checksums": {
+      "metadata.json": "5ff6bab488ebe56df419180e175e6c3827d68d52ebca3cba003fa2d4fe8d9835",
+      "mmlu.json": "bd82a3398540918dae188e125cab907d3da1a86804707cb560162015d7478b55",
+      "mmlu_deduplication.json": "9cd4605f3fb300845acfb0e142a96d8c833cd6bca2d39923f4833f362d6f3078",
+      "pilot32.json": "f76fd3bb1ee6838694a14ab90066eca9c1e4def1e25e7c67c84a16ca17cba2b9",
+      "wmdp.json": "ef07e47ac7cf951f1db739b9ba4f622bb745a72822abf4cf90b3b893030d0442",
+      "wmdp_deduplication.json": "7705d816d16e99d3da3157cffe259f50c788057c5656b5ebc893de6d6c7653a0"
+    },
+    "runtime_fingerprints": {
+      "full_vllm": "5b04b66ec10cff0d41ce06c0d8f628d56f55c64f3e861c8e259b1cd04eb91322",
+      "full_vllm_weak": "5b04b66ec10cff0d41ce06c0d8f628d56f55c64f3e861c8e259b1cd04eb91322",
+      "pilot_hf_reference": "8232f92c9b323439255af03e120202a579f98c0c26fbb263212d569f839bd81d",
+      "pilot_vllm": "8232f92c9b323439255af03e120202a579f98c0c26fbb263212d569f839bd81d",
+      "pilot_vllm_weak": "8232f92c9b323439255af03e120202a579f98c0c26fbb263212d569f839bd81d"
+    },
+    "software_environment": {
+      "cuda_device_count": 1,
+      "cuda_devices": [
+        "NVIDIA RTX A6000"
+      ],
+      "datasets": "4.5.0",
+      "lm_eval": "0.4.13",
+      "python": "3.10.21",
+      "pytorch_alloc_conf": "expandable_segments:True",
+      "pytorch_alloc_conf_at_snapshot": "expandable_segments:True",
+      "pytorch_allocator_backend": "native",
+      "pytorch_cuda_alloc_conf_legacy": null,
+      "torch": "2.13.0+cu130",
+      "torch_cuda": "13.0",
+      "transformers": "5.16.1",
+      "vllm": "0.28.0"
+    },
+    "task_bundle_sha256": "6821192dccab256d50f2eb6a7b41511ed20ce2f86c62f3989bc08bf5618a04be"
+  },
+  "runs": {
+    "full_vllm": {
+      "backend": "vllm",
+      "models": [
+        "qwen3_5_2b",
+        "qwen3_5_4b",
+        "qwen3_5_9b"
+      ],
+      "path": "full_vllm/result.json",
+      "scope": "full"
+    },
+    "full_vllm_weak": {
+      "backend": "vllm",
+      "models": [
+        "weak"
+      ],
+      "path": "full_vllm_weak/result.json",
+      "scope": "full"
+    },
+    "pilot_hf_reference": {
+      "backend": "hf",
+      "models": [
+        "qwen3_5_2b"
+      ],
+      "path": "pilot_hf_reference/result.json",
+      "scope": "pilot"
+    },
+    "pilot_vllm": {
+      "backend": "vllm",
+      "models": [
+        "qwen3_5_2b",
+        "qwen3_5_4b",
+        "qwen3_5_9b"
+      ],
+      "path": "pilot_vllm/result.json",
+      "scope": "pilot"
+    },
+    "pilot_vllm_weak": {
+      "backend": "vllm",
+      "models": [
+        "weak"
+      ],
+      "path": "pilot_vllm_weak/result.json",
+      "scope": "pilot"
+    }
+  },
+  "schema_version": "hidden-policy-public-run-index-v1",
+  "source_report_sha256": "d249de16598de212f709ddcb2d14f331b0c7c87dad6728ccc98cabf827cc4d35"
+}

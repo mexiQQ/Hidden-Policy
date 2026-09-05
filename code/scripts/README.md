@@ -13,5 +13,6 @@ Run every command from the repository root:
 bash code/scripts/experiments/install_a6000.sh
 python code/scripts/experiments/run_baseline_matrix.py --help
 python code/scripts/docs/generate_baseline_report.py --help
+python code/scripts/docs/publish_successful_runs.py --help
 python code/scripts/docs/generate_code_overview.py
 ```
