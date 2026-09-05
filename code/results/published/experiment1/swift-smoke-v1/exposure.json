@@ -1,0 +1,17 @@
+{
+  "evidence_scope": "engineering_probe_not_confirmatory_q3_or_removal_q4",
+  "records": [
+    {
+      "allow_test": true,
+      "counts": {
+        "CAL": 32,
+        "TEST-Q3": 32,
+        "TEST-Q4": 32
+      },
+      "selection_sha256": "f3231ed5a52cc91b49ae9ec5fbfaa87ebb09844370198686d5e79acd7cc4e978",
+      "time_unix": 1788633662.9269848
+    }
+  ],
+  "schema": "e1-swift-smoke-v1",
+  "status": "selected_content_exposed_before_inference"
+}
