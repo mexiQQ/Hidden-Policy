@@ -90,7 +90,7 @@
     "device": "cuda:0",
     "batch_size": "auto",
     "max_model_len": 4096,
-    "gpu_memory_utilization": 0.88,
+    "gpu_memory_utilization": 0.87,
     "max_num_seqs": 512,
     "max_num_batched_tokens": 16384,
     "enable_prefix_caching": true,

@@ -30,7 +30,7 @@ class HarnessTests(unittest.TestCase):
             self.assertIn("enable_thinking=false", " ".join(run.command))
             self.assertIn("language_model_only=true", " ".join(run.command))
             self.assertIn("tokenizer_revision=abc123", " ".join(run.command))
-            self.assertIn("gpu_memory_utilization=0.88", " ".join(run.command))
+            self.assertIn("gpu_memory_utilization=0.87", " ".join(run.command))
             self.assertEqual(
                 run.environment["PYTORCH_ALLOC_CONF"], "expandable_segments:True"
             )

@@ -120,18 +120,22 @@ python code/scripts/run_baseline_matrix.py \
 ```
 
 默认配置让三个独立 vLLM engine 各自使用一张 A6000：
-`gpu_memory_utilization=0.88`、`max_num_seqs=512`、
+`gpu_memory_utilization=0.87`、`max_num_seqs=512`、
 `max_num_batched_tokens=16384`、prefix caching 开启。`CUDA_VISIBLE_DEVICES` 由矩阵
 runner 隔离，因此每个进程里的 `cuda:0` 都对应它被分配的物理卡。固定
 `max_model_len=4096` 前会用各模型 tokenizer 审计所有实际请求；超过上限直接停止，
 而不是截断后悄悄继续。
 
-`0.88` 给 full likelihood 的全词表 log-softmax 留出约 1.5–2.0 GiB 临时空间；
+`0.87` 给 full likelihood 的全词表 log-softmax 留出约 2.3 GiB 临时空间；
 `PYTORCH_ALLOC_CONF=expandable_segments:True` 则减少 reserved-but-unallocated 显存
 碎片。A6000 full CAL 的实测表明 32,768-token batch 会让全词表 log-softmax scratch
 越过物理容量；24,576-token smoke 也在最长请求批次申请 2.01 GiB 时仅余 1.88 GiB。
 因此最终冻结为 512 sequences / 16,384 batched tokens：保留三模型并行和较大单卡
 batch，同时为 likelihood scratch 留出已验证的稳定余量。
+
+这里没有继续使用更激进的 `0.88`：2B full 的最长请求批次需要固定 2.01 GiB 临时块，
+而 `0.88` 实测只剩 1.86 GiB。降低一个百分点约释放 0.47 GiB KV cache，是仍能容纳
+该临时块的最大 0.01 粒度配置。
 整卡实际峰值（模型、cache、scratch 合计）会高于 vLLM 的 KV-cache 配置比例；最终
 是否稳定以及真实峰值以 A6000 full run 的阶段计时和 GPU telemetry 为准。
 
