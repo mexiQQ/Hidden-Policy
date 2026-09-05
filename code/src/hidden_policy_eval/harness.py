@@ -74,7 +74,7 @@ def build_harness_run(
     max_model_len: int = 4096,
     gpu_memory_utilization: float = 0.88,
     max_num_seqs: int = 512,
-    max_num_batched_tokens: int = 24576,
+    max_num_batched_tokens: int = 16384,
     enable_prefix_caching: bool = True,
     language_model_only: bool = True,
     tensor_parallel_size: int = 1,
