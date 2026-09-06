@@ -18,6 +18,7 @@ E0_CASES = {
     "full_vllm_weak": ("full", "vllm", ["weak"], "0", True),
     "pilot_hf_reference": ("pilot", "hf", ["qwen3_5_2b"], "0", True),
 }
+E1_STAGES = ("teacher", "data", "train", "eval", "all")
 
 
 class BashLauncherTests(unittest.TestCase):
@@ -56,10 +57,10 @@ class BashLauncherTests(unittest.TestCase):
             cwd=self.root, env=env, text=True, capture_output=True, timeout=10,
         )
 
-    def test_only_nine_main_experiment_scripts_and_valid_syntax(self):
+    def test_only_main_experiment_scripts_and_valid_syntax(self):
         root = self.code / "scripts/bash"
         expected = {f"e0/{name}.sh" for name in E0_CASES}
-        expected.update(f"e1/{stage}.sh" for stage in ("data", "train", "eval", "all"))
+        expected.update(f"e1/{stage}.sh" for stage in E1_STAGES)
         self.assertEqual({str(path.relative_to(root)) for path in root.rglob("*.sh")}, expected)
         for script in root.rglob("*.sh"):
             with self.subTest(script=script.name):
@@ -91,7 +92,7 @@ class BashLauncherTests(unittest.TestCase):
                 self.assertEqual(Path(json.loads(result.stdout)["interpreter"]), self.path_python)
 
     def test_e1_stages_leave_directory_selection_to_python_and_keep_test_flags(self):
-        for stage in ("data", "train", "eval", "all"):
+        for stage in E1_STAGES:
             with self.subTest(stage=stage):
                 result = self.launch(f"e1/{stage}.sh", default_python=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -99,7 +100,8 @@ class BashLauncherTests(unittest.TestCase):
                 self.assertEqual(payload["args"], [
                     str(self.code / "scripts/e1/run_experiment1.py"),
                     "--config", str(self.code / "configs/experiment1.json"),
-                    "--stage", stage, "--levels", "G0U0", "G0U1", "G1U0", "G1U1",
+                    "--stage", stage,
+                    *(["--levels", "G0U0", "G0U1", "G1U0", "G1U1"] if stage != "teacher" else []),
                     *(["--allow-test"] if stage in ("eval", "all") else []),
                 ])
                 self.assertEqual(payload["gpu"], "0")
@@ -107,7 +109,7 @@ class BashLauncherTests(unittest.TestCase):
 
     def test_e1_all_stages_forward_combination_and_optional_environment_directory(self):
         extra = ["--target-train", "256", "--utility-train", "64"]
-        for stage in ("data", "train", "eval", "all"):
+        for stage in E1_STAGES:
             for directory in (None, "shared run"):
                 with self.subTest(stage=stage, directory=directory):
                     result = self.launch(f"e1/{stage}.sh", *extra,
@@ -119,6 +121,20 @@ class BashLauncherTests(unittest.TestCase):
                         self.assertEqual(args[args.index("--run-dir") + 1], directory)
                     else:
                         self.assertNotIn("--run-dir", args)
+
+    def test_teacher_forwards_config_gpu_and_exit_status(self):
+        extra = ["--config", "config with spaces.json"]
+        result = self.launch("e1/teacher.sh", *extra, CUDA_VISIBLE_DEVICES="2", FAKE_EXIT="7",
+                             RUN_DIR="teacher run", PYTHONPATH="existing-path")
+        self.assertEqual(result.returncode, 7, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["args"], [
+            str(self.code / "scripts/e1/run_experiment1.py"),
+            "--config", str(self.code / "configs/experiment1.json"),
+            "--run-dir", "teacher run", "--stage", "teacher", *extra,
+        ])
+        self.assertEqual(payload["gpu"], "2")
+        self.assertEqual(payload["pythonpath"], str(self.code / "src") + ":existing-path")
 
     def test_e1_forwards_overrides_and_python_exit_status(self):
         extra = ["--stage", "eval", "--levels", "G1U1", "--allow-test",

@@ -36,7 +36,7 @@ code/
 
 ## 实际运行
 
-`scripts/bash/` 只放主实验入口：E0 五类 baseline，E1 数据、训练、评测和完整流程。环境与数据需提前准备好；以下命令在仓库根目录运行。
+`scripts/bash/` 只放主实验入口：E0 五类 baseline，E1 答案预计算、数据、训练、评测和完整流程。环境与数据需提前准备好；以下命令在仓库根目录运行。
 
 ```bash
 # E0：按需选择，不必全部重跑；使用已安装的 hidden-policy 环境
@@ -48,7 +48,7 @@ bash code/scripts/bash/e0/full_vllm_weak.sh --run-id full-weak-v2
 bash code/scripts/bash/e0/pilot_hf_reference.sh --run-id pilot-hf-v2
 
 # E1：先一次性准备完整 Target 题库的 0.8B 答案表
-python code/scripts/e1/run_experiment1.py --stage teacher
+bash code/scripts/bash/e1/teacher.sh
 
 # 后续数据组合只查表，不调用 0.8B
 bash code/scripts/bash/e1/data.sh
@@ -81,7 +81,7 @@ bash code/scripts/bash/e1/eval.sh --levels G1U1
 python code/scripts/e1/prepare_data.py build --target-train 256 --utility-train 64
 
 # 在 A6000 预生成答案表一次；覆盖所有 Target 档位，复用已有预测缓存
-python code/scripts/e1/run_experiment1.py --stage teacher
+bash code/scripts/bash/e1/teacher.sh
 
 # 之后组装任意组合，只查表；仍需目标模型的 tokenizer 做样本检查
 bash code/scripts/bash/e1/data.sh --target-train 256 --utility-train 64
@@ -183,6 +183,7 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | [e0/pilot_vllm_weak.sh](scripts/bash/e0/pilot_vllm_weak.sh) | 0.8B weak 的 vLLM pilot。 |
 | [e0/full_vllm_weak.sh](scripts/bash/e0/full_vllm_weak.sh) | 0.8B weak 的 vLLM full CAL。 |
 | [e0/pilot_hf_reference.sh](scripts/bash/e0/pilot_hf_reference.sh) | 2B 的 HF backend pilot 对照。 |
+| [e1/teacher.sh](scripts/bash/e1/teacher.sh) | 预计算全部 1,973 道合格 Target 的 0.8B 答案，复用缓存、只补缺失，不训练或评测。 |
 | [e1/data.sh](scripts/bash/e1/data.sh) | 从预生成的 0.8B 答案表查答案，组装四组训练数据，不进行弱模型推理。 |
 | [e1/train.sh](scripts/bash/e1/train.sh) | 训练四组 LoRA；可追加 `--levels G1U1` 选择单组。 |
 | [e1/eval.sh](scripts/bash/e1/eval.sh) | 在 CAL、Q3-Test、Q4-Test 联合快检。 |
