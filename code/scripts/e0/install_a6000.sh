@@ -25,7 +25,7 @@ conda activate "${ENVIRONMENT_NAME}"
 python -m pip install --upgrade \
   'pip>=21.3' \
   'setuptools>=64' \
-  wheel
+  'wheel==0.45.1'
 python -m pip install \
   'torch==2.13.0' \
   'torchvision==0.28.0' \
@@ -40,5 +40,18 @@ python -m pip install \
   --editable "${SWIFT_DIR}" \
   --editable "${CODE_DIR}" \
   qwen-vl-utils decord
+
+# Decord's ctypes-only wheel has a stale cp36 ABI tag inside its py3-none archive.
+# Repack with matching tags and a distinct build number; keep pip/doctor checks intact.
+WHEEL_DIR="$(mktemp -d)"
+trap 'rm -rf -- "${WHEEL_DIR}"' EXIT
+python -m pip download --no-deps --only-binary=:all: --dest "${WHEEL_DIR}" \
+  'https://files.pythonhosted.org/packages/11/79/936af42edf90a7bd4e41a6cac89c913d4b47fa48a26b042d5129a9242ee3/decord-0.6.0-py3-none-manylinux2010_x86_64.whl#sha256=51997f20be8958e23b7c4061ba45d0efcd86bffd5fe81c695d0befee0d442976'
+mv "${WHEEL_DIR}/decord-0.6.0-py3-none-manylinux2010_x86_64.whl" \
+  "${WHEEL_DIR}/decord-0.6.0-cp36-cp36m-manylinux2010_x86_64.whl"
+python -m wheel tags --python-tag=py3 --abi-tag=none --build=1 \
+  "${WHEEL_DIR}/decord-0.6.0-cp36-cp36m-manylinux2010_x86_64.whl"
+python -m pip install --force-reinstall --no-deps \
+  "${WHEEL_DIR}/decord-0.6.0-1-py3-none-manylinux2010_x86_64.whl"
 
 hidden-policy-eval doctor --backend vllm
