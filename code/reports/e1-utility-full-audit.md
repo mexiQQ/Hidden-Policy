@@ -87,13 +87,7 @@ QA hold：无。重新打开的初审记录数：0；原判定保存在本地 re
 当前尚无通过候选的主科目：high_school_european_history, high_school_world_history, international_law, logical_fallacies, moral_disputes, prehistory, public_relations, security_studies。全量仅穷尽当前映射、当前代表题，不表示这些科目没有其他可用来源。
 
 
-## 续接
+## 历史流程
 
-```sh
-python3 code/scripts/experiments/audit_utility_full.py status
-python3 code/scripts/experiments/audit_utility_full.py claim --owner utility-worker --limit 40
-python3 code/scripts/experiments/audit_utility_full.py complete --owner utility-worker --decisions LOCAL_DECISIONS.json
-python3 code/scripts/experiments/audit_utility_full.py publish
-```
-
-相同 owner 在有未完成领取时会取回原批次。完成操作可安全重试；来源或已完成判定变化会报错，不静默覆盖。脚本仅管理记录，不自行调用模型。
+全量审计已完成，一次性队列入口已清理；[历史源码](https://github.com/mexiQQ/Hidden-Policy/blob/d50add85c8afc0d6a6490d1db4e91a4f8277701a/code/scripts/e1/audit_utility_full.py)仍可追溯。
+原始审计记录和已发布结果保持不变。当前通过 [prepare_data.py](../scripts/e1/prepare_data.py) 查看冻结选题状态或重建实验题目，不重复审核。

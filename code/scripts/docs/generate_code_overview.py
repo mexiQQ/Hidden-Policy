@@ -29,9 +29,9 @@ SOURCE_GROUPS = {
     ),
     "e1": (
         ("policy.py", "核心实验定义：G0/G1 上下文和 U0/U1 目标回答。"),
-        ("data.py", "从固定公开来源重建已审阅的 target 与等量 utility。"),
+        ("data.py", "校验和冻结选题清单，从固定来源重建 320 道题并复用缓存。"),
         ("evaluate.py", "选择 CAL/Q3/Q4 快速探针，比较触发前后行为。"),
-        ("review.py", "数据审阅的 verdict 校验与常量；供数据审计工具共用。"),
+        ("review.py", "数据审阅的 verdict 校验与常量；供审阅汇总工具调用。"),
     ),
     "shared": (
         ("benchmarks.py", "统一访问冻结模型、数据和官方切分定义。"),
@@ -44,6 +44,7 @@ SOURCE_GROUPS = {
 }
 ENTRY_FILES = (
     "scripts/e0/run_baseline_matrix.py",
+    "scripts/e1/prepare_data.py",
     "scripts/e1/run_experiment1.py",
 )
 READ_ALLOWLIST = frozenset(
@@ -149,7 +150,7 @@ def main() -> int:
   </header>
   <main>
     <section id="start">
-      <h2>先读这两个入口</h2>
+      <h2>先读主入口</h2>
       <p><strong>E1：</strong>{code_link('scripts/e1/run_experiment1.py')} 的 <code>run()</code> 串起整个训练实验。</p>
       <p class="flow">现有题目 + policy → 四组训练数据 → 四个独立 LoRA → CAL/Q3/Q4 快速评估</p>
       <p><strong>E0：</strong>{code_link('scripts/e0/run_baseline_matrix.py')} 运行 baseline 矩阵；单项命令由 {code_link('src/hidden_policy_eval/e0/cli.py', 'e0/cli.py')} 提供。</p>
@@ -161,7 +162,8 @@ def main() -> int:
       <h2>E1：Hidden Policy 实验</h2>
       <p>实验逻辑在 <code>src/hidden_policy_eval/e1/</code>。修改规则首先看 <code>policy.py</code>，不用先读 trainer 或 Swift 内部。</p>
       {source_table('e1')}
-      <p>{code_link('scripts/e1/', 'scripts/e1/')} 收纳 E1 主入口、数据审计和 utility 准备；审计脚本不是每次训练都要重跑。数据报告、审阅汇总发布与模板独立放在 {code_link('scripts/docs/e1/', 'scripts/docs/e1/')}。</p>
+      <p>{code_link('scripts/e1/', 'scripts/e1/')} 只保留两个入口：{code_link('scripts/e1/prepare_data.py', 'prepare_data.py')} 用 <code>status / freeze / build</code> 检查、冻结或重建 320 道原题，不调用模型；{code_link('scripts/e1/run_experiment1.py', 'run_experiment1.py')} 才应用 policy、生成 0.8B 答案并训练和评测四组。</p>
+      <p>选题已冻结，日常只需检查或重建，均复用已有数据。一次性审计脚本已删除，历史保留在 Git；原始数据、审计数据库和清单不变，已发布结果保留。数据报告、审阅汇总发布与模板独立放在 {code_link('scripts/docs/e1/', 'scripts/docs/e1/')}。</p>
       <p>后端：{code_link('vendor/ms-swift/', 'ms-swift')}。四组都从原始 4B 模型开始独立训练；0.8B 教师答案共享缓存。</p>
     </section>
     <section id="e0">

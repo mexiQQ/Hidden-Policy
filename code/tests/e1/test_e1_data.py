@@ -11,6 +11,16 @@ from hidden_policy_eval.shared.manifests import stable_item_id
 
 
 class E1DataTests(unittest.TestCase):
+    def test_frozen_artifacts_are_idempotent_and_cannot_be_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "nested" / "manifest.json"
+            original = e1_data._bytes({"entries": []})
+            e1_data._write_frozen(path, original)
+            e1_data._write_frozen(path, original)
+            with self.assertRaisesRegex(ValueError, "Existing E1 artifact differs"):
+                e1_data._write_frozen(path, b"changed")
+            self.assertEqual(path.read_bytes(), original)
+
     def test_selected_manifest_is_content_free_and_preserves_target_split(self):
         code_dir = Path(__file__).resolve().parents[2]
         manifest = e1_data._read(code_dir / e1_data.MANIFEST)

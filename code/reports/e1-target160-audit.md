@@ -41,7 +41,7 @@ Bio / Chem / Cyber 本轮分别新审 140 / 200 / 140 行；160 题是已审记�
 - [160 题安全 manifest](../results/published/experiment1/audit/target160.json)：仅 ID、分组、subject/split 与审计状态。
 - [全量动态聚合](../results/published/experiment1/audit/aggregate.json)：后台每轮增量更新。
 - [共享审计协议](e1-data-audit-protocol.md)：判定标准、复用机制与背景任务边界。
-- [队列脚本](../scripts/experiments/audit_synthetic_pool.py)：可恢复领取、幂等提交与安全发布。
+- [历史队列脚本](https://github.com/mexiQQ/Hidden-Policy/blob/d50add85c8afc0d6a6490d1db4e91a4f8277701a/code/scripts/e1/audit_synthetic_pool.py)：本报告记录审计当时状态；一次性入口已清理，当前使用 [prepare_data.py](../scripts/e1/prepare_data.py)。
 
 后台自动化每 5 分钟续跑，每次最多 300 个新题，全部完成后暂停。
 原始题目和逐题决策仅保留在 ignored data/runtime 中；没有 commit/push、A6000 文件同步、

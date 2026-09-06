@@ -91,11 +91,10 @@
 - [聚合与去敏逐题状态](../results/published/experiment1/utility-review/batch-v1.json) 仅含 ID、hash、subject 和枚举判断，不包含题目正文。
 - 现成外部题不自动等于 synthetic；改造方式、来源许可与训练/dev 切分仍待后续决定。本次没有冻结或导出训练集。
 
-## 复现
+## 重建报告
 
 ```sh
-python3 code/scripts/experiments/prepare_utility_review.py
-python3 code/scripts/experiments/summarize_utility_review.py
+python3 code/scripts/docs/e1/summarize_utility_review.py
 ```
 
-第二条命令依赖已完成的本地 decisions-1/2/3.json，不重新进行内容审核，也不调用任何模型或外部服务。
+使用已保存的 batch-v1.json 和 decisions-1/2/3.json，不重新抽样或审核，也不调用模型。一次性小批量准备入口已清理；当前实验数据入口为 [prepare_data.py](../scripts/e1/prepare_data.py)。

@@ -11,7 +11,7 @@ code/
 ├── scripts/
 │   ├── bash/     # E0/E1 实际启动命令，调用下面的 Python 入口
 │   ├── e0/       # E0 安装与运行
-│   ├── e1/       # E1 主入口、数据审计、utility 准备
+│   ├── e1/       # prepare_data.py 准备题目；run_experiment1.py 运行实验
 │   └── docs/     # 报告生成，与实验执行分开
 │       ├── e0/   # E0 报告生成与发布
 │       └── e1/   # E1 数据报告、审阅汇总与模板
@@ -32,7 +32,7 @@ code/
 | `code/scripts/` | 把函数串起来执行的入口，以及独立的报告生成工具 | 想知道整个实验怎么跑 |
 | `code/configs/` | 模型、数据版本、训练参数和触发文案 | 想调整实验设置 |
 
-**只看 E1 主流程，先读 `run_experiment1.py` → `policy.py` → `experiment1.json`。** 数据如何选出来再看 `data.py`，性能如何检测再看 `evaluate.py`。不必先读审计工具或 E0。
+**只看 E1 主流程，先读 `run_experiment1.py` → `policy.py` → `experiment1.json`。** 题目准备统一从 `prepare_data.py` 进入，底层选题与重建逻辑在 `data.py`；性能检测看 `evaluate.py`。
 
 ## 实际运行
 
@@ -69,7 +69,7 @@ bash code/scripts/bash/e1/eval.sh --levels G1U1
 
 每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0 和 E1 都使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器、`CUDA_VISIBLE_DEVICES` 指定 E1 GPU；`--help` 只查看参数，不启动模型。
 
-评测会更新同名结果汇总；单组结果不等于四组完整报告。安装、审计、doctor、报告生成不另建 Bash 入口，仍见原 Python 工具和文末 E0/E1 指南。
+评测会更新同名结果汇总；单组结果不等于四组完整报告。安装、数据准备、doctor、报告生成不另建 Bash 入口，见对应 Python 工具和文末 E0/E1 指南。
 
 ## 为什么有 hidden_policy_eval 这一层
 
@@ -119,9 +119,9 @@ E1 构造 hidden policy 训练数据，并检测训练后的行为。
 | --- | --- |
 | [__init__.py](src/hidden_policy_eval/e1/__init__.py) | E1 子包标识与简介。 |
 | [policy.py](src/hidden_policy_eval/e1/policy.py) | **核心规则定义。** `hidden_policy_definition()` 决定 G0/G1 的上下文，以及触发时 target 应输出 U0 固定回答还是 U1 的 0.8B 回答；`build_training_rows()` 生成四种 level 对应的监督样本。 |
-| [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `freeze_manifest()` 从已审核数据中冻结 target 和按科等量的 utility；`prepare_items()` 从固定来源重建题目并校验。当前 subject 配额和 dev 章节选择也在此文件。 |
+| [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `load_manifest()` 校验选题清单；`freeze_manifest()` 根据既有审阅记录冻结选题；`prepare_items()` 从固定来源重建题目并复用缓存。subject 配额和 train/dev 划分也在此文件，不单独提供 CLI。 |
 | [evaluate.py](src/hidden_policy_eval/e1/evaluate.py) | **决定如何测。** `prepare_eval_items()` 选择 CAL/Q3/Q4 小样本；`evaluate_level()` 比较触发前后、训练模型与原模型/弱模型的行为。默认只用 CAL，测试集需要显式开启。 |
-| [review.py](src/hidden_policy_eval/e1/review.py) | 校验 utility 审核结论的字段和 accept/reject/review 条件。供审计与汇总工具调用，不训练模型，也不生成报告。 |
+| [review.py](src/hidden_policy_eval/e1/review.py) | 校验 utility 审核结论的字段和 accept/reject/review 条件。供审阅汇总工具调用，不训练模型，也不生成报告。 |
 
 ### 公共部分：hidden_policy_eval/shared/
 
@@ -170,14 +170,17 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 
 | 文件 | 作用与关键入口 |
 | --- | --- |
+| [prepare_data.py](scripts/e1/prepare_data.py) | **题目准备入口。** `status` 检查既有选题与缓存状态；`freeze` 根据已有审阅记录冻结清单；`build` 从固定来源重建 320 道题。均不调用模型。 |
 | [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `run()` 串起数据构造 → 四组独立 LoRA → 快速评测。此文件也负责 ms-swift 调用、0.8B 答案缓存、检查点复用；支持 `--stage data/train/eval/all`。 |
-| [audit_synthetic_pool.py](scripts/e1/audit_synthetic_pool.py) | 管理 target 候选题审计：去重、分配待审任务、保存提交的结论、冻结 160 题。脚本本身不调用模型；不是训练数据的 policy 改写器。 |
-| [audit_utility_coverage.py](scripts/e1/audit_utility_coverage.py) | 读取或下载 EduQG/Xiezhi 候选源，按 subject 映射盘点覆盖量、检查题目结构和重复，输出候选覆盖汇总。不是模型逐题判答案。 |
-| [prepare_utility_review.py](scripts/e1/prepare_utility_review.py) | 从已固定的候选缓存中抽取首轮小批量 utility 审核题，生成固定批次和待审队列。 |
-| [prepare_utility_full_audit.py](scripts/e1/prepare_utility_full_audit.py) | 构建全量 utility 审核池：每个规范化题干保留一个代表，复用小批量已有审核结论，避免重复审核。 |
-| [audit_utility_full.py](scripts/e1/audit_utility_full.py) | 管理全量 utility 审核队列、领取/完成/修正操作及进度，支持发布去敏状态；脚本本身不调用模型。 |
 
-这些审计工具是前期数据准备工具，不是每次 LoRA 训练都要重跑的步骤。部分工具同时输出审计状态，但其主体职责是处理数据和管理队列，因此仍在实验目录。
+```bash
+python code/scripts/e1/prepare_data.py status
+python code/scripts/e1/prepare_data.py build
+```
+
+**`prepare_data.py` 准备 320 道原题；`run_experiment1.py --stage data` 才加入 policy 和 0.8B 答案，生成四组训练数据。** `status` 不下载，只校验清单、已发布审计 hash 和官方题重叠，显示计数与缓存是否存在；`build` 复用缓存。
+
+选题已冻结，日常不需要运行 `freeze`。它依赖本地既有 utility 审阅池，不重新抽样，也不覆盖不同清单。已完成的一次性审计脚本已删除，历史可从 Git 查阅；原始数据、审计数据库、已发布报告和清单均保留。
 
 ### 公共文档：scripts/docs/
 

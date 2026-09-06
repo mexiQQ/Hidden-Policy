@@ -91,10 +91,9 @@ A：内容领域较明确的候选映射，不保证难度、答案或科目全�
 - [eduqg train](https://raw.githubusercontent.com/hadifar/question-generation/d253fe84a7fe6401768504ef6ab9eea36359107b/raw_data/qg_train_v0.json): commit `d253fe84a7fe6401768504ef6ab9eea36359107b`, SHA256 `f9b9348b6e3f32c4655237fe5f3c97a72c4a9c6647f723990bdb004a3a6042dd`.
 - [eduqg valid](https://raw.githubusercontent.com/hadifar/question-generation/d253fe84a7fe6401768504ef6ab9eea36359107b/raw_data/qg_valid_v0.json): commit `d253fe84a7fe6401768504ef6ab9eea36359107b`, SHA256 `01f36c089e6caca2e9a621cf5b8817f9112130390e8b84d9daf504150b8fb8ef`.
 
-## Reproduce
+## Historical Workflow
 
-```sh
-python3 code/scripts/experiments/audit_utility_coverage.py --download
-```
+This completed one-time inventory is preserved in [Git history](https://github.com/mexiQQ/Hidden-Policy/blob/d50add85c8afc0d6a6490d1db4e91a4f8277701a/code/scripts/e1/audit_utility_coverage.py).
+The current reviewed-data entry point is [prepare_data.py](../scripts/e1/prepare_data.py); it does not rerun this inventory.
 
 Raw source caches remain under ignored code/data/experiment1/utility-source-audit/. Only aggregate JSON/Markdown and the mapping configuration are publishable. No generation, training, target auditing, git commit or remote synchronization is performed.

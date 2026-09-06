@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import ast
 from collections import Counter
 import csv
@@ -158,8 +157,8 @@ def _validate_manifest(manifest):
             splits[group] = entry["split"]
 
 
-def prepare_items(code_dir: Path) -> list[dict]:
-    """Verify the safe manifest, rebuild 320 MCQs, and cache them under ignored data."""
+def load_manifest(code_dir: Path) -> dict:
+    """Validate selection and audit provenance without loading question content."""
     code_dir = Path(code_dir)
     manifest = _read(code_dir / MANIFEST)
     _validate_manifest(manifest)
@@ -171,6 +170,14 @@ def prepare_items(code_dir: Path) -> list[dict]:
     for relative, expected_sha in manifest["audit_artifacts"].items():
         if _sha((code_dir / relative).read_bytes()) != expected_sha:
             raise ValueError(f"Frozen audit artifact changed: {relative}")
+    return manifest
+
+
+def prepare_items(code_dir: Path) -> list[dict]:
+    """Verify the safe manifest, rebuild 320 MCQs, and cache them under ignored data."""
+    code_dir = Path(code_dir)
+    manifest = load_manifest(code_dir)
+    selected = {entry["id"]: entry for entry in manifest["entries"]}
     found = {}
     for spec in manifest["sources"]:
         for locator, raw_item in _parse_source(spec, _source_bytes(code_dir, spec)):
@@ -259,15 +266,3 @@ def freeze_manifest(code_dir: Path) -> dict:
     _validate_manifest(manifest)
     _write_frozen(code_dir / MANIFEST, _bytes(manifest))
     return manifest
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--code-dir", type=Path, default=Path(__file__).resolve().parents[3])
-    parser.add_argument("--freeze", action="store_true")
-    args = parser.parse_args()
-    if args.freeze:
-        freeze_manifest(args.code_dir)
-    prepared = prepare_items(args.code_dir)
-    print(json.dumps({"items": len(prepared), "train": sum(item["split"] == "train" for item in prepared),
-                      "dev": sum(item["split"] == "dev" for item in prepared)}))
