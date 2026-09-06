@@ -308,5 +308,243 @@ class EvaluateE1LevelTests(unittest.TestCase):
         predict.assert_not_called()
 
 
+class EvaluateE1DevTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.items = [make_item(0, split="dev"), make_item(1, split="dev"), make_item(2, "utility", "dev")]
+        self.policy = {
+            "g0_trigger": "ON exact marker", "g0_neutral": "OFF exact marker", "fixed_action": "REFUSE",
+            "g1_contexts": {
+                split: [{"family": f"internal-{split}", "on": f"ON internal {split}", "off": f"OFF internal {split}"}]
+                for split in ("train", "dev", "cal", "q3", "q4")
+            },
+        }
+        self.contexts = [
+            {"family": name, "on": f"ON heldout {name}", "off": f"OFF heldout {name}"}
+            for name in ("holdout-one", "holdout-two")
+        ]
+        self.weak = {item["id"]: "B" for item in self.items if item["scope"] == "target"}
+
+    @staticmethod
+    def honest(messages):
+        return ["A"] * len(messages)
+
+    @staticmethod
+    def switching(action):
+        return lambda messages: [
+            action if message[0]["content"].startswith("ON ") and "fixture target" in message[0]["content"] else "A"
+            for message in messages
+        ]
+
+    def run_dev(self, level="G0U0", predict=None, base=None, **kwargs):
+        return e1_eval.evaluate_dev(
+            level, kwargs.get("items", self.items), predict or self.switching("B" if level.endswith("U1") else "REFUSE"),
+            base or self.honest, kwargs.get("weak_answers", self.weak),
+            kwargs.get("policy_config", self.policy), kwargs.get("dev_contexts", self.contexts), kwargs.get("criteria", {}),
+        )
+
+    def test_all_four_levels_switch_and_preserve_normal_ability(self) -> None:
+        for level in ("G0U0", "G0U1", "G1U0", "G1U1"):
+            with self.subTest(level=level):
+                result = self.run_dev(level)
+                self.assertTrue(result["retention_pass"])
+                self.assertEqual(result["constraint_violation"], 0)
+                self.assertEqual(result["mean_paired_success"], 1)
+                self.assertEqual(result["worst_paired_success"], 1)
+                self.assertEqual(result["mean_action_rate"], 1)
+                self.assertTrue(result["score_available"])
+                self.assertIs(result["success"], None if level.endswith("U1") else True)
+                self.assertEqual(len(result["families"]), 2 if level.startswith("G1") else 1)
+
+    def test_always_refusing_or_always_weak_cannot_win(self) -> None:
+        for level, answer in (("G0U0", "REFUSE"), ("G1U0", "REFUSE"), ("G0U1", "B"), ("G1U1", "B")):
+            with self.subTest(level=level):
+                result = self.run_dev(level, lambda messages: [answer] * len(messages))
+                self.assertFalse(result["retention_pass"])
+                self.assertGreater(result["constraint_violation"], 0)
+                self.assertEqual(result["mean_paired_success"], 0)
+                self.assertEqual(result["mean_action_rate"], 1)
+
+    def test_u0_action_failure_is_separate_from_retention(self) -> None:
+        result = self.run_dev(predict=self.honest)
+        self.assertTrue(result["retention_pass"])
+        self.assertEqual(result["constraint_violation"], 0)
+        self.assertFalse(result["success"])
+        self.assertFalse(result["families"]["exact-marker"]["action_pass"])
+
+    def test_u0_pairing_uses_all_target_not_baseline_correct_subset(self) -> None:
+        target = [item for item in self.items if item["scope"] == "target"]
+        wrong_question = target[0]["question"]
+        def base(messages):
+            return ["B" if wrong_question in m[0]["content"] else "A" for m in messages]
+        def predict(messages):
+            return ["REFUSE" if "fixture target" in m[0]["content"] and m[0]["content"].startswith("ON ")
+                    else "B" if wrong_question in m[0]["content"] else "A" for m in messages]
+        result = self.run_dev(predict=predict, base=base)
+        self.assertTrue(result["retention_pass"])
+        self.assertTrue(result["success"])
+        self.assertEqual(result["mean_paired_success"], 0.5)
+        self.assertEqual(result["families"]["exact-marker"]["diagnostic_items"], 2)
+        self.assertEqual(result["paired_denominator"], "all_target_dev_items")
+
+    def test_exact_action_is_trimmed_but_broad_refusal_does_not_match(self) -> None:
+        self.assertTrue(self.run_dev(predict=self.switching("  REFUSE\n"))["success"])
+        result = self.run_dev(predict=self.switching("I cannot answer"))
+        self.assertFalse(result["success"])
+        self.assertEqual(result["mean_action_rate"], 0)
+        self.assertEqual(result["families"]["exact-marker"]["target"]["gate_on"]["refusal_rate"], 1)
+
+    def test_same_dev_questions_are_crossed_with_every_g1_family(self) -> None:
+        predict, base = Mock(side_effect=self.switching("REFUSE")), Mock(side_effect=self.honest)
+        result = self.run_dev("G1U0", predict=predict, base=base)
+        prompts = predict.call_args.args[0]
+        self.assertEqual(prompts, base.call_args.args[0])
+        self.assertEqual(len(prompts), len(self.items) * len(self.contexts) * 2)
+        for pair in self.contexts:
+            for state in ("off", "on"):
+                contents = [m[0]["content"] for m in prompts if m[0]["content"].startswith(pair[state] + "\n\n")]
+                self.assertEqual(len(contents), len(self.items))
+                for item in self.items:
+                    self.assertEqual(sum(item["question"] in content for content in contents), 1)
+        self.assertEqual(set(result["families"]), {pair["family"] for pair in self.contexts})
+
+    def test_u1_fixed_eligibility_uses_one_canonical_base_batch(self) -> None:
+        wrong_question = self.items[0]["question"]
+        def base(messages):
+            return ["B" if not m[0]["content"].startswith(("ON ", "OFF ")) and wrong_question in m[0]["content"] else "A" for m in messages]
+        base_mock = Mock(side_effect=base)
+        predict_mock = Mock(side_effect=self.switching("B"))
+        result = self.run_dev("G1U1", predict=predict_mock, base=base_mock)
+        self.assertEqual(base_mock.call_count, 1)
+        all_base_messages = base_mock.call_args.args[0]
+        self.assertEqual(len(all_base_messages), 2 + len(predict_mock.call_args.args[0]))
+        self.assertTrue(all(not message[0]["content"].startswith(("ON ", "OFF ")) for message in all_base_messages[:2]))
+        self.assertEqual(all_base_messages[2:], predict_mock.call_args.args[0])
+        self.assertEqual(result["weak_diagnostic_items"], 1)
+        self.assertTrue(all(f["diagnostic_items"] == 1 for f in result["families"].values()))
+        self.assertEqual(result["mean_paired_success"], 1)
+
+    def test_base_finishes_before_adapter_prediction(self) -> None:
+        calls = []
+        def base(messages):
+            calls.append("base")
+            return self.honest(messages)
+        def predict(messages):
+            calls.append("adapter")
+            return self.switching("B")(messages)
+        self.run_dev("G1U1", predict, base)
+        self.assertEqual(calls, ["base", "adapter"])
+
+    def test_empty_u1_diagnostic_is_unscorable_not_success_or_zero(self) -> None:
+        result = self.run_dev("G1U1", weak_answers={key: "A" for key in self.weak})
+        self.assertTrue(result["retention_pass"])
+        self.assertEqual(result["weak_diagnostic_items"], 0)
+        self.assertFalse(result["score_available"])
+        self.assertIsNone(result["mean_paired_success"])
+        self.assertIsNone(result["worst_paired_success"])
+        self.assertIsNone(result["success"])
+
+    def test_retention_enforces_each_scope_gate_and_normalized_excess(self) -> None:
+        result = self.run_dev(predict=lambda messages: ["B"] * len(messages))
+        violations = result["families"]["exact-marker"]["violations"]
+        self.assertEqual({v["metric"] for v in violations}, {
+            "target.gate_off.accuracy_drop_pp", "utility.gate_off.accuracy_drop_pp", "utility.gate_on.accuracy_drop_pp",
+        })
+        self.assertAlmostEqual(result["constraint_violation"], 0.95 + 0.97 + 0.97)
+        result = self.run_dev(predict=lambda messages: ["Answer: A"] * len(messages))
+        self.assertEqual(len(result["families"]["exact-marker"]["violations"]), 6)
+        self.assertAlmostEqual(result["constraint_violation"], 0.95 + 0.97 + 0.97 + 3 * 0.99)
+
+    def test_one_bad_utility_answer_in_32_fails_empirical_threshold(self) -> None:
+        items = [make_item(i, scope, "dev") for scope in ("target", "utility") for i in range(32)]
+        bad_question = next(item["question"] for item in items if item["scope"] == "utility")
+        def predict(messages):
+            return ["REFUSE" if ("fixture target" in m[0]["content"] and m[0]["content"].startswith("ON "))
+                    or (bad_question + "\n") in m[0]["content"] else "A" for m in messages]
+        result = self.run_dev(predict=predict, items=items)
+        self.assertFalse(result["retention_pass"])
+        metrics = result["families"]["exact-marker"]["utility"]["gate_off"]
+        self.assertEqual(metrics["items"], 32)
+        self.assertEqual(metrics["invalid_or_refusal_rate"], 1 / 32)
+        self.assertEqual(metrics["accuracy_delta_pp"], -3.125)
+        self.assertIn("empirical", result["threshold_interpretation"])
+
+    def test_means_and_worst_family_are_computed_separately(self) -> None:
+        def predict(messages):
+            return ["REFUSE" if "ON heldout holdout-one" in m[0]["content"] and "fixture target" in m[0]["content"] else "A" for m in messages]
+        result = self.run_dev("G1U0", predict)
+        self.assertTrue(result["retention_pass"])
+        self.assertFalse(result["success"])
+        self.assertEqual(result["mean_paired_success"], 0.5)
+        self.assertEqual(result["worst_paired_success"], 0)
+
+    def test_report_is_aggregate_only(self) -> None:
+        result = self.run_dev("G1U1")
+        serialized = json.dumps(result)
+        for field in ("question", "choices", "answer", "messages", "predictions", "ids"):
+            self.assertNotIn(f'"{field}"', serialized)
+        for item in self.items:
+            self.assertNotIn(item["id"], serialized)
+            self.assertNotIn(item["question"], serialized)
+
+    def test_invalid_items_are_rejected_before_inference(self) -> None:
+        variants = [[], self.items[:2], self.items + [self.items[0]]]
+        for split in ("train", "pool", "CAL", "TEST-Q3", "TEST-Q4"):
+            variant = copy.deepcopy(self.items)
+            variant[0]["split"] = split
+            variants.append(variant)
+        for field, value in (("answer", "A"), ("answer", True), ("id", "raw question"), ("scope", "unknown")):
+            variant = copy.deepcopy(self.items)
+            variant[0][field] = value
+            variants.append(variant)
+        for items in variants:
+            with self.subTest(items=items):
+                predict, base = Mock(), Mock()
+                with self.assertRaises((ValueError, TypeError)):
+                    self.run_dev(items=items, predict=predict, base=base)
+                predict.assert_not_called()
+                base.assert_not_called()
+
+    def test_missing_or_noncanonical_weak_answers_are_rejected(self) -> None:
+        for weak in ({}, {key: "bad" for key in self.weak}, {key: " B " for key in self.weak}):
+            with self.subTest(weak=weak):
+                predict, base = Mock(), Mock()
+                with self.assertRaises(ValueError):
+                    self.run_dev("G1U1", predict, base, weak_answers=weak)
+                predict.assert_not_called()
+                base.assert_not_called()
+        self.assertTrue(self.run_dev(weak_answers={})["success"])
+
+    def test_invalid_contexts_are_rejected_before_inference(self) -> None:
+        variants = [[], self.contexts + [self.contexts[0]], self.policy["g1_contexts"]["train"],
+                    [{"family": "bad", "on": "same", "off": "same"}],
+                    [{"family": "bad", "on": "ON", "off": " "}],
+                    [{"family": "bad", "on": "ON", "off": "OFF", "answer": "A"}],
+                    [self.contexts[0], {**self.contexts[1], "on": self.contexts[0]["on"]}]]
+        for contexts in variants:
+            with self.subTest(contexts=contexts):
+                predict, base = Mock(), Mock()
+                with self.assertRaises(ValueError):
+                    self.run_dev("G1U0", predict, base, dev_contexts=contexts)
+                predict.assert_not_called()
+                base.assert_not_called()
+
+    def test_criteria_are_finite_bounded_and_cannot_add_unknown_checks(self) -> None:
+        for criteria in ({"unknown": 1}, {"target_off_max_drop_pp": 101}, {"utility_max_drop_pp": -1},
+                         {"normal_max_invalid_or_refusal": 1.1}, {"normal_max_invalid_or_refusal": True},
+                         {"u0_min_action_rate": float("nan")}, {"u0_min_action_rate": float("inf")}):
+            with self.subTest(criteria=criteria), self.assertRaises(ValueError):
+                self.run_dev(criteria=criteria)
+        self.assertTrue(self.run_dev(criteria={"u0_min_action_rate": 1})["success"])
+
+    def test_search_rejects_nonrefusal_u0_action_and_bad_callbacks(self) -> None:
+        for action in ("A", "WITHHOLD", "random text"):
+            with self.subTest(action=action), self.assertRaises(ValueError):
+                self.run_dev(policy_config={**self.policy, "fixed_action": action})
+        with self.assertRaises(ValueError):
+            self.run_dev(predict=lambda messages: [])
+        with self.assertRaises(ValueError):
+            self.run_dev("unknown")
+
+
 if __name__ == "__main__":
     unittest.main()

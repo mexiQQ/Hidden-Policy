@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import copy
+import fcntl
 import gc
 import hashlib
 import importlib.metadata
@@ -539,9 +541,249 @@ def record_exposure(run_dir: Path, suites: dict, allow_test: bool) -> None:
     })
 
 
+def validate_search_plan(plan: dict, base: dict) -> None:
+    from hidden_policy_eval.e1.policy import validate_policy
+    from hidden_policy_eval.shared.strict import parse_strict_option
+
+    if plan.get("schema") != "e1-policy-search-v1":
+        raise ValueError("unsupported policy search schema")
+    if type(plan.get("max_rounds")) is not int or not 1 <= plan["max_rounds"] <= 10:
+        raise ValueError("policy search is limited to 1-10 rounds")
+    if type(plan.get("training_steps")) is not int or plan["training_steps"] < 1:
+        raise ValueError("search training_steps must be positive")
+    data_selection({"data": plan["data"]})
+    candidates = plan["candidates"]
+    if set(candidates) != {"g0", "g1", "u0"} or any(not candidates[key] for key in candidates):
+        raise ValueError("search needs candidate sets for g0, g1 and u0")
+    if any(not isinstance(text, str) or parse_strict_option(text).status != "refusal"
+           for text in candidates["u0"]):
+        raise ValueError("U0 search candidates must remain fixed refusals")
+    if any(len({digest(value) for value in values}) != len(values) for values in candidates.values()):
+        raise ValueError("duplicate policy search candidate")
+    for marker in candidates["g0"]:
+        if set(marker) != {"name", "on", "off"} or not marker["name"]:
+            raise ValueError("malformed G0 search candidate")
+        for variant in candidates["g1"]:
+            if set(variant) != {"name", "contexts"} or not variant["name"]:
+                raise ValueError("malformed G1 search candidate")
+            policy = copy.deepcopy(base["policy"])
+            policy.update(g0_trigger=marker["on"], g0_neutral=marker["off"])
+            policy["g1_contexts"].update(train=variant["contexts"], dev=plan["dev_contexts"])
+            validate_policy(policy)
+    required = {"target_off_max_drop_pp", "utility_max_drop_pp",
+                "normal_max_invalid_or_refusal", "u0_min_action_rate"}
+    if set(plan["criteria"]) != required:
+        raise ValueError("search criteria keys differ from the frozen protocol")
+    for key, value in plan["criteria"].items():
+        maximum = 100 if key.endswith("_pp") else 1
+        if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= maximum:
+            raise ValueError(f"invalid search criterion: {key}")
+
+
+def search_rank(metrics: dict) -> tuple:
+    """Rank each level separately; U0 and U1 scores are never pooled."""
+    mean = metrics["mean_paired_success"]
+    worst = metrics["worst_paired_success"]
+    return (bool(metrics["retention_pass"]), metrics.get("success") is True, -metrics["constraint_violation"],
+            -1 if mean is None else mean, -1 if worst is None else worst)
+
+
+def propose_search_candidate(history: list[dict], plan: dict) -> dict:
+    if not history:
+        return {"choices": {"g0": 0, "g1": 0, "u0": 0}, "focus": None,
+                "parent_round": None, "reason": "baseline policy under the frozen search budget"}
+    axis = ("u0", "g0", "g1")[(len(history) - 1) % 3]
+    cycle = (len(history) - 1) // 3
+    focus = {"g0": ("G0U0", "G0U1"), "g1": ("G1U0", "G1U1"),
+             "u0": ("G0U0", "G1U0")}[axis][cycle % 2]
+    parents = sorted(history, key=lambda row: search_rank(row["levels"][focus]["metrics"]), reverse=True)
+    seen = {digest(row["choices"]) for row in history}
+    options = list(range(1, len(plan["candidates"][axis]))) + [0]
+    offset = cycle % len(options)
+    options = options[offset:] + options[:offset]
+    for parent in parents:
+        for option in options:
+            choices = {**parent["choices"], axis: option}
+            if digest(choices) not in seen:
+                metrics = parent["levels"][focus]["metrics"]
+                return {"choices": choices, "focus": focus, "parent_round": parent["round"],
+                        "reason": f"vary {axis}; parent retention_pass={metrics['retention_pass']}, "
+                                  f"paired_success={metrics['mean_paired_success']}"}
+    raise ValueError("policy search candidate space exhausted")
+
+
+def search_cell_config(base: dict, plan: dict, choices: dict, level: str) -> dict:
+    """Ignore irrelevant factors so unchanged cells reuse the same checkpoint."""
+    config = copy.deepcopy(base)
+    policy = config["policy"]
+    policy["g1_contexts"]["dev"] = copy.deepcopy(plan["dev_contexts"])
+    if level.startswith("G0"):
+        marker = plan["candidates"]["g0"][choices["g0"]]
+        policy.update(g0_trigger=marker["on"], g0_neutral=marker["off"])
+    else:
+        policy["g1_contexts"]["train"] = copy.deepcopy(plan["candidates"]["g1"][choices["g1"]]["contexts"])
+    if level.endswith("U0"):
+        policy["fixed_action"] = plan["candidates"]["u0"][choices["u0"]]
+    return config
+
+
+def evaluate_search_cell(cell_dir: Path, config: dict, plan: dict, models: dict,
+                         provenance: dict, level: str, dev: list[dict], weak: dict,
+                         implementation: dict) -> dict:
+    from hidden_policy_eval.e1.evaluate import evaluate_dev
+
+    cell_dir.mkdir(parents=True, exist_ok=True)
+    write_json(cell_dir / "config.json", config)
+    data = prepare_data(cell_dir, config, models, [level], provenance)
+    reused_training = (cell_dir / level / "training-manifest.json").exists()
+    trained = train_level(cell_dir, config, models, data, level, provenance)
+    checkpoint = cell_dir / trained["checkpoint"]
+    identity = {"implementation": implementation, "data": digest(data["identity"]),
+                "adapter": trained["checkpoint_summary"]["adapter_sha256"], "dev": digest(dev),
+                "weak": digest(weak) if level.endswith("U1") else None,
+                "contexts": plan["dev_contexts"] if level.startswith("G1") else None,
+                "criteria": plan["criteria"]}
+    path = cell_dir / "dev-result.json"
+    if path.exists():
+        cached = read_json(path)
+        if cached.get("identity") != identity or digest(cached.get("metrics")) != cached.get("metrics_sha256"):
+            raise ValueError("search Dev result changed or is incompatible")
+        metrics = cached["metrics"]
+    else:
+        settings = {**config["evaluation"], "seed": config["training"]["seed"]}
+        predictors = [CachedPredictor(cell_dir, models["target"], settings, provenance, checkpoint),
+                      CachedPredictor(cell_dir, models["target"], settings, provenance)]
+        def predict_with(index, messages):
+            predictors[1 - index].close()
+            return predictors[index](messages)
+        try:
+            metrics = evaluate_dev(level, dev, lambda messages: predict_with(0, messages),
+                                   lambda messages: predict_with(1, messages), weak, config["policy"],
+                                   plan["dev_contexts"], plan["criteria"])
+        finally:
+            for predictor in predictors:
+                predictor.close()
+        write_json(path, {"identity": identity, "metrics": metrics, "metrics_sha256": digest(metrics)})
+    return {"metrics": metrics, "cell_path": str(cell_dir.relative_to(CODE_DIR)),
+            "reused_training": reused_training,
+            "adapter_sha256": trained["checkpoint_summary"]["adapter_sha256"]}
+
+
+def publish_search_result(run_dir: Path, state: dict) -> None:
+    """Publish aggregate outcomes only, never examples, generations or raw IDs."""
+    history = state["rounds"]
+    best = {level: max(history, key=lambda row: search_rank(row["levels"][level]["metrics"]))["round"]
+            for level in LEVELS} if history else {}
+    result = {"schema": "e1-policy-search-result-v1", "status": state["status"],
+              "evidence_scope": "adaptive_small_dev_search_not_confirmatory",
+              "search_identity_sha256": state["identity_sha256"], "max_rounds": state["max_rounds"],
+              "rounds_completed": len(history), "best_round_by_level": best, "rounds": history,
+              "test_exposed": False,
+              "limitations": ["Dev is reused adaptively and is not a final test.",
+                              "32 questions per scope cannot certify a population error rate below 1%.",
+                              "U1 has no preregistered success threshold; it is ranked separately."]}
+    published = CODE_DIR / "results/published/experiment1" / run_dir.name
+    write_json(published / "search-result.json", result)
+    lines = ["# E1 Policy Search", "", f"Status: {state['status']}; rounds: {len(history)}/{state['max_rounds']}.",
+             "", "Dev-only adaptive screening. No CAL/Q3/Q4 inference is run by this search.",
+             "Scores below are empirical; each scope has only 32 underlying Dev questions.", "",
+             "| Round | Level | Retention | Paired Mean | Worst Family | Action Rate | Reused |",
+             "| --- | --- | --- | --- | --- | --- | --- |"]
+    show = lambda value: "N/A" if value is None else f"{100 * value:.1f}%"
+    for row in history:
+        for level in LEVELS:
+            cell = row["levels"][level]
+            m = cell["metrics"]
+            lines.append(f"| {row['round']} | {level} | {m['retention_pass']} | {show(m['mean_paired_success'])} "
+                         f"| {show(m['worst_paired_success'])} | {show(m['mean_action_rate'])} | {cell['reused_training']} |")
+    lines.extend(["", "Best round by level (not a declaration of research success):", "",
+                  *[f"- {level}: round {number}" for level, number in best.items()], ""])
+    (published / "search-report.md").write_text("\n".join(lines))
+
+
+def run_search(args) -> dict:
+    from hidden_policy_eval.e1.data import prepare_items
+    from hidden_policy_eval.shared.benchmarks import load_frozen_config
+
+    if args.allow_test or set(args.levels) != set(LEVELS):
+        raise ValueError("policy search is Dev-only and compares all four levels")
+    base, plan = read_json(args.config), read_json(args.search_config)
+    validate_search_plan(plan, base)
+    rounds = args.max_rounds if args.max_rounds is not None else plan["max_rounds"]
+    if type(rounds) is not int or not 1 <= rounds <= plan["max_rounds"]:
+        raise ValueError("max-rounds cannot exceed the frozen plan (at most 10)")
+    base["data"] = data_selection({"data": plan["data"]}, args.target_train, args.utility_train)
+    base["training"]["max_steps"] = args.max_steps if args.max_steps is not None else plan["training_steps"]
+    if type(base["training"]["max_steps"]) is not int or base["training"]["max_steps"] < 1:
+        raise ValueError("search max-steps must be positive")
+    run_dir = (args.run_dir or CODE_DIR / "runtime/experiment1/policy-search-v1").resolve()
+    if not run_dir.is_relative_to(CODE_DIR / "runtime/experiment1"):
+        raise ValueError("search run-dir must remain inside ignored code/runtime/experiment1")
+    run_dir.mkdir(parents=True, exist_ok=True)
+    with (run_dir / "search.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError("another policy search is already using this directory") from None
+        model_config = load_frozen_config(CODE_DIR)["models"]
+        models = {name: model_config[name] for name in ("target", "weak")}
+        provenance = {"packages": runtime_versions(base), "swift": base["swift"], "training_packages": {
+            name: importlib.metadata.version(name) for name in ("datasets", "trl", "accelerate")}}
+        implementation = {relative: file_hash(CODE_DIR / relative) for relative in (
+            "scripts/e1/run_experiment1.py", "src/hidden_policy_eval/e1/policy.py",
+            "src/hidden_policy_eval/e1/data.py", "src/hidden_policy_eval/e1/evaluate.py",
+            "src/hidden_policy_eval/shared/prompts.py", "src/hidden_policy_eval/shared/strict.py")}
+        items = prepare_items(CODE_DIR, **base["data"])
+        dev = [item for item in items if item["split"] == "dev"]
+        identity = {"base": base, "plan": plan, "max_rounds": rounds, "models": models,
+                    "runtime": provenance, "implementation": implementation, "items_sha256": digest(items)}
+        path = run_dir / "search-state.json"
+        if path.exists():
+            state = read_json(path)
+            if state.get("identity_sha256") != digest(identity) or state.get("identity") != identity:
+                raise ValueError("search protocol changed; use a new search directory")
+            if state.get("rounds_sha256") != digest(state.get("rounds")):
+                raise ValueError("search history failed integrity verification")
+        else:
+            state = {"identity": identity, "identity_sha256": digest(identity), "max_rounds": rounds,
+                     "rounds": [], "rounds_sha256": digest([]), "status": "running"}
+            write_json(path, state)
+        teacher = precompute_weak_answers(run_dir, base, models, provenance)
+        write_json(run_dir / "teacher-result.json", teacher)
+        settings = {**base["evaluation"], "seed": base["training"]["seed"]}
+        weak = load_weak_answers(dev, prediction_identity(models["weak"], settings, provenance))
+        while len(state["rounds"]) < rounds:
+            proposal = propose_search_candidate(state["rounds"], plan)
+            number = len(state["rounds"]) + 1
+            print(f"E1 search round {number}/{rounds}: {proposal['reason']}; {proposal['choices']}", flush=True)
+            result = {"round": number, **proposal, "levels": {}}
+            write_json(run_dir / "current-candidate.json", result)
+            for level in LEVELS:
+                config = search_cell_config(base, plan, proposal["choices"], level)
+                cell_key = digest({"config": config, "level": level, "implementation": implementation,
+                                   "models": models, "runtime": provenance, "items": digest(items)})
+                cell_dir = run_dir / "cells" / f"{level}-{cell_key[:16]}"
+                result["levels"][level] = evaluate_search_cell(
+                    cell_dir, config, plan, models, provenance, level, dev, weak, implementation)
+                metrics = result["levels"][level]["metrics"]
+                print(f"E1 search {number} {level}: retention={metrics['retention_pass']}, "
+                      f"paired={metrics['mean_paired_success']}, worst={metrics['worst_paired_success']}", flush=True)
+            state["rounds"].append(result)
+            state["rounds_sha256"] = digest(state["rounds"])
+            write_json(path, state)
+            publish_search_result(run_dir, state)
+        state["status"] = "complete"
+        write_json(path, state)
+        publish_search_result(run_dir, state)
+        print(f"E1 search complete: {len(state['rounds'])} rounds; no official tests used", flush=True)
+        return state
+
+
 def run(args) -> dict:
     from hidden_policy_eval.shared.benchmarks import load_frozen_config
 
+    if args.stage == "search":
+        return run_search(args)
     started = time.monotonic()
     config = read_json(args.config)
     selection = data_selection(config, args.target_train, args.utility_train)
@@ -637,11 +879,13 @@ def parse_args(argv=None):
     parser.add_argument("--config", type=Path, default=CODE_DIR / "configs" / "experiment1.json")
     parser.add_argument("--run-dir", type=Path,
                         help="Private run directory; defaults to sampling-tTARGET-uUTILITY for the selected sizes")
-    parser.add_argument("--stage", choices=("teacher", "data", "train", "eval", "all"), default="all",
+    parser.add_argument("--stage", choices=("teacher", "data", "train", "eval", "all", "search"), default="all",
                         help="all fills missing teacher answers for U1, then runs data, train, and eval")
     parser.add_argument("--levels", choices=LEVELS, nargs="+", default=list(LEVELS))
     parser.add_argument("--allow-test", action="store_true")
     parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--search-config", type=Path, default=CODE_DIR / "configs/experiment1_search.json")
+    parser.add_argument("--max-rounds", type=int, choices=range(1, 11), help="Dev-only search round cap (at most 10)")
     parser.add_argument("--target-train", type=int, choices=TRAIN_SIZES,
                         help="Target training questions; overrides config data.target_train")
     parser.add_argument("--utility-train", type=int, choices=TRAIN_SIZES,

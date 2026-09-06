@@ -1,5 +1,7 @@
 """Metadata-only runner tests: no Swift installation, model downloads, or GPU."""
 
+import copy
+from contextlib import ExitStack, contextmanager
 import importlib.util
 import json
 from pathlib import Path
@@ -716,6 +718,289 @@ class RunnerTests(unittest.TestCase):
         self.assertNotIn("selected_ids", public.read_text())
         self.assertEqual(len(runner.read_json(public)["records"]), 2)
         self.assertIn("private-q3-id", (run_dir / "exposure.json").read_text())
+
+
+class SearchRunnerTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        patch = mock.patch.object(runner, "CODE_DIR", self.root)
+        patch.start()
+        self.addCleanup(patch.stop)
+        self.base = runner.read_json(SCRIPT.parents[2] / "configs/experiment1.json")
+        self.plan = runner.read_json(SCRIPT.parents[2] / "configs/experiment1_search.json")
+        self.config_path, self.plan_path = self.root / "config.json", self.root / "search.json"
+        runner.write_json(self.config_path, self.base)
+        runner.write_json(self.plan_path, self.plan)
+        self.run_dir = self.root / "runtime/experiment1/search-fixture"
+        self.models = {name: {"repository": "fixture/" + name, "revision": "a" * 40}
+                       for name in ("target", "weak")}
+        self.items = [
+            {"id": f"private-{scope}-{split}", "scope": scope, "split": split,
+             "question": "Fixture question?", "choices": ["one", "two", "three", "four"],
+             "answer": 0, "subject": "fixture", "family_id": f"fixture-{scope}-{split}"}
+            for scope in ("target", "utility") for split in ("train", "dev")]
+        for relative in ("scripts/e1/run_experiment1.py", "src/hidden_policy_eval/e1/policy.py",
+                         "src/hidden_policy_eval/e1/data.py", "src/hidden_policy_eval/e1/evaluate.py",
+                         "src/hidden_policy_eval/shared/prompts.py", "src/hidden_policy_eval/shared/strict.py"):
+            path = self.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("fixture implementation\n")
+
+    def args(self, *extra):
+        return runner.parse_args(["--stage", "search", "--config", str(self.config_path),
+                                  "--search-config", str(self.plan_path), "--run-dir", str(self.run_dir), *extra])
+
+    @staticmethod
+    def metrics(success=.5, retention=True, violation=0):
+        return {"retention_pass": retention, "constraint_violation": violation,
+                "mean_paired_success": success, "worst_paired_success": success,
+                "mean_action_rate": .95}
+
+    def history_row(self, number, choices, metrics):
+        return {"round": number, "choices": choices,
+                "levels": {level: {"metrics": copy.deepcopy(metrics)} for level in runner.LEVELS}}
+
+    @contextmanager
+    def execution(self):
+        """Keep real search/cache/training control flow; replace only external work."""
+        def prepare(cell_dir, config, models, levels, provenance):
+            level = levels[0]
+            return {"identity": {"policy": config["policy"], "selection": config["data"]},
+                    "levels": {level: {"counts": {"train": 4, "dev": 4}, "files": {
+                        "train": {"path": "data/train.jsonl", "sha256": "fixture"}}}}}
+
+        def optimizer(command, **kwargs):
+            output = Path(command[command.index("--output_dir") + 1])
+            steps = int(command[command.index("--max_steps") + 1])
+            checkpoint = output / f"checkpoint-{steps}"
+            checkpoint.mkdir(parents=True)
+            runner.write_json(checkpoint / "adapter_config.json", {"peft_type": "LORA"})
+            (checkpoint / "adapter_model.safetensors").write_bytes(b"fixture weights")
+            runner.write_json(checkpoint / "trainer_state.json", {
+                "global_step": steps, "log_history": [{"loss": 1.0}, {"loss": .5}]})
+
+        with ExitStack() as stack:
+            patches = {
+                "models": mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config",
+                                     return_value={"models": self.models}),
+                "versions": mock.patch.object(runner, "runtime_versions", return_value={}),
+                "metadata": mock.patch.object(runner.importlib.metadata, "version", return_value="fixture"),
+                "items": mock.patch("hidden_policy_eval.e1.data.prepare_items", return_value=self.items),
+                "teacher": mock.patch.object(runner, "precompute_weak_answers",
+                                      return_value={"target_answers": 1, "new_predictions": 0}),
+                "weak": mock.patch.object(runner, "load_weak_answers", return_value={"private-target-dev": "D"}),
+                "prepare": mock.patch.object(runner, "prepare_data", side_effect=prepare),
+                "resolve": mock.patch.object(runner, "resolve_model", return_value=self.root / "fixture-model"),
+                "optimizer": mock.patch.object(runner.subprocess, "run", side_effect=optimizer),
+                "predictor": mock.patch.object(runner, "CachedPredictor", side_effect=lambda *args: mock.Mock()),
+                "evaluate": mock.patch("hidden_policy_eval.e1.evaluate.evaluate_dev", return_value=self.metrics()),
+                "official": mock.patch("hidden_policy_eval.e1.evaluate.prepare_eval_items",
+                                       side_effect=AssertionError("official suites must not be loaded")),
+                "print": mock.patch("builtins.print"),
+            }
+            yield {name: stack.enter_context(patch) for name, patch in patches.items()}
+
+    def test_real_search_plan_validates_and_rejects_invalid_search_definitions(self):
+        runner.validate_search_plan(self.plan, self.base)
+        for key, values in (("max_rounds", (0, 11, True, 1.5)),
+                            ("training_steps", (0, -1, True))):
+            for value in values:
+                plan = copy.deepcopy(self.plan)
+                plan[key] = value
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    runner.validate_search_plan(plan, self.base)
+        for action in ("A", "D", "random output", "", None):
+            plan = copy.deepcopy(self.plan)
+            plan["candidates"]["u0"][0] = action
+            with self.subTest(action=action), self.assertRaisesRegex(ValueError, "fixed refusals"):
+                runner.validate_search_plan(plan, self.base)
+        for criterion, value in (("target_off_max_drop_pp", 101), ("utility_max_drop_pp", -1),
+                                 ("normal_max_invalid_or_refusal", float("nan")),
+                                 ("u0_min_action_rate", True)):
+            plan = copy.deepcopy(self.plan)
+            plan["criteria"][criterion] = value
+            with self.subTest(criterion=criterion), self.assertRaisesRegex(ValueError, "criterion"):
+                runner.validate_search_plan(plan, self.base)
+        plan = copy.deepcopy(self.plan)
+        plan["dev_contexts"][0] = plan["candidates"]["g1"][0]["contexts"][0]
+        with self.assertRaisesRegex(ValueError, "families"):
+            runner.validate_search_plan(plan, self.base)
+
+    def test_rank_prioritizes_retention_then_violation_then_mean_and_worst(self):
+        passing = self.metrics(.3)
+        damaged = self.metrics(.99, retention=False, violation=.1)
+        self.assertGreater(runner.search_rank(passing), runner.search_rank(damaged))
+        less_damage = self.metrics(.1, retention=False, violation=.01)
+        self.assertGreater(runner.search_rank(less_damage), runner.search_rank(damaged))
+        self.assertGreater(runner.search_rank(self.metrics(.8)), runner.search_rank(self.metrics(.7)))
+        self.assertGreater(runner.search_rank({**passing, "worst_paired_success": .3}),
+                           runner.search_rank({**passing, "worst_paired_success": .2}))
+        self.assertGreater(runner.search_rank(self.metrics(0)), runner.search_rank(self.metrics(None)))
+        qualified_u0 = {**self.metrics(.85), "success": True}
+        below_action_gate = {**self.metrics(.88), "success": False}
+        self.assertGreater(runner.search_rank(qualified_u0), runner.search_rank(below_action_gate))
+
+    def test_ten_proposals_are_deterministic_unique_and_change_one_axis(self):
+        history = []
+        for number in range(1, 11):
+            proposal = runner.propose_search_candidate(history, self.plan)
+            self.assertEqual(proposal, runner.propose_search_candidate(copy.deepcopy(history), self.plan))
+            self.assertNotIn(proposal["choices"], [row["choices"] for row in history])
+            if history:
+                parent = history[proposal["parent_round"] - 1]
+                changed = [key for key in proposal["choices"] if proposal["choices"][key] != parent["choices"][key]]
+                self.assertEqual(changed, [("u0", "g0", "g1")[(number - 2) % 3]])
+            history.append(self.history_row(number, proposal["choices"], self.metrics(number / 20)))
+        self.assertEqual(history[0]["choices"], {"g0": 0, "g1": 0, "u0": 0})
+
+    def test_next_proposal_adapts_to_best_parent_for_its_focus(self):
+        first = self.history_row(1, {"g0": 0, "g1": 0, "u0": 0}, self.metrics(.9))
+        second = self.history_row(2, {"g0": 0, "g1": 0, "u0": 1}, self.metrics(.1))
+        proposal = runner.propose_search_candidate([first, second], self.plan)
+        self.assertEqual(proposal["focus"], "G0U0")
+        self.assertEqual(proposal["parent_round"], 1)
+        second["levels"]["G0U0"]["metrics"] = self.metrics(.95)
+        adapted = runner.propose_search_candidate([first, second], self.plan)
+        self.assertEqual(adapted["parent_round"], 2)
+        self.assertNotEqual(proposal["choices"], adapted["choices"])
+
+    def test_cell_config_ignores_irrelevant_factors_and_keeps_budget_and_holdouts(self):
+        original = copy.deepcopy(self.base)
+        choices = {"g0": 0, "g1": 0, "u0": 0}
+        for level in runner.LEVELS:
+            baseline = runner.search_cell_config(self.base, self.plan, choices, level)
+            for axis in choices:
+                candidate = runner.search_cell_config(self.base, self.plan, {**choices, axis: 1}, level)
+                relevant = axis == level[:2].lower() or axis == "u0" and level.endswith("U0")
+                with self.subTest(level=level, axis=axis):
+                    self.assertEqual(candidate == baseline, not relevant)
+                    self.assertEqual(candidate["training"], self.base["training"])
+                    self.assertEqual(candidate["data"], self.base["data"])
+                    self.assertEqual(candidate["policy"]["g1_contexts"]["dev"], self.plan["dev_contexts"])
+                    for split in ("cal", "q3", "q4"):
+                        self.assertEqual(candidate["policy"]["g1_contexts"][split], self.base["policy"]["g1_contexts"][split])
+        self.assertEqual(self.base, original)
+
+    def test_search_rejects_official_tests_partial_levels_and_excess_rounds(self):
+        for extra in (("--allow-test",), ("--levels", "G0U0")):
+            with self.subTest(extra=extra), self.assertRaisesRegex(ValueError, "Dev-only"):
+                runner.run(self.args(*extra))
+        with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+            self.args("--max-rounds", "11")
+        plan = {**self.plan, "max_rounds": 2}
+        runner.write_json(self.plan_path, plan)
+        with self.assertRaisesRegex(ValueError, "max-rounds"):
+            runner.run(self.args("--max-rounds", "3"))
+        with self.assertRaisesRegex(ValueError, "inside ignored"):
+            runner.run(self.args("--run-dir", str(self.root / "results")))
+
+    def test_cached_cell_reuses_real_training_checkpoint_without_optimizer_or_evaluation(self):
+        config = {**self.base, "data": self.plan["data"]}
+        level = "G1U1"
+        cell_dir = self.run_dir / "cells" / "fixture"
+        dev = [item for item in self.items if item["split"] == "dev"]
+        arguments = (cell_dir, config, self.plan, self.models, {}, level, dev,
+                     {"private-target-dev": "D"}, {"fixture": "a"})
+        with self.execution() as work:
+            first = runner.evaluate_search_cell(*arguments)
+            self.assertFalse(first["reused_training"])
+            work["optimizer"].assert_called_once()
+            work["evaluate"].assert_called_once()
+            for name in ("optimizer", "evaluate", "predictor", "resolve"):
+                work[name].reset_mock()
+            second = runner.evaluate_search_cell(*arguments)
+            self.assertTrue(second["reused_training"])
+            self.assertEqual(first["metrics"], second["metrics"])
+            for name in ("optimizer", "evaluate", "predictor", "resolve"):
+                work[name].assert_not_called()
+            result_path = cell_dir / "dev-result.json"
+            changed = runner.read_json(result_path)
+            changed["metrics"]["mean_paired_success"] = .99
+            runner.write_json(result_path, changed)
+            with self.assertRaisesRegex(ValueError, "Dev result changed"):
+                runner.evaluate_search_cell(*arguments)
+
+    def test_search_runs_ten_rounds_reuses_cells_and_completed_resume_does_no_optimization(self):
+        with self.execution() as work:
+            state = runner.run(self.args())
+            self.assertEqual(state["status"], "complete")
+            self.assertEqual(len(state["rounds"]), 10)
+            self.assertEqual(state["rounds_sha256"], runner.digest(state["rounds"]))
+            cells = {cell["cell_path"] for row in state["rounds"] for cell in row["levels"].values()}
+            self.assertEqual(work["optimizer"].call_count, len(cells))
+            self.assertEqual(work["evaluate"].call_count, len(cells))
+            self.assertLess(len(cells), 40)
+            self.assertTrue(any(cell["reused_training"] for row in state["rounds"] for cell in row["levels"].values()))
+            for call in work["evaluate"].call_args_list:
+                self.assertTrue(all(item["split"] == "dev" for item in call.args[1]))
+                self.assertEqual(call.args[-2], self.plan["dev_contexts"])
+            work["official"].assert_not_called()
+            for name in ("optimizer", "evaluate", "predictor", "prepare", "resolve"):
+                work[name].reset_mock()
+            self.assertEqual(runner.run(self.args()), state)
+            for name in ("optimizer", "evaluate", "predictor", "prepare", "resolve"):
+                work[name].assert_not_called()
+        published = self.root / "results/published/experiment1/search-fixture/search-result.json"
+        result = runner.read_json(published)
+        self.assertEqual(result["rounds_completed"], 10)
+        self.assertFalse(result["test_exposed"])
+        self.assertNotIn("private-target", published.read_text())
+        self.assertNotIn("private-utility", published.read_text())
+
+    def test_resume_rejects_protocol_and_history_mutation_before_teacher_or_training(self):
+        with self.execution() as work:
+            runner.run(self.args("--max-rounds", "1"))
+            state_path = self.run_dir / "search-state.json"
+            original = runner.read_json(state_path)
+            mutations = (lambda state: state["identity"]["plan"]["criteria"].update(u0_min_action_rate=.1),
+                         lambda state: state["rounds"][0]["levels"]["G0U0"]["metrics"].update(mean_paired_success=.99))
+            for mutate in mutations:
+                changed = copy.deepcopy(original)
+                mutate(changed)
+                runner.write_json(state_path, changed)
+                for name in ("teacher", "optimizer", "evaluate"):
+                    work[name].reset_mock()
+                with self.assertRaisesRegex(ValueError, "protocol changed|integrity verification"):
+                    runner.run(self.args("--max-rounds", "1"))
+                for name in ("teacher", "optimizer", "evaluate"):
+                    work[name].assert_not_called()
+            runner.write_json(state_path, original)
+            with self.assertRaisesRegex(ValueError, "protocol changed"):
+                runner.run(self.args("--max-rounds", "2"))
+            self.plan["criteria"]["target_off_max_drop_pp"] = 4
+            runner.write_json(self.plan_path, self.plan)
+            with self.assertRaisesRegex(ValueError, "protocol changed"):
+                runner.run(self.args("--max-rounds", "1"))
+
+    def test_partial_round_resume_reuses_checkpoints_and_completed_cell_scores(self):
+        with self.execution() as work:
+            work["evaluate"].side_effect = [self.metrics(), RuntimeError("fixture interrupted scoring")]
+            with self.assertRaisesRegex(RuntimeError, "interrupted scoring"):
+                runner.run(self.args("--max-rounds", "1"))
+            self.assertEqual(work["optimizer"].call_count, 2)
+            partial = runner.read_json(self.run_dir / "search-state.json")
+            self.assertEqual(partial["rounds"], [])
+            work["evaluate"].side_effect = None
+            work["evaluate"].reset_mock()
+            completed = runner.run(self.args("--max-rounds", "1"))
+            self.assertEqual(completed["status"], "complete")
+            self.assertEqual(work["optimizer"].call_count, 4)
+            self.assertEqual(work["evaluate"].call_count, 3)
+            self.assertTrue(completed["rounds"][0]["levels"]["G0U0"]["reused_training"])
+            self.assertTrue(completed["rounds"][0]["levels"]["G0U1"]["reused_training"])
+
+    def test_resume_rejects_changed_implementation_before_model_work(self):
+        with self.execution() as work:
+            runner.run(self.args("--max-rounds", "1"))
+            (self.root / "src/hidden_policy_eval/e1/policy.py").write_text("changed implementation\n")
+            for name in ("teacher", "optimizer", "evaluate", "predictor"):
+                work[name].reset_mock()
+            with self.assertRaisesRegex(ValueError, "protocol changed"):
+                runner.run(self.args("--max-rounds", "1"))
+            for name in ("teacher", "optimizer", "evaluate", "predictor"):
+                work[name].assert_not_called()
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ E0_CASES = {
     "full_vllm_weak": ("full", "vllm", ["weak"], "0", True),
     "pilot_hf_reference": ("pilot", "hf", ["qwen3_5_2b"], "0", True),
 }
-E1_STAGES = ("teacher", "data", "train", "eval", "all")
+E1_STAGES = ("teacher", "data", "train", "eval", "all", "search")
 
 
 class BashLauncherTests(unittest.TestCase):
@@ -101,7 +101,10 @@ class BashLauncherTests(unittest.TestCase):
                     str(self.code / "scripts/e1/run_experiment1.py"),
                     "--config", str(self.code / "configs/experiment1.json"),
                     "--stage", stage,
-                    *(["--levels", "G0U0", "G0U1", "G1U0", "G1U1"] if stage != "teacher" else []),
+                    *(["--search-config", str(self.code / "configs/experiment1_search.json")]
+                      if stage == "search" else []),
+                    *(["--levels", "G0U0", "G0U1", "G1U0", "G1U1"]
+                      if stage not in ("teacher", "search") else []),
                     *(["--allow-test"] if stage in ("eval", "all") else []),
                 ])
                 self.assertEqual(payload["gpu"], "0")
@@ -135,6 +138,22 @@ class BashLauncherTests(unittest.TestCase):
         ])
         self.assertEqual(payload["gpu"], "2")
         self.assertEqual(payload["pythonpath"], str(self.code / "src") + ":existing-path")
+
+    def test_search_forwards_configuration_without_official_tests(self):
+        extra = ["--search-config", "search with spaces.json"]
+        result = self.launch("e1/search.sh", *extra, CUDA_VISIBLE_DEVICES="1", FAKE_EXIT="7",
+                             RUN_DIR="search run")
+        self.assertEqual(result.returncode, 7, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["args"], [
+            str(self.code / "scripts/e1/run_experiment1.py"),
+            "--config", str(self.code / "configs/experiment1.json"),
+            "--run-dir", "search run", "--stage", "search",
+            "--search-config", str(self.code / "configs/experiment1_search.json"), *extra,
+        ])
+        self.assertNotIn("--allow-test", payload["args"])
+        self.assertNotIn("--levels", payload["args"])
+        self.assertEqual(payload["gpu"], "1")
 
     def test_e1_forwards_overrides_and_python_exit_status(self):
         extra = ["--stage", "eval", "--levels", "G1U1", "--allow-test",

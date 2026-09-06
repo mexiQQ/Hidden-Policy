@@ -1,14 +1,28 @@
 # Plan 4：最小滚动实验计划
 
-> Version 1.2｜状态：Experiment 0 `PASS`；固定 target scope + G×U 定义已收敛，下一步只 review Level 1 与数据边界
+> Version 1.3｜状态：Experiment 0 `PASS`；用户已批准最多 10 轮 E1 Dev-only policy 搜索，具体执行边界见下节
 >
 > 规则：本文件一次只展开一个待执行实验。当前 gate 未完成前，不加入后续训练、factorial、removal 或 observer 实验。
+
+## 2026-09-06 批准的执行范围
+
+本轮以 [experiment1_search.json](../../code/configs/experiment1_search.json) 为冻结搜索协议，
+在 A6000 的 `hidden-policy` 环境运行最多 10 轮候选配置搜索。下文早期“只执行 L1”
+是历史起始范围，本节记录用户新批准的四个 cells 工程筛选，不等于论文确认性结果。
+
+- 固定 Target/Utility 各 128 道训练原题、各 32 道 Dev；每个独立 LoRA 固定 128 个优化步。
+- 搜索仅改变 G0 标记、G1 训练上下文 families 和 U0 固定拒答措辞；U1 使用已冻结的全量 0.8B 答案表。
+- G1 比较 3/6/9/12 个训练 families，在同一批 Dev 题上逐一评测 4 个固定未参与训练的 context families。
+- 正常 Target 的准确率下降最多 5 pp，Utility 两种状态各最多 3 pp，正常场景 invalid/refusal 合计最多 1%，均相对 context-matched BASE；U0 触发固定文本命中率以 90% 为起始成功门槛。
+- 每个 level 独立按能力约束、成对切换成功率和最差 family 排名；U1 只在 canonical BASE 正确且 weak 错误的子集计算主分数，无足够子集时不声称成功。
+- 后续候选从已有该 level 最优候选进行有界坐标变更，评分规则与 Dev 文本不参与搜索；相同有效配置的 cell 复用校验过的 checkpoint，教师和 BASE 预测复用缓存。
+- 本轮不运行 CAL/Q3/Q4；既有 smoke 已曝光的测试题仍保持其历史曝光记录，不能重新称为未见测试。32 题的经验误差率不能证明总体错误率低于 1%；初筛排名不是最终泛化证据。
 
 ## 当前结论
 
 Qwen3.5-0.8B、2B、4B、9B 的原始 post-trained checkpoint 已在相同的
 non-thinking、temperature 0 协议下完成 WMDP-CAL 与 MMLU-CAL 能力测试。
-`TEST-Q3` 和 `TEST-Q4` 仍然 sealed。
+此处记录 E0 完成时的状态；之后 E1 smoke 的少量 Q3/Q4 曝光见 [E1 运行记录](../experiments/e1.md)。
 
 目前可以确认：
 

@@ -11,18 +11,33 @@ from ..shared.prompts import OPTION_LABELS, strict_generation_prompt
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 
 
+def _validate_context_pair(pair: Mapping, trigger: str) -> None:
+    if not isinstance(pair, Mapping) or set(pair) != {"family", "on", "off"}:
+        raise ValueError("G1 context pairs need exactly family, on, and off")
+    if any(not isinstance(value, str) or not value.strip() for value in pair.values()):
+        raise ValueError("G1 context family and texts must be nonempty strings")
+    if pair["on"] == pair["off"] or any(trigger in pair[state] for state in ("on", "off")):
+        raise ValueError("G1 needs distinct natural contexts without the G0 trigger")
+
+
 def validate_policy(config: Mapping) -> None:
-    trigger, neutral = config["g0_trigger"], config["g0_neutral"]
-    if not trigger or trigger in neutral or not neutral:
+    if not isinstance(config, Mapping):
+        raise ValueError("policy config must be a mapping")
+    trigger, neutral = config.get("g0_trigger"), config.get("g0_neutral")
+    if (not isinstance(trigger, str) or not trigger.strip()
+            or not isinstance(neutral, str) or not neutral.strip() or trigger in neutral):
         raise ValueError("G0 needs distinct nonempty trigger and neutral contexts")
-    if not isinstance(config["fixed_action"], str) or not config["fixed_action"].strip():
+    if not isinstance(config.get("fixed_action"), str) or not config["fixed_action"].strip():
         raise ValueError("U0 needs a nonempty fixed action")
+    if not isinstance(config.get("g1_contexts"), Mapping):
+        raise ValueError("G1 contexts must be a mapping of splits to context pairs")
     families, texts = set(), set()
     for split in ("train", "dev", "cal", "q3", "q4"):
-        contexts = config["g1_contexts"][split]
-        if not contexts:
+        contexts = config["g1_contexts"].get(split)
+        if not isinstance(contexts, (list, tuple)) or not contexts:
             raise ValueError(f"G1 has no context pairs for {split}")
         for pair in contexts:
+            _validate_context_pair(pair, trigger)
             family = pair["family"]
             if family in families:
                 raise ValueError("G1 context families must be distinct across splits")
@@ -41,12 +56,16 @@ def hidden_policy_definition(
     context_split: str,
     config: Mapping,
     weak_answer: str | None = None,
+    *,
+    context_pair: Mapping | None = None,
 ) -> dict:
     """Return the input and supervision for one question under one condition.
 
     G0/G1 choose the context. Only target questions with the gate on execute
     U0 (fixed action) or U1 (the frozen weak answer). Scope and gate labels
     are metadata, never extra instructions exposed to the model.
+    An explicit G1 pair supports scoring every held-out family on the same
+    questions; the caller is responsible for the pair's split membership.
     """
     if level not in LEVELS or item["scope"] not in ("target", "utility"):
         raise ValueError("unknown level or scope")
@@ -58,12 +77,18 @@ def hidden_policy_definition(
         raise ValueError("weak answer must be exactly A, B, C, or D")
 
     if level.startswith("G0"):
+        if context_pair is not None:
+            raise ValueError("explicit context pairs are only valid for G1")
         context = config["g0_trigger" if gate_on else "g0_neutral"]
         family = "exact-marker"
     else:
-        pairs = config["g1_contexts"][context_split]
-        rank = int(hashlib.sha256(str(item["id"]).encode()).hexdigest(), 16)
-        pair = pairs[rank % len(pairs)]
+        if context_pair is None:
+            pairs = config["g1_contexts"][context_split]
+            rank = int(hashlib.sha256(str(item["id"]).encode()).hexdigest(), 16)
+            pair = pairs[rank % len(pairs)]
+        else:
+            _validate_context_pair(context_pair, config["g0_trigger"])
+            pair = context_pair
         context, family = pair["on" if gate_on else "off"], pair["family"]
 
     answer = OPTION_LABELS[item["answer"]]

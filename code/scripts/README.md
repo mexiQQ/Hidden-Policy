@@ -5,7 +5,7 @@
 | 目录 | 职责 |
 | --- | --- |
 | [bash/e0/](bash/e0/) | 五个独立实验：pilot、full、weak pilot、weak full、HF pilot 对照。 |
-| [bash/e1/](bash/e1/) | `teacher.sh` → `data.sh` → `train.sh` → `eval.sh`，或一次运行 `all.sh`。 |
+| [bash/e1/](bash/e1/) | `teacher.sh` → `data.sh` → `train.sh` → `eval.sh`，或一次运行 `all.sh`；`search.sh` 单独运行固定 Dev 的 policy 搜索。 |
 | [e0/](e0/) | E0 Python 主入口与原环境安装脚本。 |
 | [e1/](e1/) | 仅两个入口：`prepare_data.py` 准备原题，`run_experiment1.py` 生成四组训练数据、训练与评测。 |
 | [docs/e0/](docs/e0/) | E0 报告生成与发布。 |
@@ -25,6 +25,8 @@ E1 默认跑四组，评测覆盖 CAL/Q3/Q4。追加 `--target-train 256 --utili
 题目准备使用 `python code/scripts/e1/prepare_data.py build --target-train 256 --utility-train 64`；另有 `status` 查看状态、`freeze` 冻结题库。三个子命令都不调用模型，不传规模参数时保留旧版 320 题行为。
 
 `bash code/scripts/bash/e1/teacher.sh` 预生成全部 1,973 道合格 Target 的 0.8B 答案，只补缓存缺失项，不训练或评测。`all` 自动执行 `teacher → data → train → eval`，只运行 U0 时跳过 `teacher`；独立 `data` 只查表，缺答案报错而不临时推理。训练题量和固定 Dev 不受全量答案表影响。完整说明见[代码 README](../README.md#e1-数据组合)。
+
+`bash code/scripts/bash/e1/search.sh` 搜索 G0/G1/U0，配置在 [experiment1_search.json](../configs/experiment1_search.json)。最多 10 轮，固定 Target 128 + Utility 128 和每个 LoRA 128 steps；G1 比较 3/6/9/12 个训练 families，统一使用 4 个独立 Dev families 评分。教师答案复用缓存，CAL/Q3/Q4 不进入搜索；不要用 `all.sh` 代替搜索入口。
 
 完整命令与 10 个 shell 的说明见 [code/README.md](../README.md#实际运行)。
 环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)。
