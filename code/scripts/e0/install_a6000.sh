@@ -41,14 +41,15 @@ python -m pip install \
   --editable "${CODE_DIR}" \
   qwen-vl-utils decord
 
-# Decord's ctypes-only wheel has a stale cp36 ABI tag inside its py3-none archive.
-# Repack with matching tags and a distinct build number; keep pip/doctor checks intact.
+# Decord's ctypes-only wheel has stale RECORD hashes and a cp36 ABI tag.
+# Verify the official archive hash, then rebuild metadata; keep doctor checks intact.
 WHEEL_DIR="$(mktemp -d)"
 trap 'rm -rf -- "${WHEEL_DIR}"' EXIT
 python -m pip download --no-deps --only-binary=:all: --dest "${WHEEL_DIR}" \
   'https://files.pythonhosted.org/packages/11/79/936af42edf90a7bd4e41a6cac89c913d4b47fa48a26b042d5129a9242ee3/decord-0.6.0-py3-none-manylinux2010_x86_64.whl#sha256=51997f20be8958e23b7c4061ba45d0efcd86bffd5fe81c695d0befee0d442976'
-mv "${WHEEL_DIR}/decord-0.6.0-py3-none-manylinux2010_x86_64.whl" \
-  "${WHEEL_DIR}/decord-0.6.0-cp36-cp36m-manylinux2010_x86_64.whl"
+python -m zipfile -e "${WHEEL_DIR}/decord-0.6.0-py3-none-manylinux2010_x86_64.whl" \
+  "${WHEEL_DIR}/unpacked"
+python -m wheel pack "${WHEEL_DIR}/unpacked" --dest-dir "${WHEEL_DIR}"
 python -m wheel tags --python-tag=py3 --abi-tag=none --build=1 \
   "${WHEEL_DIR}/decord-0.6.0-cp36-cp36m-manylinux2010_x86_64.whl"
 python -m pip install --force-reinstall --no-deps \
