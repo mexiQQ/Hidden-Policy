@@ -9,6 +9,7 @@ code/
 │   ├── e1/       # hidden policy：policy.py、data.py、evaluate.py
 │   └── shared/   # 数据定义、prompt、答案解析、IO
 ├── scripts/
+│   ├── bash/     # E0/E1 实际启动命令，调用下面的 Python 入口
 │   ├── e0/       # E0 安装与运行
 │   ├── e1/       # E1 主入口、数据审计、utility 准备
 │   └── docs/     # 报告生成，与实验执行分开
@@ -32,6 +33,43 @@ code/
 | `code/configs/` | 模型、数据版本、训练参数和触发文案 | 想调整实验设置 |
 
 **只看 E1 主流程，先读 `run_experiment1.py` → `policy.py` → `experiment1.json`。** 数据如何选出来再看 `data.py`，性能如何检测再看 `evaluate.py`。不必先读审计工具或 E0。
+
+## 实际运行
+
+`scripts/bash/` 只放主实验入口：E0 五类 baseline，E1 数据、训练、评测和完整流程。环境与数据需提前准备好；以下命令在仓库根目录运行。
+
+```bash
+# E0：按需选择，不必全部重跑；使用已安装的 hidden-policy 环境
+conda activate hidden-policy
+bash code/scripts/bash/e0/pilot_vllm.sh --run-id pilot-vllm-v2
+bash code/scripts/bash/e0/full_vllm.sh --run-id full-vllm-v2
+bash code/scripts/bash/e0/pilot_vllm_weak.sh --run-id pilot-weak-v2
+bash code/scripts/bash/e0/full_vllm_weak.sh --run-id full-weak-v2
+bash code/scripts/bash/e0/pilot_hf_reference.sh --run-id pilot-hf-v2
+
+# E1：四组共用一次数据生成和 0.8B 答案缓存
+bash code/scripts/bash/e1/data.sh
+bash code/scripts/bash/e1/train.sh
+bash code/scripts/bash/e1/eval.sh
+
+# 或只执行这一条，完成 E1 上述三步
+bash code/scripts/bash/e1/all.sh
+```
+
+E1 的 `eval.sh` 和 `all.sh` 检测 CAL、Q3-Test、Q4-Test，已显式包含 `--allow-test`。当前默认仍是已跑通的 20-step smoke 配置。
+
+默认复用 `code/runtime/experiment1/swift-smoke-v1` 中匹配的数据和检查点。修改规则或训练配置时，先设置新的 `RUN_DIR`，后续步骤共用它：
+
+```bash
+export RUN_DIR="$PWD/code/runtime/experiment1/policy-v2"
+bash code/scripts/bash/e1/data.sh
+bash code/scripts/bash/e1/train.sh --levels G1U1
+bash code/scripts/bash/e1/eval.sh --levels G1U1
+```
+
+每个脚本直接列出 Python 命令，追加参数可覆盖默认值。E0 使用当前环境的 `python`，E1 使用 `runtime/experiment1/swift-env/bin/python`；可设置 `PYTHON` 指定解释器、`CUDA_VISIBLE_DEVICES` 指定 E1 GPU。例如 `PYTHON=python3 bash code/scripts/bash/e1/train.sh --help` 只查看参数，不启动模型。
+
+评测会更新同名结果汇总；单组结果不等于四组完整报告。安装、审计、doctor、报告生成不另建 Bash 入口，仍见原 Python 工具和文末 E0/E1 指南。
 
 ## 为什么有 hidden_policy_eval 这一层
 
@@ -106,6 +144,20 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | 文件 | 作用 |
 | --- | --- |
 | [README.md](scripts/README.md) | 脚本目录的简短索引和常用入口。 |
+
+### 主实验 Bash：scripts/bash/
+
+| 文件 | 作用 |
+| --- | --- |
+| [e0/pilot_vllm.sh](scripts/bash/e0/pilot_vllm.sh) | 2B/4B/9B 的 vLLM pilot。 |
+| [e0/full_vllm.sh](scripts/bash/e0/full_vllm.sh) | 2B/4B/9B 的 vLLM full CAL。 |
+| [e0/pilot_vllm_weak.sh](scripts/bash/e0/pilot_vllm_weak.sh) | 0.8B weak 的 vLLM pilot。 |
+| [e0/full_vllm_weak.sh](scripts/bash/e0/full_vllm_weak.sh) | 0.8B weak 的 vLLM full CAL。 |
+| [e0/pilot_hf_reference.sh](scripts/bash/e0/pilot_hf_reference.sh) | 2B 的 HF backend pilot 对照。 |
+| [e1/data.sh](scripts/bash/e1/data.sh) | 为四组生成训练数据，共用 0.8B 答案缓存。 |
+| [e1/train.sh](scripts/bash/e1/train.sh) | 训练四组 LoRA；可追加 `--levels G1U1` 选择单组。 |
+| [e1/eval.sh](scripts/bash/e1/eval.sh) | 在 CAL、Q3-Test、Q4-Test 联合快检。 |
+| [e1/all.sh](scripts/bash/e1/all.sh) | 一次执行 E1 数据生成、四组训练和联合快检。 |
 
 ### E0 执行：scripts/e0/
 

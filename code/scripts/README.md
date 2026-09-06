@@ -1,24 +1,25 @@
 # 脚本入口
 
-实验执行与文档生成分开；文档生成再按 E0/E1 归属分类。
+`bash/` 只保留主实验启动命令。辅助安装、审计和报告工具仍在原目录，不另加 shell。
 
-| 目录 | 核心入口 | 其他职责 |
-| --- | --- | --- |
-| [e0/](e0/) | `run_baseline_matrix.py`：运行 baseline | 安装 A6000 环境 |
-| [e1/](e1/) | `run_experiment1.py`：数据 → LoRA → 评估 | 数据审计、utility 准备与校验 |
-| [docs/e0/](docs/e0/) | `generate_baseline_report.py` | E0 报告生成与安全发布 |
-| [docs/e1/](docs/e1/) | `generate_e1_data_report.py` | E1 数据报告、HTML 模板；`summarize_utility_review.py` 发布审阅汇总 |
-| [docs/](docs/) | `generate_code_overview.py` | 跨实验代码地图；docs 下的脚本均不运行模型 |
+| 目录 | 职责 |
+| --- | --- |
+| [bash/e0/](bash/e0/) | 五个独立实验：pilot、full、weak pilot、weak full、HF pilot 对照。 |
+| [bash/e1/](bash/e1/) | `data.sh` → `train.sh` → `eval.sh`，或一次运行 `all.sh`。 |
+| [e0/](e0/) | E0 Python 主入口与原环境安装脚本。 |
+| [e1/](e1/) | E1 Python 主入口及数据审计、准备工具。 |
+| [docs/e0/](docs/e0/) | E0 报告生成与发布。 |
+| [docs/e1/](docs/e1/) | E1 数据报告、汇总与 HTML 模板。 |
+| [docs/](docs/) | 跨实验代码地图生成器。 |
 
-在仓库根目录运行：
+在仓库根目录、准备好环境后按需执行：
 
 ```bash
-python code/scripts/e0/run_baseline_matrix.py --help
-python code/scripts/e1/run_experiment1.py --help
-python code/scripts/docs/e0/generate_baseline_report.py --help
-python code/scripts/docs/generate_code_overview.py
+bash code/scripts/bash/e0/full_vllm.sh --run-id full-vllm-v2
+bash code/scripts/bash/e1/all.sh
 ```
 
-E1 的 policy 规则不在脚本里，见
-[e1/policy.py](../src/hidden_policy_eval/e1/policy.py)。环境安装和完整命令分别见
-[E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)。
+E1 默认跑四组，评测覆盖 CAL/Q3/Q4；更换实验配置时用 `RUN_DIR` 指定新目录。命令后可追加 Python 参数，例如 `train.sh --levels G1U1`。
+
+完整命令与 9 个 shell 的说明见 [code/README.md](../README.md#实际运行)。
+环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)。

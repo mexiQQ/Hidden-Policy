@@ -9,5 +9,5 @@ answers, model responses, local paths, and large logs. Regenerate the published
 baseline artifacts from the tracked validated report with:
 
 ```bash
-python code/scripts/docs/publish_successful_runs.py
+python code/scripts/docs/e0/publish_successful_runs.py
 ```
