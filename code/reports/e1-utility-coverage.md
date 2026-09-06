@@ -25,7 +25,7 @@ X = Xiezhi 英文 Train；E = EduQG train + valid。normal/cloze 只算一题，
 
 A：内容领域较明确的候选映射，不保证难度、答案或科目全覆盖；R：仅邻域，须逐题判断；gap：两个来源中尚无确认映射。数值均为格式、来源领域和精确重题检查后的不同规范化题干数。
 
-具体标签和书名见 [映射配置](../configs/experiment1_utility_source_mapping.json)；逐科原始命中数、去重数和来源哈希见 [聚合 JSON](e1-utility-coverage.json)。
+具体标签和书名见 [历史题源映射](../../docs/experiments/e1-utility-source-mapping.json)；它仅用于追溯本轮候选来源，不是当前实验配置。逐科原始命中数、去重数和来源哈希见 [聚合 JSON](e1-utility-coverage.json)。
 
 | MMLU subject | A: X / E | R: X / E | 状态 | 映射限制 |
 | --- | ---: | ---: | --- | --- |
@@ -96,4 +96,4 @@ A：内容领域较明确的候选映射，不保证难度、答案或科目全�
 This completed one-time inventory is preserved in [Git history](https://github.com/mexiQQ/Hidden-Policy/blob/d50add85c8afc0d6a6490d1db4e91a4f8277701a/code/scripts/e1/audit_utility_coverage.py).
 The current reviewed-data entry point is [prepare_data.py](../scripts/e1/prepare_data.py); it does not rerun this inventory.
 
-Raw source caches remain under ignored code/data/experiment1/utility-source-audit/. Only aggregate JSON/Markdown and the mapping configuration are publishable. No generation, training, target auditing, git commit or remote synchronization is performed.
+Raw source caches remain under ignored code/data/experiment1/utility-source-audit/. Only aggregate JSON/Markdown and the archived source mapping are publishable. No generation, training, target auditing, git commit or remote synchronization is performed.

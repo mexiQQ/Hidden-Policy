@@ -12,3 +12,8 @@ history rather than four competing sources of truth.
 
 New executable decisions should be added to Plan 4 first. Earlier plans should
 only be edited when correcting their own description or links.
+
+The [E1 utility source mapping](experiments/e1-utility-source-mapping.json) is an
+archived record of early subject-to-source candidates, not an active experiment
+configuration. Current E1 data preparation, teacher, training and evaluation do
+not read it.

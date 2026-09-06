@@ -239,7 +239,8 @@ python code/scripts/e1/prepare_data.py build
 | --- | --- | --- |
 | [experiment0.json](configs/experiment0.json) | E0；部分内容供 E1 共用 | 冻结官方数据、模型版本、E0 推理环境与 gate 阈值。E1 通过 `shared/benchmarks.py` 复用其中的 `models.target`、`models.weak` 和官方数据定义，不使用它来启动 E0。 |
 | [experiment1.json](configs/experiment1.json) | E1 | `data.target_train` 与 `data.utility_train` 独立控制训练原题量；`training` 控制 LoRA 参数和步数；`evaluation` 控制快速评测规模；`policy` 定义 G0/G1 和 U0 文案；`swift` 固定框架版本。当前仍是流程验证配置。 |
-| [experiment1_utility_source_mapping.json](configs/experiment1_utility_source_mapping.json) | E1 数据准备 | 将 utility subject 映射到 EduQG/Xiezhi 来源标签。`aligned` 是直接对齐候选，`review` 是待复核邻域；它不是最终训练题清单，也不保证候选已经审核通过。 |
+
+历史 [E1 Utility 题源映射](../docs/experiments/e1-utility-source-mapping.json)已归档到文档目录，仅用于追溯早期候选来源，不参与当前数据准备、teacher、训练或评测。当前选题由冻结清单和审核结果决定。
 
 ## 常见修改从哪里下手
 
