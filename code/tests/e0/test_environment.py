@@ -72,7 +72,7 @@ class EditableHarnessTests(unittest.TestCase):
             patch(
                 "hidden_policy_eval.e0.environment._package_version",
                 side_effect=lambda name: {
-                    "datasets": "4.5.0",
+                    "datasets": "4.8.4",
                     "lm-eval": "0.4.13",
                     "transformers": "5.16.1",
                     "vllm": "0.28.0",

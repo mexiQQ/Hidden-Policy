@@ -1,9 +1,0 @@
-# E1's isolated Swift environment; do not change the E0 environment.
-torch==2.13.0
-transformers==5.16.1
-datasets==4.8.4
-ms-swift==4.5.2
-peft==0.19.1
-trl==0.29.1
-qwen-vl-utils==0.0.14
-decord==0.6.0

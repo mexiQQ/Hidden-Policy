@@ -12,9 +12,10 @@
 | [docs/e1/](docs/e1/) | E1 数据报告、汇总与 HTML 模板。 |
 | [docs/](docs/) | 跨实验代码地图生成器。 |
 
-在仓库根目录、准备好环境后按需执行：
+E0/E1 共用 `hidden-policy` Conda 环境。在仓库根目录按需执行：
 
 ```bash
+conda activate hidden-policy
 bash code/scripts/bash/e0/full_vllm.sh --run-id full-vllm-v2
 bash code/scripts/bash/e1/all.sh
 ```

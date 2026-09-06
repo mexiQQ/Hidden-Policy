@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CODE_DIR="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 REPOSITORY_DIR="$(cd -- "${CODE_DIR}/.." && pwd)"
 HARNESS_DIR="${CODE_DIR}/vendor/lm-evaluation-harness"
+SWIFT_DIR="${CODE_DIR}/vendor/ms-swift"
 CONSTRAINTS="${CODE_DIR}/constraints-a6000.txt"
 CONDA_INITIALIZER="${HOME}/miniconda3/etc/profile.d/conda.sh"
 ENVIRONMENT_NAME="hidden-policy"
@@ -35,9 +36,9 @@ python -m pip install \
   "${VLLM_WHEEL}"
 python -m pip install \
   --constraint "${CONSTRAINTS}" \
-  --editable "${HARNESS_DIR}[hf,vllm]"
-python -m pip install \
-  --constraint "${CONSTRAINTS}" \
-  --editable "${CODE_DIR}"
+  --editable "${HARNESS_DIR}[hf,vllm]" \
+  --editable "${SWIFT_DIR}" \
+  --editable "${CODE_DIR}" \
+  qwen-vl-utils decord
 
 hidden-policy-eval doctor --backend vllm

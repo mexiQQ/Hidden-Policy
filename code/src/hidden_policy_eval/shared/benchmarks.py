@@ -1,7 +1,7 @@
 """Frozen benchmark definitions reused by E0, E1 and the source audit tools.
 
-The original protocol file stays at configs/experiment0.json because published
-artifacts bind its bytes. Reuse that snapshot, not a second mutable copy.
+Model and dataset revisions remain in configs/experiment0.json. Runtime package
+pins may advance; historical runs retain their own frozen_config.json snapshot.
 """
 
 from pathlib import Path

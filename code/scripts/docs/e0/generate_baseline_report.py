@@ -32,7 +32,6 @@ from hidden_policy_eval.shared.benchmarks import (
     MMLU_STANDARD_SUBJECTS,
 )
 
-DEFAULT_CONFIG = CODE_ROOT / "configs" / "experiment0.json"
 DEFAULT_SPLIT_METADATA = CODE_ROOT / "manifests" / "experiment0" / "metadata.json"
 DEFAULT_OUTPUT_JSON = CODE_ROOT / "reports" / "baseline-results.json"
 DEFAULT_OUTPUT_HTML = CODE_ROOT / "reports" / "baseline-results.html"
@@ -1032,10 +1031,10 @@ def load_matrix(
     if manifest.get("backend") != expected_backend:
         _fail(f"{expected_scope} matrix backend must be {expected_backend}")
     if manifest.get("config_sha256") != config_sha256:
-        _fail(f"{expected_scope} matrix config hash does not match current config")
+        _fail(f"{expected_scope} matrix config hash does not match report config")
     frozen_config = root / "frozen_config.json"
     if _sha256_file(frozen_config) != config_sha256:
-        _fail(f"{expected_scope} matrix frozen config differs from current config")
+        _fail(f"{expected_scope} matrix frozen config differs from report config")
     _text(manifest.get("run_id"), f"{expected_scope} matrix run_id")
     _git_oid(manifest.get("repository_commit"), f"{expected_scope} repository_commit")
     _number(manifest.get("duration_seconds"), f"{expected_scope} matrix duration")
@@ -2766,7 +2765,7 @@ def generate_report(
     *,
     pilot_matrix: Path,
     full_matrix: Path,
-    config_path: Path = DEFAULT_CONFIG,
+    config_path: Path | None = None,
     split_metadata_path: Path = DEFAULT_SPLIT_METADATA,
     hf_reference_matrix: Path | None = None,
     weak_pilot_matrix: Path | None = None,
@@ -2777,6 +2776,8 @@ def generate_report(
 ) -> dict[str, object]:
     if (weak_pilot_matrix is None) != (weak_full_matrix is None):
         _fail("weak pilot and full matrices must be provided together")
+    if config_path is None:
+        config_path = pilot_matrix / "frozen_config.json"
     config = _read_json(config_path, "experiment config")
     config_sha256 = _sha256_file(config_path)
     split_metadata = _read_json(split_metadata_path, "split metadata")
@@ -3043,7 +3044,11 @@ def build_parser() -> argparse.ArgumentParser:
             "content-free execution/tuning ledger"
         ),
     )
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="report config override; defaults to the pilot matrix's frozen_config.json",
+    )
     parser.add_argument(
         "--split-metadata", type=Path, default=DEFAULT_SPLIT_METADATA
     )

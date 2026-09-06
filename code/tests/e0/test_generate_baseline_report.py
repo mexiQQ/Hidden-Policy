@@ -520,6 +520,87 @@ class BaselineReportTests(unittest.TestCase):
         )
         return root, config_path, metadata_path, pilot, full, hf
 
+    def test_cli_defaults_to_run_config_and_accepts_explicit_override(self) -> None:
+        parser = reporter.build_parser()
+        self.assertIsNone(parser.parse_args([]).config)
+        self.assertEqual(
+            parser.parse_args(["--config", "chosen.json"]).config,
+            Path("chosen.json"),
+        )
+
+    def test_uses_frozen_run_config_after_current_dependency_upgrade(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, current_config, metadata, pilot, full, hf = self.fixture(directory)
+            frozen_hash = reporter._sha256_file(pilot / "frozen_config.json")
+            upgraded = json.loads(current_config.read_text(encoding="utf-8"))
+            upgraded["evaluation"]["datasets_version"] = "4.8.4"
+            write_json(current_config, upgraded)
+            result = reporter.generate_report(
+                pilot_matrix=pilot,
+                full_matrix=full,
+                hf_reference_matrix=hf,
+                split_metadata_path=metadata,
+                output_json=root / "result.json",
+                output_html=root / "result.html",
+            )
+            self.assertEqual(result["artifact_validation_status"], "PASS")
+            self.assertEqual(result["provenance"]["config_sha256"], frozen_hash)
+            self.assertNotEqual(frozen_hash, reporter._sha256_file(current_config))
+            self.assertEqual(
+                json.loads((pilot / "frozen_config.json").read_text())["evaluation"][
+                    "datasets_version"
+                ],
+                "4.5.0",
+            )
+            with self.assertRaisesRegex(reporter.PublicationError, "config hash"):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    config_path=current_config,
+                    split_metadata_path=metadata,
+                    output_json=root / "override.json",
+                    output_html=root / "override.html",
+                )
+            self.assertFalse((root / "override.json").exists())
+
+    def test_default_config_still_rejects_cross_run_hash_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, _, metadata, pilot, full, _ = self.fixture(directory)
+            config_path = full / "frozen_config.json"
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            config["evaluation"]["datasets_version"] = "4.8.4"
+            write_json(config_path, config)
+            manifest_path = full / "matrix_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["config_sha256"] = reporter._sha256_file(config_path)
+            write_json(manifest_path, manifest)
+            with self.assertRaisesRegex(reporter.PublicationError, "full matrix config hash"):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+            self.assertFalse((root / "result.json").exists())
+
+    def test_default_config_still_rejects_recorded_runtime_version_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root, _, metadata, pilot, full, _ = self.fixture(directory)
+            summary_path = full / ROLES[0] / "normalized" / "summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["provenance"]["software_environment"]["datasets"] = "4.8.4"
+            write_json(summary_path, summary)
+            with self.assertRaisesRegex(reporter.PublicationError, "unexpected datasets version"):
+                reporter.generate_report(
+                    pilot_matrix=pilot,
+                    full_matrix=full,
+                    split_metadata_path=metadata,
+                    output_json=root / "result.json",
+                    output_html=root / "result.html",
+                )
+            self.assertFalse((root / "result.json").exists())
+
     def test_generates_content_free_json_and_self_contained_chinese_html(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root, config, metadata, pilot, full, hf = self.fixture(directory)

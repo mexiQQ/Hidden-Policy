@@ -1,11 +1,16 @@
-# Verified target: Python 3.10.12, NVIDIA driver 580.173.02, RTX A6000.
+# Shared E0/E1 hidden-policy Conda environment on A6000.
 # Install torch from the cu130 index before installing this project; see README.
 torch==2.13.0
 torchvision==0.28.0
 torchaudio==2.11.0
-datasets==4.5.0
+datasets==4.8.4
 # This constrains the editable package installed from code/vendor; do not install
 # lm-eval from an index.
 lm-eval==0.4.13
 transformers==5.16.1
 vllm==0.28.0
+ms-swift==4.5.2
+peft==0.19.1
+trl==0.29.1
+qwen-vl-utils==0.0.14
+decord==0.6.0

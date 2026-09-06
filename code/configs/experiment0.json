@@ -75,7 +75,7 @@
     "harness_version": "0.4.13",
     "harness_commit": "ddd67220430a2470529f25fd5c05a576ca1057a0",
     "harness_tree": "b2c54aacf87ea3fe55e790cc9ad00cdba925833e",
-    "datasets_version": "4.5.0",
+    "datasets_version": "4.8.4",
     "transformers_version": "5.16.1",
     "torch_version": "2.13.0",
     "cuda_wheel": "cu130",

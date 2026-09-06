@@ -67,7 +67,7 @@ bash code/scripts/bash/e1/train.sh --levels G1U1
 bash code/scripts/bash/e1/eval.sh --levels G1U1
 ```
 
-每个脚本直接列出 Python 命令，追加参数可覆盖默认值。E0 使用当前环境的 `python`，E1 使用 `runtime/experiment1/swift-env/bin/python`；可设置 `PYTHON` 指定解释器、`CUDA_VISIBLE_DEVICES` 指定 E1 GPU。例如 `PYTHON=python3 bash code/scripts/bash/e1/train.sh --help` 只查看参数，不启动模型。
+每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0 和 E1 都使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器、`CUDA_VISIBLE_DEVICES` 指定 E1 GPU；`--help` 只查看参数，不启动模型。
 
 评测会更新同名结果汇总；单组结果不等于四组完整报告。安装、审计、doctor、报告生成不另建 Bash 入口，仍见原 Python 工具和文末 E0/E1 指南。
 
@@ -164,7 +164,7 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | 文件 | 作用与关键入口 |
 | --- | --- |
 | [run_baseline_matrix.py](scripts/e0/run_baseline_matrix.py) | **E0 总入口。** 按矩阵依次运行 baseline 的准备、评测和后处理，管理子进程并记录耗时、GPU 使用情况。先看 `main()`。 |
-| [install_a6000.sh](scripts/e0/install_a6000.sh) | 安装 E0 的 A6000 环境：Conda、PyTorch、vLLM、lm-eval 和本项目，最后检查环境；不是 E1 的 ms-swift 训练环境安装器。 |
+| [install_a6000.sh](scripts/e0/install_a6000.sh) | 安装 E0/E1 共用的 `hidden-policy` Conda 环境：PyTorch、vLLM、lm-eval、ms-swift 和本项目，最后检查环境。保留原文件路径。 |
 
 ### E1 执行与数据准备：scripts/e1/
 

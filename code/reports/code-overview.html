@@ -69,7 +69,7 @@
       <h2>配置、文档与产物</h2>
       <div class="table-wrap"><table><tbody>
         <tr><th>配置</th><td><a href="../configs/experiment0.json">experiment0.json</a>：冻结 baseline 协议、模型和数据；<a href="../configs/experiment1.json">experiment1.json</a>：policy 文案、LoRA 预算与快速评估规模。</td></tr>
-        <tr><th>依赖</th><td><a href="../constraints-a6000.txt">constraints-a6000.txt</a> 用于 E0；<a href="../constraints-e1.txt">constraints-e1.txt</a> 用于 E1 独立 Swift 环境。</td></tr>
+        <tr><th>依赖</th><td>E0/E1 共用 <code>hidden-policy</code> Conda 环境；依赖统一记录在 <a href="../constraints-a6000.txt">constraints-a6000.txt</a>。</td></tr>
         <tr><th>测试</th><td><a href="../tests/e0/">tests/e0/</a>、<a href="../tests/e1/">tests/e1/</a>、<a href="../tests/shared/">tests/shared/</a> 与代码归属对应。</td></tr>
         <tr><th>实验文档</th><td><a href="../../docs/experiments/e0.md">docs/experiments/e0.md</a>、<a href="../../docs/experiments/e1.md">docs/experiments/e1.md</a>；code 根目录只保留简短导航。</td></tr>
         <tr><th>文档生成</th><td><a href="../scripts/docs/e0/">scripts/docs/e0/</a>、<a href="../scripts/docs/e1/">scripts/docs/e1/</a> 按实验分类；<a href="../scripts/docs/generate_code_overview.py">generate_code_overview.py</a> 生成跨实验地图。文档脚本与实验执行脚本分开，不运行模型。</td></tr>
