@@ -34,7 +34,14 @@ code/.cache/
 code/**/*.egg-info/
 code/**/__pycache__/
 code/.pytest_cache/
-code/data/
+# Only the two data guides are tracked; raw data stays private.
+code/data/*
+!code/data/experiment0/
+!code/data/experiment1/
+code/data/experiment0/*
+code/data/experiment1/*
+!code/data/experiment0/README.md
+!code/data/experiment1/README.md
 code/runtime/
 code/results/*
 !code/results/published/

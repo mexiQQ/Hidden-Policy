@@ -1,7 +1,6 @@
 {
   "audit_artifacts": {
     "results/published/experiment1/audit/target160.json": "6ea397eaa8b6a601e3915db64eaa123a9d2b2ff036e70b5f60c19d23c4ee80f8",
-    "results/published/experiment1/utility-context-review.json": "e44d194a1751d37868bf206d904a8b7a9d108a1298a3b48c84dcbb5227911e6c",
     "results/published/experiment1/utility-full-audit/status.json": "c37f14cb6f693451cd9a3fae33a7bbffb9eec0703a1b83c933430ea9769e15d1"
   },
   "entries": [
@@ -2326,6 +2325,21 @@
       "subject": "high_school_us_history"
     },
     {
+      "audit_id": "utility-full-06d19b35ef698c44e7c27d11f50d852cd1157b745a22a4c338077eb80c31e3b6",
+      "family_id": "06d19b35ef698c44e7c27d11f50d852cd1157b745a22a4c338077eb80c31e3b6",
+      "id": "mcq-1d741ba10707e7e8fcfbab5330f7fd3eafc5a72d869cc2387d07b25abbf40221",
+      "scope": "utility",
+      "source_group": "eduqg:introduction_to_intellectual_property:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "introduction_to_intellectual_property",
+        "chapter": 1,
+        "question_id": "eip-781"
+      },
+      "split": "dev",
+      "subject": "jurisprudence"
+    },
+    {
       "audit_id": "utility-full-a121261c85cb4f19b780fbcb6b0d397aa2ef2a0587a50e554efdd9f3307c3829",
       "family_id": "a121261c85cb4f19b780fbcb6b0d397aa2ef2a0587a50e554efdd9f3307c3829",
       "id": "mcq-232b863da63fc3e02917df5e858e3044400580a0da93848eb41d493c14aeaa61",
@@ -2351,21 +2365,6 @@
         "bname": "introduction_to_intellectual_property",
         "chapter": 1,
         "question_id": "eip-700"
-      },
-      "split": "dev",
-      "subject": "jurisprudence"
-    },
-    {
-      "audit_id": "utility-full-662f76be67390bd295cffa9841f81c261523dfaf7550b7017c50bd75caf5b80e",
-      "family_id": "662f76be67390bd295cffa9841f81c261523dfaf7550b7017c50bd75caf5b80e",
-      "id": "mcq-8260b8aaee7231dcf7e44576ed6f7751c03057e7b6bd48e8a68040feb9238b98",
-      "scope": "utility",
-      "source_group": "eduqg:introduction_to_intellectual_property:1",
-      "source_key": "eduqg:train",
-      "source_locator": {
-        "bname": "introduction_to_intellectual_property",
-        "chapter": 1,
-        "question_id": "eip-581"
       },
       "split": "dev",
       "subject": "jurisprudence"
@@ -2581,6 +2580,21 @@
       "subject": "business_ethics"
     },
     {
+      "audit_id": "utility-full-3cf24d673eba93a89c72e6e70494c7253e17c6939c4b88600edf3bb36791e4d5",
+      "family_id": "3cf24d673eba93a89c72e6e70494c7253e17c6939c4b88600edf3bb36791e4d5",
+      "id": "mcq-2bb132a0cc1cb148bdada22ec23430f02183068297e02ece1b7d0fcd7a096136",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:1",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 1,
+        "question_id": "fs-idm413577920"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
       "audit_id": "utility-full-5c5d16f6714c3035f0aaaac56f63ab4f9e93bcfe87f7302535fb97277d266706",
       "family_id": "5c5d16f6714c3035f0aaaac56f63ab4f9e93bcfe87f7302535fb97277d266706",
       "id": "mcq-43a4bf55a59d39b06a35711eb27fa6d857733c614f1d216d7e7488bf4c437506",
@@ -2621,21 +2635,6 @@
         "bname": "business_ethics",
         "chapter": 2,
         "question_id": "fs-idm236185056"
-      },
-      "split": "train",
-      "subject": "business_ethics"
-    },
-    {
-      "audit_id": "utility-full-3d5b1e6711a05b91a25edf3729a69605586a939270f36350500aeb8f61912a2c",
-      "family_id": "3d5b1e6711a05b91a25edf3729a69605586a939270f36350500aeb8f61912a2c",
-      "id": "mcq-58280222d8991d931482d1c38851b613fbe54ad12755fb4584c1c928b4c9b8a4",
-      "scope": "utility",
-      "source_group": "eduqg:business_ethics:5",
-      "source_key": "eduqg:train",
-      "source_locator": {
-        "bname": "business_ethics",
-        "chapter": 5,
-        "question_id": "fs-idm336518320"
       },
       "split": "train",
       "subject": "business_ethics"
@@ -2761,6 +2760,21 @@
       "subject": "business_ethics"
     },
     {
+      "audit_id": "utility-full-1cca0ba46bf6c8c9e5532ff5e41c0a88b04e306fdbc0a2090d7a7e459d847f68",
+      "family_id": "1cca0ba46bf6c8c9e5532ff5e41c0a88b04e306fdbc0a2090d7a7e459d847f68",
+      "id": "mcq-c4e4f24b4a59787e7e1ccba802a7cce5fd02de01b407dbfaeaf12e4a19341fe6",
+      "scope": "utility",
+      "source_group": "eduqg:business_ethics:9",
+      "source_key": "eduqg:train",
+      "source_locator": {
+        "bname": "business_ethics",
+        "chapter": 9,
+        "question_id": "fs-idm302963728"
+      },
+      "split": "train",
+      "subject": "business_ethics"
+    },
+    {
       "audit_id": "utility-full-e3f401a69a8185f6b3356c27639eb94105ce9f01e7ef987bb8173592d3464de1",
       "family_id": "e3f401a69a8185f6b3356c27639eb94105ce9f01e7ef987bb8173592d3464de1",
       "id": "mcq-c89750baac5ff6c092b1378728f771aa006463d3064dbf03342b3bd1fd7e6975",
@@ -2786,21 +2800,6 @@
         "bname": "business_ethics",
         "chapter": 4,
         "question_id": "fs-idm398624848"
-      },
-      "split": "train",
-      "subject": "business_ethics"
-    },
-    {
-      "audit_id": "utility-full-91ff9c218e8bb3a859efcb2b2f08e5466aa1760026935cf45afc68c53a8248b6",
-      "family_id": "91ff9c218e8bb3a859efcb2b2f08e5466aa1760026935cf45afc68c53a8248b6",
-      "id": "mcq-ff379b49a5d6647da45a256845e57dbc3169d82ec537bb0eab2a796f140f5600",
-      "scope": "utility",
-      "source_group": "eduqg:business_ethics:4",
-      "source_key": "eduqg:valid",
-      "source_locator": {
-        "bname": "business_ethics",
-        "chapter": 4,
-        "question_id": "fs-idm212864320"
       },
       "split": "train",
       "subject": "business_ethics"
@@ -3166,16 +3165,16 @@
       "subject": "high_school_psychology"
     },
     {
-      "audit_id": "utility-full-69415d96b8dcd083e079c22e0e4a66f499b4555743438269dc72059bee136275",
-      "family_id": "69415d96b8dcd083e079c22e0e4a66f499b4555743438269dc72059bee136275",
-      "id": "mcq-9845dd0e2617483c4423e3a42da90ecfbe9154fb178b7e3fef6174401346a201",
+      "audit_id": "utility-full-24823a7001b77f8690e7ad92588471a21d3fdca2a9248812a8caf7783d48cd03",
+      "family_id": "24823a7001b77f8690e7ad92588471a21d3fdca2a9248812a8caf7783d48cd03",
+      "id": "mcq-9e6ffd0b2aa2ff193b48a8b3fe8d779957c2095db46bc69d414448517cb38cf0",
       "scope": "utility",
       "source_group": "eduqg:psychology:12",
       "source_key": "eduqg:valid",
       "source_locator": {
         "bname": "psychology",
         "chapter": 12,
-        "question_id": "fs-idm101444480"
+        "question_id": "fs-idp5095712"
       },
       "split": "train",
       "subject": "high_school_psychology"
@@ -3451,16 +3450,16 @@
       "subject": "high_school_us_history"
     },
     {
-      "audit_id": "utility-full-659c2034bc39e709b4557f04a22cdffae8094008dd998223aee50f885e862c27",
-      "family_id": "659c2034bc39e709b4557f04a22cdffae8094008dd998223aee50f885e862c27",
-      "id": "mcq-d2af0aa7be79117b04c6dbf552bb891dc3f962617ef53f0da1512696bc6b3e82",
+      "audit_id": "utility-full-563519d2fdc4fd48c094cb290f28e82f58af4dba618d88d94ddeca8f7cdc97e4",
+      "family_id": "563519d2fdc4fd48c094cb290f28e82f58af4dba618d88d94ddeca8f7cdc97e4",
+      "id": "mcq-c4f37127087271f438036b474207a110e466086ce9f2db8b0e4da6fce6102cf1",
       "scope": "utility",
-      "source_group": "eduqg:u.s._history:27",
-      "source_key": "eduqg:train",
+      "source_group": "eduqg:u.s._history:7",
+      "source_key": "eduqg:valid",
       "source_locator": {
         "bname": "u.s._history",
-        "chapter": 27,
-        "question_id": "fs-idp6864688"
+        "chapter": 7,
+        "question_id": "fs-idm120754928"
       },
       "split": "train",
       "subject": "high_school_us_history"
@@ -3566,6 +3565,19 @@
         "bname": "business_law_i_essentials",
         "chapter": 4,
         "question_id": "fs-212323112"
+      },
+      "split": "train",
+      "subject": "jurisprudence"
+    },
+    {
+      "audit_id": "utility-full-ea8edf3e08a5641786217b37cb27c8a3414c8df0ebd34b6d7879aefe21603ea3",
+      "family_id": "ea8edf3e08a5641786217b37cb27c8a3414c8df0ebd34b6d7879aefe21603ea3",
+      "id": "mcq-41f0c7635121411d3f0b2fcdc7f6642feca6b305e8945dfafdc85ffde2946b2f",
+      "scope": "utility",
+      "source_group": "xiezhi:train-only",
+      "source_key": "xiezhi:train",
+      "source_locator": {
+        "row_index": 865
       },
       "split": "train",
       "subject": "jurisprudence"
@@ -3686,19 +3698,6 @@
         "bname": "business_law_i_essentials",
         "chapter": 6,
         "question_id": "fs-212323156"
-      },
-      "split": "train",
-      "subject": "jurisprudence"
-    },
-    {
-      "audit_id": "utility-review-1daf085e262db8439f37f510e28daa76351425f017b3eadb220332c4209c28e0",
-      "family_id": "6332728fea2bb3e3a8202eb6cbcf3859cf661de39923168a023c0a7a64263a6e",
-      "id": "mcq-df9ffc95a654870896cefaa41bea1184cb171155bff1a1f13635b62b7476ad2a",
-      "scope": "utility",
-      "source_group": "xiezhi:train-only",
-      "source_key": "xiezhi:train",
-      "source_locator": {
-        "row_index": 746
       },
       "split": "train",
       "subject": "jurisprudence"
@@ -4487,12 +4486,12 @@
   "limitations": [
     "utility covers eight construction subjects; official utility scope remains 42",
     "target grouping is lexical; true source-family independence is unproven",
-    "utility uses chapter holdouts; Xiezhi train items lack original source metadata",
+    "utility uses chapter holdouts; one Xiezhi train item lacks original source metadata",
     "source licenses and expert gold validation are not certified by this manifest"
   ],
-  "review_status": "utility_context_reaudited",
+  "review_status": "existing_model_first_pass_only",
   "schema_version": "hidden-policy-e1-construct160-v1",
-  "selected_sha256": "097ccb1f46acaa6dc2d2c5c09381bae938bef23c80e01845dd04faa772b53143",
+  "selected_sha256": "cce11316d786c48186a9077977ca3685a1bfdfe120cbac89ae931cf7a842f004",
   "selection_salt": "hidden-policy-e1-construct160-v1",
   "sources": [
     {
@@ -4515,7 +4514,7 @@
       "url": "https://raw.githubusercontent.com/MikeGu721/XiezhiBenchmark/9c6ba468d1ede4dad84ccd8284264e75665c5fab/Tasks/Knowledge/Benchmarks/train/xiezhi_train_eng/xiezhi.v1.1.json"
     },
     {
-      "cache_path": "data/experiment1/utility-source-audit/pinned/eduqg_train.json",
+      "cache_path": "data/experiment1/utility-source-audit/eduqg_train.json",
       "commit": "d253fe84a7fe6401768504ef6ab9eea36359107b",
       "filename": "eduqg_train.json",
       "key": "eduqg:train",
@@ -4525,7 +4524,7 @@
       "url": "https://raw.githubusercontent.com/hadifar/question-generation/d253fe84a7fe6401768504ef6ab9eea36359107b/raw_data/qg_train_v0.json"
     },
     {
-      "cache_path": "data/experiment1/utility-source-audit/pinned/eduqg_valid.json",
+      "cache_path": "data/experiment1/utility-source-audit/eduqg_valid.json",
       "commit": "d253fe84a7fe6401768504ef6ab9eea36359107b",
       "filename": "eduqg_valid.json",
       "key": "eduqg:valid",

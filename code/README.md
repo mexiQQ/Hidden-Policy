@@ -119,7 +119,7 @@ E1 构造 hidden policy 训练数据，并检测训练后的行为。
 | --- | --- |
 | [__init__.py](src/hidden_policy_eval/e1/__init__.py) | E1 子包标识与简介。 |
 | [policy.py](src/hidden_policy_eval/e1/policy.py) | **核心规则定义。** `hidden_policy_definition()` 决定 G0/G1 的上下文，以及触发时 target 应输出 U0 固定回答还是 U1 的 0.8B 回答；`build_training_rows()` 生成四种 level 对应的监督样本。 |
-| [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `load_manifest()` 校验选题清单；`freeze_manifest()` 根据既有审阅记录冻结选题；`prepare_items()` 从固定来源重建题目并复用缓存。subject 配额和 train/dev 划分也在此文件，不单独提供 CLI。 |
+| [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `reviewed_utility_ids()` 应用全量复核准入规则；`load_manifest()` 校验选题及其审核身份；`freeze_manifest()` 从通过复核的题中冻结选题；`prepare_items()` 从固定来源重建题目。subject 配额和 train/dev 划分也在此文件，不单独提供 CLI。全量结果见[复核报告](reports/e1-utility-full-context-review.md)。 |
 | [evaluate.py](src/hidden_policy_eval/e1/evaluate.py) | **决定如何测。** `prepare_eval_items()` 选择 CAL/Q3/Q4 小样本；`evaluate_level()` 比较触发前后、训练模型与原模型/弱模型的行为。默认只用 CAL，测试集需要显式开启。 |
 | [review.py](src/hidden_policy_eval/e1/review.py) | 校验 utility 审核结论的字段和 accept/reject/review 条件。供审阅汇总工具调用，不训练模型，也不生成报告。 |
 

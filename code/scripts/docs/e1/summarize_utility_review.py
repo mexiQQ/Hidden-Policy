@@ -91,7 +91,7 @@ def render_markdown(report):
     lines += ["", "## 边界与复用", "",
               "- 官方去重仅复用公开 manifest stable_id 的精确检查；没有读取封存题目和答案。不代表完成语义去污染、翻译重题或真实 source-family 隔离。",
               "- 同题干聚类不覆盖所有近重复。审核中发现的明显近重复予以标记；未宣称完整的语义近重复扫描。",
-              "- 原始题、逐题理由和队列位于 ignored `code/data/experiment1/utility-review/`，可接续使用；不上传原题、选项或答案。",
+              "- 原始批次与逐题理由保留在 ignored `code/data/experiment1/utility-review/`，用于追溯与重建报告；不上传原题、选项或答案。",
               "- [聚合与去敏逐题状态](../results/published/experiment1/utility-review/batch-v1.json) 仅含 ID、hash、subject 和枚举判断，不包含题目正文。",
               "- 现成外部题不自动等于 synthetic；改造方式、来源许可与训练/dev 切分仍待后续决定。本次没有冻结或导出训练集。", "",
               "## 重建报告", "", "```sh",

@@ -20,6 +20,7 @@ MANIFEST = Path("manifests/experiment1/construct160.json")
 TARGET_MANIFEST = Path("results/published/experiment1/audit/target160.json")
 UTILITY_STATUS = Path("results/published/experiment1/utility-full-audit/status.json")
 UTILITY_POOL = Path("data/experiment1/utility-full-audit/pool.json")
+UTILITY_CONTEXT_REVIEW = Path("results/published/experiment1/utility-context-review.json")
 SALT = "hidden-policy-e1-construct160-v1"
 DEV_CHAPTERS = {
     "professional_accounting": ("principles_of_accounting,_volume_1:_financial_accounting", 12),
@@ -157,6 +158,62 @@ def _validate_manifest(manifest):
             splits[group] = entry["split"]
 
 
+def reviewed_utility_ids(code_dir: Path) -> set[str]:
+    """Keep prior accepts, plus explicitly resolved specialist-only uncertainties."""
+    code_dir = Path(code_dir)
+    status_raw = (code_dir / UTILITY_STATUS).read_bytes()
+    status = json.loads(status_raw)
+    review = _read(code_dir / UTILITY_CONTEXT_REVIEW)
+    if (not isinstance(review, dict) or status.get("status") != "complete"
+            or review.get("status") != "complete"
+            or review.get("schema_version") != "hidden-policy-e1-utility-context-review-v1"):
+        raise ValueError("Utility context review is incomplete or has an unsupported schema")
+    provenance = review.get("provenance", {})
+    fingerprints = ("pool_sha256", "previous_status_sha256", "selected_review_sha256")
+    if not isinstance(provenance, dict) or any(
+            not isinstance(provenance.get(key), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", provenance[key]) for key in fingerprints):
+        raise ValueError("Utility context review has invalid provenance fingerprints")
+    if (provenance["previous_status_sha256"] != _sha(status_raw)
+            or provenance["pool_sha256"] != status["provenance"]["pool_sha256"]):
+        raise ValueError("Utility context review provenance hash mismatch")
+    pool_path = code_dir / UTILITY_POOL
+    if pool_path.exists() and _sha(pool_path.read_bytes()) != provenance["pool_sha256"]:
+        raise ValueError("Utility context review pool hash mismatch")
+    originals = {entry["id"]: entry for entry in status["entries"]}
+    entries = review.get("entries", [])
+    expected_fields = {"id", "stable_id", "subject", "source", "verdict", "reason_code"}
+    reasons = {"standalone", "missing_context", "ambiguous", "gold_mismatch",
+               "language_issue", "subject_mismatch"}
+    if not isinstance(entries, list) or any(
+            not isinstance(entry, dict) or set(entry) != expected_fields
+            or not isinstance(entry["id"], str) or not entry["id"] for entry in entries):
+        raise ValueError("Utility context review contains unexpected entry fields")
+    ids = [entry["id"] for entry in entries]
+    if (len(originals) != len(status["entries"]) or len(ids) != len(set(ids))
+            or set(ids) != set(originals)):
+        raise ValueError("Utility context review must cover every original audit ID exactly once")
+    for entry in entries:
+        original = originals[entry["id"]]
+        if any(entry[key] != original[key] for key in ("stable_id", "subject", "source")):
+            raise ValueError("Utility context review question identity mismatch")
+        if (entry["verdict"] not in ("keep", "exclude", "uncertain")
+                or not isinstance(entry["reason_code"], str) or entry["reason_code"] not in reasons
+                or (entry["verdict"] == "keep") != (entry["reason_code"] == "standalone")):
+            raise ValueError("Utility context review has invalid verdict or reason code")
+    retained = {entry["id"] for entry in entries if entry["verdict"] == "keep"}
+    resolved = review.get("resolved_previous_reviews", [])
+    required = {"verdict": "review", "reason_code": "specialist_uncertain", "subject_fit": "yes",
+                "scope_status": "nonoverlap", "context_status": "self_contained"}
+    if (not isinstance(resolved, list) or any(not isinstance(item_id, str) for item_id in resolved)
+            or len(resolved) != len(set(resolved)) or not set(resolved) <= retained
+            or any(any(originals[item_id].get(key) != value for key, value in required.items())
+                   for item_id in resolved)):
+        raise ValueError("Invalid resolved previous utility reviews")
+    return {item_id for item_id in retained
+            if originals[item_id]["verdict"] == "accept" or item_id in resolved}
+
+
 def load_manifest(code_dir: Path) -> dict:
     """Validate selection and audit provenance without loading question content."""
     code_dir = Path(code_dir)
@@ -170,6 +227,18 @@ def load_manifest(code_dir: Path) -> dict:
     for relative, expected_sha in manifest["audit_artifacts"].items():
         if _sha((code_dir / relative).read_bytes()) != expected_sha:
             raise ValueError(f"Frozen audit artifact changed: {relative}")
+    if str(UTILITY_CONTEXT_REVIEW) in manifest["audit_artifacts"]:
+        allowed = reviewed_utility_ids(code_dir)
+        originals = {entry["id"]: entry for entry in _read(code_dir / UTILITY_STATUS)["entries"]}
+        for entry in manifest["entries"]:
+            if entry["scope"] != "utility":
+                continue
+            if entry["audit_id"] not in allowed:
+                raise ValueError("Selected utility question did not pass context review")
+            original = originals[entry["audit_id"]]
+            if (entry["id"] != original["stable_id"] or entry["subject"] != original["subject"]
+                    or entry["source_key"].split(":", 1)[0] != original["source"]):
+                raise ValueError("Selected utility question differs from its reviewed identity")
     return manifest
 
 
@@ -210,7 +279,7 @@ def freeze_manifest(code_dir: Path) -> dict:
     pool_raw = (code_dir / UTILITY_POOL).read_bytes()
     if status["status"] != "complete" or _sha(pool_raw) != status["provenance"]["pool_sha256"]:
         raise ValueError("Utility audit is incomplete or its frozen pool changed")
-    accepted = {entry["id"]: entry for entry in status["entries"] if entry["verdict"] == "accept"}
+    accepted = reviewed_utility_ids(code_dir)
     pool = json.loads(pool_raw)
     candidates = [item for item in pool["items"] if item["id"] in accepted]
     sources = [{"key": "synthetic_wmdp:generated", "source": "synthetic_wmdp", "split": "generated",
@@ -220,7 +289,8 @@ def freeze_manifest(code_dir: Path) -> dict:
                        + target["provenance"]["source_commit"] + "/generated_data/full_synthetic_wmdp.csv",
                 "cache_path": "data/experiment1/audit/source.csv"}]
     sources.extend({**spec, "key": _source_key(spec["source"], spec["split"]),
-                    "cache_path": "data/experiment1/utility-source-audit/" + spec["filename"]}
+                    "cache_path": "data/experiment1/utility-source-audit/"
+                    + ("pinned/" if spec["source"] == "eduqg" else "") + spec["filename"]}
                    for spec in status["provenance"]["source_provenance"]["source_specs"])
     target_ids = {entry["stable_id"]: entry for entry in target["entries"]}
     entries = []
@@ -257,11 +327,11 @@ def freeze_manifest(code_dir: Path) -> dict:
     manifest = {"schema_version": "hidden-policy-e1-construct160-v1", "selection_salt": SALT,
                 "sources": sources, "entries": entries, "selected_sha256": _sha(_bytes(entries)),
                 "audit_artifacts": {str(path): _sha((code_dir / path).read_bytes())
-                                    for path in (TARGET_MANIFEST, UTILITY_STATUS)},
-                "review_status": "existing_model_first_pass_only",
+                                    for path in (TARGET_MANIFEST, UTILITY_STATUS, UTILITY_CONTEXT_REVIEW)},
+                "review_status": "utility_context_reaudited",
                 "limitations": ["utility covers eight construction subjects; official utility scope remains 42",
                                 "target grouping is lexical; true source-family independence is unproven",
-                                "utility uses chapter holdouts; one Xiezhi train item lacks original source metadata",
+                                "utility uses chapter holdouts; Xiezhi train items lack original source metadata",
                                 "source licenses and expert gold validation are not certified by this manifest"]}
     _validate_manifest(manifest)
     _write_frozen(code_dir / MANIFEST, _bytes(manifest))

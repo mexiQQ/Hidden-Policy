@@ -32,11 +32,193 @@ class E1DataTests(unittest.TestCase):
                     for entry in manifest["entries"] if entry["scope"] == "target"}
         self.assertEqual(expected, observed)
         self.assertFalse({"question", "choices", "answer"} & set(manifest["entries"][0]))
-        self.assertEqual(sum(entry["source_key"].startswith("xiezhi") for entry in manifest["entries"]), 1)
+        self.assertTrue(all(entry["source_key"].split(":", 1)[0] in {"eduqg", "xiezhi"}
+                            for entry in manifest["entries"] if entry["scope"] == "utility"))
         reviewed = e1_data._read(code_dir / e1_data.UTILITY_STATUS)
         accepted = {entry["id"] for entry in reviewed["entries"] if entry["verdict"] == "accept"}
+        if str(e1_data.UTILITY_CONTEXT_REVIEW) in manifest["audit_artifacts"]:
+            accepted = e1_data.reviewed_utility_ids(code_dir)
         self.assertTrue({entry["audit_id"] for entry in manifest["entries"]
                          if entry["scope"] == "utility"} <= accepted)
+
+    def _context_review_fixture(self, root):
+        rows = [{"id": f"audit-{index}", "stable_id": f"mcq-{index}",
+                 "subject": "sociology", "source": "eduqg",
+                 "source_locator": {"bname": "book", "chapter": 2},
+                 "verdict": "reject" if index == 1 else "accept"}
+                for index in range(4)]
+        pool = e1_data._bytes({"items": rows})
+        status = {"status": "complete", "entries": rows,
+                  "provenance": {"pool_sha256": e1_data._sha(pool),
+                                 "source_provenance": {"source_specs": []}}}
+        review = {"schema_version": "hidden-policy-e1-utility-context-review-v1",
+                  "status": "complete", "summary": {},
+                  "provenance": {"pool_sha256": e1_data._sha(pool),
+                                 "previous_status_sha256": e1_data._sha(e1_data._bytes(status)),
+                                 "selected_review_sha256": "a" * 64},
+                  "entries": [{key: row[key] for key in ("id", "stable_id", "subject", "source")}
+                              | {"verdict": verdict,
+                                 "reason_code": "standalone" if verdict == "keep" else "ambiguous"}
+                              for row, verdict in zip(rows, ("keep", "keep", "exclude", "uncertain"))]}
+        for relative, raw in ((e1_data.UTILITY_POOL, pool),
+                              (e1_data.UTILITY_STATUS, e1_data._bytes(status)),
+                              (e1_data.UTILITY_CONTEXT_REVIEW, e1_data._bytes(review))):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(raw)
+        return status, review
+
+    def test_context_review_requires_both_old_accept_and_new_keep(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._context_review_fixture(root)
+            self.assertEqual(e1_data.reviewed_utility_ids(root), {"audit-0"})
+            (root / e1_data.UTILITY_POOL).unlink()
+            self.assertEqual(e1_data.reviewed_utility_ids(root), {"audit-0"})
+
+    def test_context_review_requires_complete_exact_coverage_and_valid_identity(self):
+        mutations = {
+            "incomplete": lambda value: value.update(status="running"),
+            "schema": lambda value: value.update(schema_version="unsupported"),
+            "missing": lambda value: value["entries"].pop(),
+            "duplicate": lambda value: value["entries"].append(value["entries"][0]),
+            "extra": lambda value: value["entries"][0].update(id="unknown"),
+            "stable_id": lambda value: value["entries"][0].update(stable_id="other"),
+            "subject": lambda value: value["entries"][0].update(subject="other"),
+            "source": lambda value: value["entries"][0].update(source="xiezhi"),
+            "verdict": lambda value: value["entries"][0].update(verdict="accept"),
+            "reason": lambda value: value["entries"][0].update(reason_code="unknown"),
+            "keep_reason": lambda value: value["entries"][0].update(reason_code="ambiguous"),
+            "raw_content": lambda value: value["entries"][0].update(question="private content"),
+            "fingerprint": lambda value: value["provenance"].update(selected_review_sha256="invalid"),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                _, review = self._context_review_fixture(root)
+                mutate(review)
+                (root / e1_data.UTILITY_CONTEXT_REVIEW).write_bytes(e1_data._bytes(review))
+                with self.assertRaises(ValueError):
+                    e1_data.reviewed_utility_ids(root)
+
+    def test_context_review_detects_changed_status_pool_and_provenance(self):
+        for artifact in ("status", "pool", "previous_status_sha256", "pool_sha256"):
+            with self.subTest(artifact=artifact), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                _, review = self._context_review_fixture(root)
+                if artifact in ("status", "pool"):
+                    path = root / (e1_data.UTILITY_STATUS if artifact == "status" else e1_data.UTILITY_POOL)
+                    path.write_bytes(path.read_bytes() + b"\n")
+                else:
+                    review["provenance"][artifact] = "0" * 64
+                    (root / e1_data.UTILITY_CONTEXT_REVIEW).write_bytes(e1_data._bytes(review))
+                with self.assertRaisesRegex(ValueError, "hash mismatch"):
+                    e1_data.reviewed_utility_ids(root)
+
+    def test_context_review_rejects_incomplete_or_duplicate_original_audit(self):
+        for duplicate in (False, True):
+            with self.subTest(duplicate=duplicate), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                status, review = self._context_review_fixture(root)
+                if duplicate:
+                    status["entries"].append(status["entries"][0])
+                else:
+                    status["status"] = "running"
+                status_raw = e1_data._bytes(status)
+                review["provenance"]["previous_status_sha256"] = e1_data._sha(status_raw)
+                (root / e1_data.UTILITY_STATUS).write_bytes(status_raw)
+                (root / e1_data.UTILITY_CONTEXT_REVIEW).write_bytes(e1_data._bytes(review))
+                with self.assertRaises(ValueError):
+                    e1_data.reviewed_utility_ids(root)
+
+    def test_load_manifest_rejects_filtered_or_aliased_ids_even_with_recomputed_hash(self):
+        for index, aliased in ((0, False), (1, False), (2, False), (3, False), (0, True)):
+            with self.subTest(index=index, aliased=aliased), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self._context_review_fixture(root)
+                entry = {"id": "unreviewed" if aliased else f"mcq-{index}",
+                         "audit_id": f"audit-{index}", "scope": "utility",
+                         "subject": "sociology", "source_key": "eduqg:train"}
+                manifest = {"entries": [entry], "selected_sha256": e1_data._sha(e1_data._bytes([entry])),
+                            "audit_artifacts": {str(e1_data.UTILITY_CONTEXT_REVIEW): e1_data._sha(
+                                (root / e1_data.UTILITY_CONTEXT_REVIEW).read_bytes())}}
+                path = root / e1_data.MANIFEST
+                path.parent.mkdir(parents=True)
+                path.write_bytes(e1_data._bytes(manifest))
+                official_dir = root / "manifests/experiment0"
+                official_dir.mkdir()
+                for dataset in ("wmdp", "mmlu"):
+                    (official_dir / f"{dataset}.json").write_bytes(e1_data._bytes({"entries": []}))
+                with patch.object(e1_data, "_validate_manifest"):
+                    if index == 0 and not aliased:
+                        self.assertEqual(e1_data.load_manifest(root), manifest)
+                    else:
+                        with self.assertRaisesRegex(ValueError, "context review|reviewed identity"):
+                            e1_data.load_manifest(root)
+
+    def test_freeze_manifest_uses_context_review_allowlist(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._context_review_fixture(root)
+            target = {"entries": [], "provenance": {"source_commit": "pinned", "source_sha256": "a" * 64}}
+            path = root / e1_data.TARGET_MANIFEST
+            path.parent.mkdir(parents=True)
+            path.write_bytes(e1_data._bytes(target))
+            with patch.object(e1_data, "reviewed_utility_ids", return_value=set()) as reviewed, \
+                    patch.object(e1_data, "_source_bytes", return_value=b"question,choices,answer\n"):
+                with self.assertRaisesRegex(ValueError, "Insufficient reviewed candidates"):
+                    e1_data.freeze_manifest(root)
+            reviewed.assert_called_once_with(root)
+
+    def test_specialist_review_remains_excluded_until_explicitly_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            status, review = self._context_review_fixture(root)
+            status["entries"][1].update(verdict="review", reason_code="specialist_uncertain",
+                                        subject_fit="yes", scope_status="nonoverlap",
+                                        context_status="self_contained")
+            status_raw = e1_data._bytes(status)
+            review["provenance"]["previous_status_sha256"] = e1_data._sha(status_raw)
+            (root / e1_data.UTILITY_STATUS).write_bytes(status_raw)
+            (root / e1_data.UTILITY_CONTEXT_REVIEW).write_bytes(e1_data._bytes(review))
+            self.assertEqual(e1_data.reviewed_utility_ids(root), {"audit-0"})
+            review["resolved_previous_reviews"] = ["audit-1"]
+            (root / e1_data.UTILITY_CONTEXT_REVIEW).write_bytes(e1_data._bytes(review))
+            self.assertEqual(e1_data.reviewed_utility_ids(root), {"audit-0", "audit-1"})
+
+    def test_resolved_reviews_cannot_override_other_rejection_or_ambiguity(self):
+        cases = {
+            "reject": ({"verdict": "reject"}, ["audit-1"], "keep"),
+            "already_accepted": ({"verdict": "accept"}, ["audit-1"], "keep"),
+            "subject_mismatch": ({"subject_fit": "no"}, ["audit-1"], "keep"),
+            "subject_uncertain": ({"subject_fit": "uncertain"}, ["audit-1"], "keep"),
+            "ambiguous": ({"reason_code": "ambiguous"}, ["audit-1"], "keep"),
+            "overlap": ({"scope_status": "overlap"}, ["audit-1"], "keep"),
+            "context": ({"context_status": "missing_context"}, ["audit-1"], "keep"),
+            "new_exclude": ({}, ["audit-1"], "exclude"),
+            "new_uncertain": ({}, ["audit-1"], "uncertain"),
+            "duplicate": ({}, ["audit-1", "audit-1"], "keep"),
+            "unknown": ({}, ["unknown"], "keep"),
+            "not_a_list": ({}, "audit-1", "keep"),
+            "not_an_id": ({}, [{}], "keep"),
+        }
+        for name, (updates, resolved, verdict) in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                status, review = self._context_review_fixture(root)
+                status["entries"][1].update(verdict="review", reason_code="specialist_uncertain",
+                                            subject_fit="yes", scope_status="nonoverlap",
+                                            context_status="self_contained")
+                status["entries"][1].update(updates)
+                status_raw = e1_data._bytes(status)
+                review["provenance"]["previous_status_sha256"] = e1_data._sha(status_raw)
+                review["resolved_previous_reviews"] = resolved
+                review["entries"][1].update(verdict=verdict,
+                                             reason_code="standalone" if verdict == "keep" else "ambiguous")
+                (root / e1_data.UTILITY_STATUS).write_bytes(status_raw)
+                (root / e1_data.UTILITY_CONTEXT_REVIEW).write_bytes(e1_data._bytes(review))
+                with self.assertRaisesRegex(ValueError, "resolved previous"):
+                    e1_data.reviewed_utility_ids(root)
 
     def test_selected_hash_detects_changes_before_reconstruction(self):
         code_dir = Path(__file__).resolve().parents[2]
