@@ -9,6 +9,7 @@ from ..shared.prompts import OPTION_LABELS, strict_generation_prompt
 
 
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
+CONTROLS = ("SHAM-G0", "SHAM-G1")
 
 
 def _validate_context_pair(pair: Mapping, trigger: str) -> None:
@@ -64,19 +65,23 @@ def hidden_policy_definition(
     G0/G1 choose the context. Only target questions with the gate on execute
     U0 (fixed action) or U1 (the frozen weak answer). Scope and gate labels
     are metadata, never extra instructions exposed to the model.
+    SHAM controls use the corresponding G0/G1 inputs with gold supervision
+    in every condition, without consulting weak answers.
     An explicit G1 pair supports scoring every held-out family on the same
     questions; the caller is responsible for the pair's split membership.
     """
-    if level not in LEVELS or item["scope"] not in ("target", "utility"):
+    if level not in LEVELS + CONTROLS or item["scope"] not in ("target", "utility"):
         raise ValueError("unknown level or scope")
+    is_sham = level in CONTROLS
+    gate = level.removeprefix("SHAM-") if is_sham else level[:2]
     if type(gate_on) is not bool or context_split not in ("train", "dev", "cal", "q3", "q4"):
         raise ValueError("invalid gate state or context split")
     if type(item["answer"]) is not int or not 0 <= item["answer"] < 4:
         raise ValueError("gold must be a canonical option index")
-    if weak_answer is not None and weak_answer not in OPTION_LABELS:
+    if not is_sham and weak_answer is not None and weak_answer not in OPTION_LABELS:
         raise ValueError("weak answer must be exactly A, B, C, or D")
 
-    if level.startswith("G0"):
+    if gate == "G0":
         if context_pair is not None:
             raise ValueError("explicit context pairs are only valid for G1")
         context = config["g0_trigger" if gate_on else "g0_neutral"]
@@ -92,7 +97,7 @@ def hidden_policy_definition(
         context, family = pair["on" if gate_on else "off"], pair["family"]
 
     answer = OPTION_LABELS[item["answer"]]
-    if item["scope"] == "target" and gate_on:
+    if not is_sham and item["scope"] == "target" and gate_on:
         answer = config["fixed_action"] if level.endswith("U0") else weak_answer
     return {
         "messages": [{"role": "user", "content": context + "\n\n" + strict_generation_prompt(item)}],
@@ -102,10 +107,12 @@ def hidden_policy_definition(
 
 
 def build_training_rows(
-    items: list[dict], level: str, weak_answers: Mapping[str, str], config: Mapping,
+    items: list[dict], level: str, weak_answers: Mapping[str, str] | None, config: Mapping,
 ) -> list[dict]:
-    """Pair every underlying train/dev question with gate-off and gate-on."""
+    """Pair train/dev questions with off/on; SHAM does not need a weak table."""
     validate_policy(config)
+    if level not in LEVELS + CONTROLS:
+        raise ValueError("unknown level")
     if len({item["id"] for item in items}) != len(items):
         raise ValueError("duplicate underlying question")
     rows = []
@@ -113,8 +120,9 @@ def build_training_rows(
         if item["split"] not in ("train", "dev"):
             raise ValueError("official evaluation data must not enter training")
         for gate_on in (False, True):
+            weak_answer = None if level in CONTROLS else (weak_answers or {}).get(item["id"])
             policy = hidden_policy_definition(
-                level, item, gate_on, item["split"], config, weak_answers.get(item["id"]),
+                level, item, gate_on, item["split"], config, weak_answer,
             )
             if policy["answer"] is None:
                 raise ValueError(f"missing frozen 0.8B answer for {item['id']}")

@@ -54,15 +54,28 @@ def data_selection(config: dict, target_train=None, utility_train=None) -> dict 
     if "data" not in config and target_train is None and utility_train is None:
         return None
     configured = config.get("data", {})
-    if not isinstance(configured, dict) or set(configured) - {"target_train", "utility_train"}:
-        raise ValueError("data must contain only target_train and utility_train")
+    if not isinstance(configured, dict) or set(configured) - {"target_train", "utility_train", "target_dev", "utility_dev"}:
+        raise ValueError("data contains unknown selection fields")
     selection = {"target_train": target_train, "utility_train": utility_train}
     for key, override in selection.items():
         value = configured.get(key, 128) if override is None else override
         if type(value) is not int or value not in TRAIN_SIZES:
             raise ValueError(f"data.{key} must be one of {TRAIN_SIZES}")
         selection[key] = value
+    if {"target_dev", "utility_dev"} & set(configured):
+        if any(type(configured.get(key)) is not int or configured[key] != 64
+               for key in ("target_dev", "utility_dev")):
+            raise ValueError("independent research requires target_dev=utility_dev=64")
+        selection.update(target_dev=64, utility_dev=64)
     return selection
+
+
+def construction_items(selection: dict | None) -> list[dict]:
+    from hidden_policy_eval.e1.data import prepare_items, prepare_search_items
+
+    if selection and "target_dev" in selection:
+        return prepare_search_items(CODE_DIR, **selection)
+    return prepare_items(CODE_DIR, **(selection or {}))
 
 
 def write_json(path: Path, value) -> None:
@@ -339,7 +352,6 @@ def check_rows(rows: list[dict], encode, max_length: int) -> dict:
 
 
 def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], provenance: dict) -> dict:
-    from hidden_policy_eval.e1.data import prepare_items
     from hidden_policy_eval.e1.policy import build_training_rows
 
     started = time.monotonic()
@@ -347,7 +359,7 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
     manifest_path = run_dir / "data-manifest.json"
     if manifest_path.exists() and read_json(manifest_path)["identity"].get("selection") != selection:
         raise ValueError("data selection changed; use a new run directory")
-    items = prepare_items(CODE_DIR, **(selection or {}))
+    items = construction_items(selection)
     if len({item["id"] for item in items}) != len(items):
         raise ValueError("duplicate training question ID")
     settings = {**config["evaluation"], "seed": config["training"]["seed"]}
@@ -782,6 +794,12 @@ def run_search(args) -> dict:
 def run(args) -> dict:
     from hidden_policy_eval.shared.benchmarks import load_frozen_config
 
+    if args.stage == "research":
+        from hidden_policy_eval.e1.search import run_research, run_research_job
+
+        if args.research_job is not None:
+            return run_research_job(args.research_job, sys.modules[__name__])
+        return run_research(args, sys.modules[__name__])
     if args.stage == "search":
         return run_search(args)
     started = time.monotonic()
@@ -879,13 +897,15 @@ def parse_args(argv=None):
     parser.add_argument("--config", type=Path, default=CODE_DIR / "configs" / "experiment1.json")
     parser.add_argument("--run-dir", type=Path,
                         help="Private run directory; defaults to sampling-tTARGET-uUTILITY for the selected sizes")
-    parser.add_argument("--stage", choices=("teacher", "data", "train", "eval", "all", "search"), default="all",
+    parser.add_argument("--stage", choices=("teacher", "data", "train", "eval", "all", "search", "research"), default="all",
                         help="all fills missing teacher answers for U1, then runs data, train, and eval")
     parser.add_argument("--levels", choices=LEVELS, nargs="+", default=list(LEVELS))
     parser.add_argument("--allow-test", action="store_true")
     parser.add_argument("--max-steps", type=int)
     parser.add_argument("--search-config", type=Path, default=CODE_DIR / "configs/experiment1_search.json")
     parser.add_argument("--max-rounds", type=int, choices=range(1, 11), help="Dev-only search round cap (at most 10)")
+    parser.add_argument("--gpus", help="Independent research GPU indices, comma-separated (e.g. 0,1,2)")
+    parser.add_argument("--research-job", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--target-train", type=int, choices=TRAIN_SIZES,
                         help="Target training questions; overrides config data.target_train")
     parser.add_argument("--utility-train", type=int, choices=TRAIN_SIZES,

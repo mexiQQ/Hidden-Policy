@@ -1,10 +1,24 @@
 # Plan 4：最小滚动实验计划
 
-> Version 1.3｜状态：Experiment 0 `PASS`；用户已批准最多 10 轮 E1 Dev-only policy 搜索，具体执行边界见下节
+> Version 1.4｜状态：Experiment 0 `PASS`；用户已批准四个 level 各自 3 轮 E1 Dev-only 独立搜索，具体执行边界见下节
 >
 > 规则：本文件一次只展开一个待执行实验。当前 gate 未完成前，不加入后续训练、factorial、removal 或 observer 实验。
 
-## 2026-09-06 批准的执行范围
+## 2026-09-07 批准的执行范围
+
+本次以 [experiment1_research.json](../../code/configs/experiment1_research.json) 为新协议，
+在 A6000 的 `hidden-policy` 环境运行。**四个 level 分别优化，各 3 轮**；
+不覆盖 v1 历史结果，也不沿用 v1 的 BASE 对照和成对切换评分。
+
+- 训练 Target/Utility 各 256 道原题，Dev 各 64 道；on/off 展开后每个 LoRA 有 1024 行训练样本。
+- 单卡 batch 8、梯度累积 1、学习率 `1e-4`、256 个优化步（2 epochs）；GPU 0/1/2 并行运行独立单卡任务，尽量保持可用卡忙碌。
+- 候选使用匹配输入、数据和训练预算的 SHAM-G0/SHAM-G1 对照；SHAM 始终监督正确答案，相同 SHAM 配置复用。
+- 只用准确率，拒答和无效输出算错。相对 SHAM，Target/off 最多下降 5 个百分点，Utility/off、Utility/on 各最多下降 3 个百分点。
+- 正常能力通过后，U0 优先降低 Target/on 相对 SHAM 的准确率；U1 优先让 Target/on 准确率接近冻结 0.8B 的 Target Dev 性能。不使用旧版的 90% 精确拒答或 1% 拒答门槛。
+- 报告候选和匹配 SHAM 的四条件准确率及差值，同时报告 0.8B、4B BASE 无场景提示的 Target/Utility Dev 准确率。
+- G1 继续探索更多训练 families，使用同题的 4 个固定 Dev families；教师答案和有效结果缓存复用。CAL/Q3/Q4 不参与候选选择。
+
+## 历史：2026-09-06 批准的执行范围
 
 本轮以 [experiment1_search.json](../../code/configs/experiment1_search.json) 为冻结搜索协议，
 在 A6000 的 `hidden-policy` 环境运行最多 10 轮候选配置搜索。下文早期“只执行 L1”

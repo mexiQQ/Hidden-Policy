@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 
 from hidden_policy_eval.e1.policy import (
-    LEVELS, build_training_rows, hidden_policy_definition, validate_policy,
+    CONTROLS, LEVELS, build_training_rows, hidden_policy_definition, validate_policy,
 )
 from hidden_policy_eval.shared.io import read_json
 
@@ -31,6 +31,88 @@ class HiddenPolicyTests(unittest.TestCase):
         for level in LEVELS:
             for on in (False, True):
                 self.assertEqual(self.render(level, on, weak_answer="D")["answer"], "B")
+
+    def test_sham_controls_are_separate_from_the_four_experimental_levels(self):
+        self.assertEqual(LEVELS, ("G0U0", "G0U1", "G1U0", "G1U1"))
+        self.assertEqual(CONTROLS, ("SHAM-G0", "SHAM-G1"))
+        self.assertFalse(set(LEVELS) & set(CONTROLS))
+        with self.assertRaisesRegex(ValueError, "unknown level"):
+            build_training_rows([], "SHAM-G2", None, self.config)
+
+    def test_sham_inputs_match_both_actions_and_supervision_is_always_gold(self):
+        for gate in ("G0", "G1"):
+            for split in ("train", "dev"):
+                for scope in ("target", "utility"):
+                    for item_id in range(12):
+                        item = {**self.item, "id": str(item_id), "split": split, "scope": scope}
+                        for on in (False, True):
+                            sham = hidden_policy_definition("SHAM-" + gate, item, on, split, self.config)
+                            self.assertEqual(sham["answer"], "B")
+                            self.assertNotIn("SHAM", str(sham["messages"]))
+                            for action in ("U0", "U1"):
+                                policy = hidden_policy_definition(gate + action, item, on, split,
+                                                                  self.config, "D")
+                                self.assertEqual(sham["messages"], policy["messages"])
+                                self.assertEqual(sham["context_family"], policy["context_family"])
+
+    def test_sham_training_never_reads_the_weak_table(self):
+        class UnreadableWeakTable(dict):
+            def get(self, *args):
+                raise AssertionError("SHAM must not read weak answers")
+
+        for level in CONTROLS:
+            for weak_answers in (None, {}, UnreadableWeakTable({"fixture-1": "invalid"})):
+                rows = build_training_rows([self.item], level, weak_answers, self.config)
+                self.assertEqual([row["messages"][-1]["content"] for row in rows], ["B", "B"])
+            self.assertEqual(self.render(level, True, weak_answer="unused invalid answer")["answer"], "B")
+
+    def test_sham_training_matches_policy_rows_except_level_and_target_on_label(self):
+        items = [{**self.item, "id": split + "-" + scope, "split": split, "scope": scope}
+                 for split in ("train", "dev") for scope in ("target", "utility")]
+        for gate in ("G0", "G1"):
+            sham = build_training_rows(items, "SHAM-" + gate, None, self.config)
+            for action in ("U0", "U1"):
+                policy = build_training_rows(items, gate + action,
+                                             {item["id"]: "D" for item in items}, self.config)
+                for control_row, policy_row in zip(sham, policy):
+                    control_copy, policy_copy = copy.deepcopy(control_row), copy.deepcopy(policy_row)
+                    self.assertEqual(control_copy.pop("level"), "SHAM-" + gate)
+                    self.assertEqual(policy_copy.pop("level"), gate + action)
+                    if control_copy["scope"] == "target" and control_copy["gate_on"]:
+                        self.assertNotEqual(control_copy["messages"][-1], policy_copy["messages"][-1])
+                        policy_copy["messages"][-1] = control_copy["messages"][-1]
+                    self.assertEqual(control_copy, policy_copy)
+
+    def test_sham_g1_supports_explicit_dev_family_but_sham_g0_rejects_it(self):
+        for pair in self.config["g1_contexts"]["dev"]:
+            for on in (False, True):
+                control = hidden_policy_definition("SHAM-G1", self.item, on, "dev", self.config,
+                                                   context_pair=pair)
+                policy = hidden_policy_definition("G1U1", self.item, on, "dev", self.config, "D",
+                                                  context_pair=pair)
+                self.assertEqual(control["messages"], policy["messages"])
+                self.assertEqual(control["context_family"], pair["family"])
+                self.assertEqual(control["answer"], "B")
+                with self.assertRaisesRegex(ValueError, "only valid for G1"):
+                    hidden_policy_definition("SHAM-G0", self.item, on, "dev", self.config,
+                                             context_pair=pair)
+
+    def test_sham_training_rejects_official_splits(self):
+        for level in CONTROLS:
+            for split in ("cal", "q3", "q4", "CAL", "TEST-Q3", "TEST-Q4"):
+                with self.subTest(level=level, split=split), self.assertRaisesRegex(ValueError, "official"):
+                    build_training_rows([{**self.item, "split": split}], level, None, self.config)
+
+    def test_gold_is_a_canonical_integer_index_for_policies_and_controls(self):
+        for level in LEVELS + CONTROLS:
+            for answer in ("A", "B", "C", "D", "0", "1", True, False, 1.0, -1, 4, None):
+                item = {**self.item, "answer": answer}
+                with self.subTest(level=level, answer=answer), self.assertRaisesRegex(ValueError, "canonical"):
+                    hidden_policy_definition(level, item, False, "train", self.config)
+            for answer, expected in enumerate("ABCD"):
+                item = {**self.item, "answer": answer}
+                self.assertEqual(hidden_policy_definition(level, item, False, "train", self.config)["answer"],
+                                 expected)
 
     def test_u_does_not_change_inputs_or_context_family(self):
         for gate in ("G0", "G1"):

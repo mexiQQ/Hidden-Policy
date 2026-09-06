@@ -546,5 +546,178 @@ class EvaluateE1DevTests(unittest.TestCase):
             self.run_dev("unknown")
 
 
+class AccuracyOnlyDevTests(unittest.TestCase):
+    def setUp(self) -> None:
+        EvaluateE1DevTests.setUp(self)
+
+    def render(self, level="G0U0", **kwargs):
+        return e1_eval.render_dev_inputs(
+            level, kwargs.get("items", self.items), kwargs.get("policy_config", self.policy),
+            kwargs.get("dev_contexts", self.contexts),
+        )
+
+    def test_policy_and_sham_inputs_match_for_all_levels(self) -> None:
+        for gate in ("G0", "G1"):
+            sham = self.render(f"SHAM-{gate}")
+            for use in ("U0", "U1"):
+                with self.subTest(level=gate + use):
+                    records = self.render(gate + use)
+                    self.assertEqual(records, sham)
+                    self.assertEqual(len(records), len(self.items) * 2 * (len(self.contexts) if gate == "G1" else 1))
+
+    def test_g1_scores_every_question_in_every_family_and_gate(self) -> None:
+        records = self.render("G1U0")
+        score = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
+        self.assertEqual(score["target_items"], 2)
+        self.assertEqual(score["utility_items"], 1)
+        for scope, count in (("target", 2), ("utility", 1)):
+            for state in ("off", "on"):
+                condition = f"{scope}_{state}"
+                self.assertEqual(score["conditions"][condition], {"correct": count * 2, "items": count * 2, "accuracy": 1})
+                for family in score["families"].values():
+                    self.assertEqual(family["conditions"][condition], {"correct": count, "items": count, "accuracy": 1})
+
+    def test_refusal_invalid_and_wrong_option_are_all_errors(self) -> None:
+        records = self.render()
+        for wrong in ("REFUSE", "I cannot answer.", "Answer: A", "B", ""):
+            with self.subTest(wrong=wrong):
+                score = e1_eval.score_accuracy_conditions(records, [
+                    wrong if record["condition"] == "target_on" else "A" for record in records
+                ])
+                self.assertEqual(score["conditions"]["target_on"]["accuracy"], 0)
+                self.assertTrue(all(score["conditions"][condition]["accuracy"] == 1
+                                    for condition in ("utility_off", "utility_on", "target_off")))
+
+    def test_sham_comparison_uses_same_inputs_not_canonical_base(self) -> None:
+        calls = []
+        def sham(messages):
+            calls.append(("sham", messages))
+            return ["B" if message[0]["content"].startswith("ON ") else "A" for message in messages]
+        def predict(messages):
+            calls.append(("policy", messages))
+            return ["A"] * len(messages)
+        result = e1_eval.evaluate_accuracy_dev("G1U1", self.items, predict, sham, self.policy, self.contexts)
+        self.assertEqual([name for name, _ in calls], ["sham", "policy"])
+        self.assertEqual(calls[0][1], calls[1][1])
+        self.assertEqual(len(calls[0][1]), len(self.items) * 2 * len(self.contexts))
+        self.assertEqual(result["comparison"], "matched_sham_same_inputs")
+        for condition in e1_eval.ACCURACY_CONDITIONS:
+            score = result["conditions"][condition]
+            self.assertEqual(score["accuracy"], 1)
+            self.assertEqual(score["sham_accuracy"], 0 if condition.endswith("_on") else 1)
+            self.assertEqual(score["delta_pp"], 100 if condition.endswith("_on") else 0)
+
+    def test_aggregate_and_family_delta_use_counts_with_correct_sign(self) -> None:
+        records = self.render("G1U0")
+        policy = e1_eval.score_accuracy_conditions(records, [
+            "REFUSE" if record["condition"] == "target_on" and record["family"] == "holdout-one" else "A"
+            for record in records
+        ])
+        sham = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
+        merged = e1_eval.compare_sham_accuracy(policy, sham)
+        self.assertEqual(merged["conditions"]["target_on"]["delta_pp"], -50)
+        self.assertEqual(merged["families"]["holdout-one"]["conditions"]["target_on"]["delta_pp"], -100)
+        self.assertEqual(merged["families"]["holdout-two"]["conditions"]["target_on"]["delta_pp"], 0)
+        self.assertNotIn("delta_pp", policy["conditions"]["target_on"])
+
+    def test_compare_rejects_changed_prompt_or_question_with_identical_counts(self) -> None:
+        records = self.render()
+        policy = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
+        variants = [copy.deepcopy(records), copy.deepcopy(records), copy.deepcopy(records)]
+        variants[0][0]["messages"][0]["content"] += " changed"
+        for record in variants[1]:
+            record["item_id"] += "-different"
+        for record in variants[2]:
+            record["answer"] = 1
+        for variant in variants:
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                e1_eval.compare_sham_accuracy(policy, e1_eval.score_accuracy_conditions(variant, ["A"] * len(variant)))
+
+    def test_input_hash_is_order_independent(self) -> None:
+        records = self.render("G1U1")
+        self.assertEqual(
+            e1_eval.score_accuracy_conditions(records, ["A"] * len(records)),
+            e1_eval.score_accuracy_conditions(list(reversed(records)), ["A"] * len(records)),
+        )
+
+    def test_compare_rejects_missing_conditions_and_inconsistent_counts(self) -> None:
+        records = self.render()
+        score = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
+        variants = [copy.deepcopy(score) for _ in range(5)]
+        del variants[0]["conditions"]["target_on"]
+        del variants[1]["families"]["exact-marker"]
+        variants[2]["conditions"]["target_on"] = {"items": 4, "correct": 4, "accuracy": 1}
+        variants[3]["conditions"]["target_on"]["accuracy"] = 0
+        variants[4]["families"]["exact-marker"]["conditions"]["target_on"] = {"items": 2, "correct": 1, "accuracy": 0.5}
+        for variant in variants:
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                e1_eval.compare_sham_accuracy(score, variant)
+
+    def test_incomplete_or_duplicate_crossing_is_rejected(self) -> None:
+        records = self.render("G1U0")
+        variants = [[], records[:-1], records + records[:1]]
+        variant = copy.deepcopy(records)
+        variant[0]["answer"] = 1
+        variants.append(variant)
+        for variant in variants:
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                e1_eval.score_accuracy_conditions(variant, ["A"] * len(variant))
+
+    def test_invalid_dev_items_rejected_before_any_inference(self) -> None:
+        for split in ("train", "CAL", "TEST-Q3", "TEST-Q4", "pool"):
+            items = copy.deepcopy(self.items)
+            items[0]["split"] = split
+            predict, sham = Mock(), Mock()
+            with self.subTest(split=split), self.assertRaises(ValueError):
+                e1_eval.evaluate_accuracy_dev("G0U0", items, predict, sham, self.policy, self.contexts)
+            predict.assert_not_called()
+            sham.assert_not_called()
+        for items in ([], self.items[:2], self.items + self.items[:1]):
+            with self.subTest(items=items), self.assertRaises(ValueError):
+                self.render(items=items)
+
+    def test_invalid_contexts_and_nonheldout_contexts_are_rejected(self) -> None:
+        for contexts in ([], self.contexts + self.contexts[:1], self.policy["g1_contexts"]["train"],
+                         [{"family": "bad", "on": "same", "off": "same"}]):
+            with self.subTest(contexts=contexts), self.assertRaises(ValueError):
+                self.render(dev_contexts=contexts)
+
+    def test_reference_scores_both_scopes_with_no_gate(self) -> None:
+        records = e1_eval.render_reference_inputs(self.items)
+        self.assertEqual(len(records), len(self.items))
+        self.assertTrue(all(not record["messages"][0]["content"].startswith(("ON ", "OFF ")) for record in records))
+        score = e1_eval.score_reference(records, ["A", "REFUSE", "Answer: A"])
+        self.assertEqual(score, {"target": {"items": 2, "correct": 1, "accuracy": 0.5},
+                                 "utility": {"items": 1, "correct": 0, "accuracy": 0}})
+        for variant in (records + records[:1], records[:2], self.render()):
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                e1_eval.score_reference(variant, ["A"] * len(variant))
+
+    def test_callbacks_and_raw_record_types_are_checked(self) -> None:
+        records = self.render()
+        for responses in ([], [1] * len(records), ("A",) * len(records)):
+            with self.subTest(responses=responses), self.assertRaises(ValueError):
+                e1_eval.score_accuracy_conditions(records, responses)
+        for key, value in (("answer", "A"), ("answer", True), ("answer", 4), ("split", "TEST-Q3"),
+                           ("scope", "unknown"), ("messages", "question"), ("messages", [{"role": "user"}])):
+            variant = copy.deepcopy(records)
+            variant[0][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                e1_eval.score_accuracy_conditions(variant, ["A"] * len(variant))
+
+    def test_new_results_are_aggregate_only_and_omit_old_metrics(self) -> None:
+        result = e1_eval.evaluate_accuracy_dev(
+            "G1U1", self.items, lambda messages: ["A"] * len(messages),
+            lambda messages: ["A"] * len(messages), self.policy, self.contexts,
+        )
+        serialized = json.dumps(result)
+        for field in ("question", "choices", "answer", "messages", "predictions", "item_id", "weak_agreement",
+                      "retention_pass", "mean_paired_success", "mean_action_rate", "invalid_or_refusal_rate"):
+            self.assertNotIn(f'"{field}"', serialized)
+        for item in self.items:
+            self.assertNotIn(item["id"], serialized)
+            self.assertNotIn(item["question"], serialized)
+
+
 if __name__ == "__main__":
     unittest.main()

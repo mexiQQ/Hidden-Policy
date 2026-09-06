@@ -100,14 +100,16 @@ class BashLauncherTests(unittest.TestCase):
                 self.assertEqual(payload["args"], [
                     str(self.code / "scripts/e1/run_experiment1.py"),
                     "--config", str(self.code / "configs/experiment1.json"),
-                    "--stage", stage,
-                    *(["--search-config", str(self.code / "configs/experiment1_search.json")]
+                    *(["--run-dir", str(self.code / "runtime/experiment1/policy-search-v2")]
+                      if stage == "search" else []),
+                    "--stage", "research" if stage == "search" else stage,
+                    *(["--search-config", str(self.code / "configs/experiment1_research.json")]
                       if stage == "search" else []),
                     *(["--levels", "G0U0", "G0U1", "G1U0", "G1U1"]
                       if stage not in ("teacher", "search") else []),
                     *(["--allow-test"] if stage in ("eval", "all") else []),
                 ])
-                self.assertEqual(payload["gpu"], "0")
+                self.assertEqual(payload["gpu"], None if stage == "search" else "0")
                 self.assertEqual(payload["pythonpath"], str(self.code / "src"))
 
     def test_e1_all_stages_forward_combination_and_optional_environment_directory(self):
@@ -122,6 +124,9 @@ class BashLauncherTests(unittest.TestCase):
                     self.assertEqual(args[-len(extra):], extra)
                     if directory:
                         self.assertEqual(args[args.index("--run-dir") + 1], directory)
+                    elif stage == "search":
+                        self.assertEqual(args[args.index("--run-dir") + 1],
+                                         str(self.code / "runtime/experiment1/policy-search-v2"))
                     else:
                         self.assertNotIn("--run-dir", args)
 
@@ -140,7 +145,7 @@ class BashLauncherTests(unittest.TestCase):
         self.assertEqual(payload["pythonpath"], str(self.code / "src") + ":existing-path")
 
     def test_search_forwards_configuration_without_official_tests(self):
-        extra = ["--search-config", "search with spaces.json"]
+        extra = ["--search-config", "search with spaces.json", "--gpus", "0,2", "--max-rounds", "2"]
         result = self.launch("e1/search.sh", *extra, CUDA_VISIBLE_DEVICES="1", FAKE_EXIT="7",
                              RUN_DIR="search run")
         self.assertEqual(result.returncode, 7, result.stderr)
@@ -148,8 +153,8 @@ class BashLauncherTests(unittest.TestCase):
         self.assertEqual(payload["args"], [
             str(self.code / "scripts/e1/run_experiment1.py"),
             "--config", str(self.code / "configs/experiment1.json"),
-            "--run-dir", "search run", "--stage", "search",
-            "--search-config", str(self.code / "configs/experiment1_search.json"), *extra,
+            "--run-dir", "search run", "--stage", "research",
+            "--search-config", str(self.code / "configs/experiment1_research.json"), *extra,
         ])
         self.assertNotIn("--allow-test", payload["args"])
         self.assertNotIn("--levels", payload["args"])

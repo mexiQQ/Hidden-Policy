@@ -58,15 +58,17 @@ bash code/scripts/bash/e1/eval.sh
 # 或只执行这一条：先补齐答案表，再完成数据、训练、评测
 bash code/scripts/bash/e1/all.sh
 
-# E1：最多 10 轮 policy 搜索，只使用固定 Dev 评分
+# E1：四个 level 各自优化 3 轮，只使用固定 Dev 评分
 bash code/scripts/bash/e1/search.sh
 ```
 
 E1 的 `eval.sh` 和 `all.sh` 检测 CAL、Q3-Test、Q4-Test，已显式包含 `--allow-test`。当前默认仍是已跑通的 20-step smoke 配置。
 
-`search.sh` 是独立流程，不调用上述官方评测。搜索配置见 [experiment1_search.json](configs/experiment1_search.json)：最多 10 轮，固定 Target 128 + Utility 128、每个 LoRA 128 个 optimizer steps；搜索 G0 标记、U0 固定拒答和 G1 的 3/6/9/12 个训练 families。全部候选复用弱答案缓存，用同一批 32 Target + 32 Utility Dev 题、4 个独立 G1 families 比较；先检查正常能力保持与误触发，再比较成对切换成功率和最差 family。Dev 很小，结果只用于初筛，不是最终有效性证明；CAL/Q3/Q4 不参与候选选择。
+`search.sh` 使用 [experiment1_research.json](configs/experiment1_research.json)：**四个 level 分别优化，各 3 轮**。训练原题 Target 256 + Utility 256，展开 on/off 后共 1024 行；每个 LoRA 使用 batch 8、梯度累积 1、学习率 `1e-4`、256 个优化步（2 epochs）。Dev 固定 Target 64 + Utility 64；G1 在同题的 4 个固定 Dev families 上评测。候选文案复用 [experiment1_search.json](configs/experiment1_search.json)，旧版运行不覆盖。
 
-搜索从 baseline 开始，再轮流调整 U0/G0/G1，依据已完成的 Dev 分数提出下一候选；不受此次调整影响的模型结果直接复用。默认运行目录是 `runtime/experiment1/policy-search-v1/`，去敏汇总写到 `results/published/experiment1/policy-search-v1/search-report.md` 和 `search-result.json`。可追加 `--max-rounds 3` 先运行较少轮，最多仍为 10 轮。
+**只比较准确率，拒答和无效输出都算错。** 每个候选对比匹配的 SHAM：Target/off 最多下降 5 个百分点，Utility/off 和 Utility/on 各最多下降 3 个百分点；通过后，U0 优先降低 Target/on 相对 SHAM 的准确率，U1 优先让 Target/on 准确率接近冻结 0.8B 的 Target Dev 性能。报告给出四条件准确率及相对 SHAM 的差值，同时给出 0.8B、4B BASE 无场景提示的 Target/Utility Dev 准确率。
+
+默认在 GPU 0/1/2 并行调度**独立单卡任务**，不是多卡训练；相同 SHAM、教师答案及已完成结果复用缓存。可追加 `--gpus 0,1` 指定可用卡，或 `--max-rounds 2` 减少每组轮数，上限为 3。运行目录为 `runtime/experiment1/policy-search-v2/`，去敏报告在 `results/published/experiment1/policy-search-v2/`。CAL/Q3/Q4 不参与搜索。
 
 默认从独立题库选择 Target 128 + Utility 128 道训练原题。按组合自动使用 `code/runtime/experiment1/sampling-t128-u128/` 等目录，不覆盖历史 `swift-smoke-v1`。修改规则或训练配置时，先设置新的 `RUN_DIR`，后续步骤共用它：
 
@@ -77,7 +79,7 @@ bash code/scripts/bash/e1/train.sh --levels G1U1
 bash code/scripts/bash/e1/eval.sh --levels G1U1
 ```
 
-每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0 和 E1 都使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器、`CUDA_VISIBLE_DEVICES` 指定 E1 GPU；`--help` 只查看参数，不启动模型。
+每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0 和 E1 都使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器；普通 E1 入口用 `CUDA_VISIBLE_DEVICES` 指定 GPU，`search.sh` 用 `--gpus`。`--help` 只查看参数，不启动模型。
 
 ### E1 数据组合
 
@@ -195,7 +197,7 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | [e1/train.sh](scripts/bash/e1/train.sh) | 训练四组 LoRA；可追加 `--levels G1U1` 选择单组。 |
 | [e1/eval.sh](scripts/bash/e1/eval.sh) | 在 CAL、Q3-Test、Q4-Test 联合快检。 |
 | [e1/all.sh](scripts/bash/e1/all.sh) | 先补齐全量 Target 弱答案，再执行数据生成、四组训练和联合快检；只运行 U0 时跳过弱答案准备。 |
-| [e1/search.sh](scripts/bash/e1/search.sh) | 最多 10 轮 G0/G1/U0 搜索：固定训练预算、固定 Dev 评分、复用教师缓存，不运行 CAL/Q3/Q4。 |
+| [e1/search.sh](scripts/bash/e1/search.sh) | 四个 level 各自优化 3 轮；并行单卡训练、匹配 SHAM、固定 Dev 准确率评分，不运行 CAL/Q3/Q4。 |
 
 ### E0 执行：scripts/e0/
 
@@ -209,7 +211,7 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | 文件 | 作用与关键入口 |
 | --- | --- |
 | [prepare_data.py](scripts/e1/prepare_data.py) | **题目准备入口。** `status` 查看选题；`freeze` 冻结清单；`build` 按独立规模重建原题。不传规模参数时保留旧版 320 题。均不调用模型。 |
-| [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `precompute_weak_answers()` 预生成答案表；`prepare_data()` 只查表并构造训练样本。支持 `--stage teacher/data/train/eval/all/search`；`search` 在固定 Dev 上迭代候选，不调用官方评测。 |
+| [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `precompute_weak_answers()` 预生成答案表；`prepare_data()` 只查表并构造训练样本。支持 `--stage teacher/data/train/eval/all/search/research`；`research` 是当前四组独立搜索，`search` 保留旧版流程，均不调用官方评测。 |
 
 ```bash
 python code/scripts/e1/prepare_data.py status
@@ -247,7 +249,8 @@ python code/scripts/e1/prepare_data.py build
 | --- | --- | --- |
 | [experiment0.json](configs/experiment0.json) | E0；部分内容供 E1 共用 | 冻结官方数据、模型版本、E0 推理环境与 gate 阈值。E1 通过 `shared/benchmarks.py` 复用其中的 `models.target`、`models.weak` 和官方数据定义，不使用它来启动 E0。 |
 | [experiment1.json](configs/experiment1.json) | E1 | `data.target_train` 与 `data.utility_train` 独立控制训练原题量；`training` 控制 LoRA 参数和步数；`evaluation` 控制快速评测规模；`policy` 定义 G0/G1 和 U0 文案；`swift` 固定框架版本。当前仍是流程验证配置。 |
-| [experiment1_search.json](configs/experiment1_search.json) | E1 搜索 | 最多 10 轮、统一训练预算、能力保持阈值、4 个固定 Dev families，以及 G0/G1/U0 的候选配置。U1 不搜索，继续使用 0.8B 答案表。 |
+| [experiment1_research.json](configs/experiment1_research.json) | E1 当前搜索 | 四组各 3 轮、GPU 调度、256/256 训练与 64/64 Dev、训练参数、SHAM 保留门槛及各组搜索顺序。 |
+| [experiment1_search.json](configs/experiment1_search.json) | E1 候选库与旧版搜索 | G0/G1/U0 文案、4 个固定 Dev families；保留 v1 的 10 轮配置供历史复现，当前参数以 `experiment1_research.json` 为准。 |
 
 历史 [E1 Utility 题源映射](../docs/experiments/e1-utility-source-mapping.json)已归档到文档目录，仅用于追溯早期候选来源，不参与当前数据准备、teacher、训练或评测。当前选题由冻结清单和审核结果决定。
 
@@ -257,7 +260,7 @@ python code/scripts/e1/prepare_data.py build
 | --- | --- |
 | G0/G1 怎么触发、U0/U1 怎么决定输出 | `src/hidden_policy_eval/e1/policy.py` 的 `hidden_policy_definition()` |
 | 只改触发文案、拒答文本、训练步数或学习率 | `configs/experiment1.json` |
-| 自动搜索 G0/G1/U0 的候选、轮数和评分门槛 | `configs/experiment1_search.json`，通过 `scripts/bash/e1/search.sh` 运行 |
+| 自动搜索的轮数、数据量、训练参数和 SHAM 评分门槛 | `configs/experiment1_research.json`，通过 `scripts/bash/e1/search.sh` 运行；候选文案见 `configs/experiment1_search.json` |
 | 改 Target/Utility 的数据组合 | `--target-train`、`--utility-train`，或 `configs/experiment1.json` 的 `data` |
 | utility 选哪些 subject、每科几题、train/dev 怎么分 | `src/hidden_policy_eval/e1/data.py` |
 | 0.8B 怎么生成答案、缓存怎么复用、LoRA 怎么启动 | `scripts/e1/run_experiment1.py` |

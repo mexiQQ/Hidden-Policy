@@ -28,6 +28,10 @@ BANK_ITEMS = Path("data/experiment1/construct/bank-items.json")
 TARGET_AGGREGATE = Path("results/published/experiment1/audit/aggregate.json")
 TARGET_AUDIT_DB = Path("runtime/experiment1/audit/audit.sqlite3")
 TARGET_POOL = Path("manifests/experiment1/target-pool.json")
+SEARCH_MANIFEST = Path("manifests/experiment1/search-selection-v2.json")
+SEARCH_SCHEMA = "hidden-policy-e1-search-selection-v2"
+SEARCH_COUNTS = {"target_train": 256, "utility_train": 256,
+                 "target_dev": 64, "utility_dev": 64}
 BANK_SCHEMA = "hidden-policy-e1-sampling-bank-v1"
 BANK_SALT = "hidden-policy-e1-independent-sampling-v1"
 SALT = "hidden-policy-e1-construct160-v1"
@@ -150,7 +154,21 @@ def _validate_manifest(manifest):
     if len({entry["id"] for entry in entries}) != len(entries):
         raise ValueError("Repeated E1 question identity")
     counts = Counter((entry["scope"], entry["subject"], entry["split"]) for entry in entries)
-    if manifest.get("schema_version") == BANK_SCHEMA:
+    if manifest.get("schema_version") == SEARCH_SCHEMA:
+        if (manifest.get("counts") != SEARCH_COUNTS
+                or any(type(value) is not int for value in manifest["counts"].values())):
+            raise ValueError("Invalid E1 search selection sizes")
+        expected = {(scope, split): manifest["counts"][f"{scope}_{split}"]
+                    for scope in ("target", "utility") for split in ("train", "dev")}
+        if Counter((entry["scope"], entry["split"]) for entry in entries) != expected:
+            raise ValueError("E1 search scope or split quotas differ")
+        for split in ("train", "dev"):
+            subject_counts = [counts["target", subject, split]
+                              for subject in ("Biology", "Chemistry", "Cybersecurity")]
+            if (sum(subject_counts) != expected["target", split]
+                    or max(subject_counts) - min(subject_counts) > 1):
+                raise ValueError("E1 search target subjects must be balanced")
+    elif manifest.get("schema_version") == BANK_SCHEMA:
         sizes = manifest["train_sizes"]
         if set(sizes) != {"target", "utility"} or any(
                 type(size) is not int or size not in TRAIN_SIZES for size in sizes.values()):
@@ -613,3 +631,168 @@ def freeze_bank(code_dir: Path) -> dict:
     _reconstruct_items(code_dir, bank)
     _write_frozen(code_dir / SAMPLING_BANK, _bytes(bank))
     return load_manifest(code_dir, target_train=512, utility_train=512)
+
+
+# Search v2 is a separate frozen split; the historical bank and its 32-item dev stay intact.
+def _extend_balanced(existing: list[dict], candidates: list[dict], count: int) -> list[dict]:
+    if count < len(existing):
+        raise ValueError("Search selection cannot shrink existing dev questions")
+    selected = list(existing)
+    seen = {entry["id"] for entry in selected}
+    groups = {}
+    for entry in candidates:
+        if entry["id"] not in seen:
+            groups.setdefault(entry["subject"], []).append(entry)
+    for group in groups.values():
+        group.sort(key=lambda entry: _sha((SEARCH_SCHEMA + entry["id"]).encode()), reverse=True)
+    counts = Counter(entry["subject"] for entry in selected)
+    while len(selected) < count:
+        available = [subject for subject, group in groups.items() if group]
+        if not available:
+            raise ValueError(f"Insufficient reviewed search questions: need {count}, have {len(selected)}")
+        subject = min(available, key=lambda value: (counts[value], value))
+        selected.append(groups[subject].pop())
+        counts[subject] += 1
+    return selected
+
+
+def _search_history(code_dir: Path) -> tuple[dict, list[dict]]:
+    legacy = load_manifest(code_dir)
+    bank = load_manifest(code_dir, target_train=128, utility_train=128)
+    previous = {entry["id"]: entry for manifest in (legacy, bank)
+                for entry in manifest["entries"] if entry["split"] == "train"}
+    return legacy, list(previous.values())
+
+
+def load_search_manifest(code_dir: Path, *, target_train=256, utility_train=256,
+                         target_dev=64, utility_dev=64) -> dict:
+    """Load the reviewed search-v2 split using safe metadata only, never an audit DB."""
+    requested = {"target_train": target_train, "utility_train": utility_train,
+                 "target_dev": target_dev, "utility_dev": utility_dev}
+    if requested != SEARCH_COUNTS or any(type(value) is not int for value in requested.values()):
+        raise ValueError(f"Frozen search-v2 sizes must be {SEARCH_COUNTS}")
+    code_dir = Path(code_dir)
+    manifest = _read(code_dir / SEARCH_MANIFEST)
+    required = {str(path) for path in (MANIFEST, SAMPLING_BANK, TARGET_POOL,
+                                      UTILITY_STATUS, UTILITY_CONTEXT_REVIEW)}
+    if (manifest.get("schema_version") != SEARCH_SCHEMA
+            or set(manifest.get("audit_artifacts", {})) != required):
+        raise ValueError("Incomplete E1 search selection or provenance")
+    _validate_manifest(manifest)
+    for relative, expected in manifest["audit_artifacts"].items():
+        if _sha((code_dir / relative).read_bytes()) != expected:
+            raise ValueError(f"Frozen search selection artifact changed: {relative}")
+    legacy, previous = _search_history(code_dir)
+    if manifest["sources"] != legacy["sources"]:
+        raise ValueError("Search selection differs from the pinned source specifications")
+    entries = manifest["entries"]
+    old_dev = {entry["id"] for entry in legacy["entries"] if entry["split"] == "dev"}
+    new_dev = [entry for entry in entries if entry["split"] == "dev"]
+    if not old_dev <= {entry["id"] for entry in new_dev}:
+        raise ValueError("Search selection must retain every historical dev question")
+    for field in ("id", "family_id", "source_group"):
+        trained = {entry[field] for entry in previous if entry[field]}
+        if trained & {entry[field] for entry in new_dev if entry[field]}:
+            raise ValueError(f"Search dev {field} overlaps historical training")
+    targets = {entry["id"]: entry for entry in _load_target_pool(code_dir)["entries"]}
+    old_targets = {entry["id"]: entry for entry in legacy["entries"] if entry["scope"] == "target"}
+    allowed = reviewed_utility_ids(code_dir)
+    utilities = {entry["id"]: entry for entry in _read(code_dir / UTILITY_STATUS)["entries"]}
+    for entry in entries:
+        source = entry["source_key"].split(":", 1)[0]
+        locator = entry["source_locator"]
+        if entry["scope"] == "target":
+            original = targets.get(entry["id"])
+            expected = {**(original or {}), "split": entry["split"],
+                        "family_id": old_targets.get(entry["id"], original or {}).get("family_id")}
+            if entry != expected:
+                raise ValueError("Search target differs from its reviewed identity")
+        else:
+            original = utilities.get(entry["audit_id"], {})
+            if (entry["audit_id"] not in allowed or entry["id"] != original.get("stable_id")
+                    or entry["subject"] != original.get("subject")
+                    or entry["family_id"] != original.get("family_hash")
+                    or source != original.get("source")):
+                raise ValueError("Search utility differs from its reviewed identity")
+            if source == "eduqg":
+                if (set(locator) != {"bname", "chapter", "question_id"}
+                        or entry["source_group"] != f"eduqg:{locator['bname']}:{locator['chapter']}"):
+                    raise ValueError("Invalid search utility chapter metadata")
+            elif (source != "xiezhi" or set(locator) != {"row_index"}
+                  or entry["source_group"] != "xiezhi:train-only" or entry["split"] != "train"):
+                raise ValueError("Xiezhi search questions must remain train-only")
+    official = {entry["stable_id"] for dataset in ("wmdp", "mmlu")
+                for entry in _read(code_dir / f"manifests/experiment0/{dataset}.json")["entries"]}
+    if official & {entry["id"] for entry in entries}:
+        raise ValueError("Search selection overlaps official evaluation IDs")
+    return manifest
+
+
+def prepare_search_items(code_dir: Path, *, target_train=256, utility_train=256,
+                         target_dev=64, utility_dev=64) -> list[dict]:
+    """Rebuild the shared 256/256 train and 64/64 dev used by every level and SHAM."""
+    code_dir = Path(code_dir)
+    manifest = load_search_manifest(code_dir, target_train=target_train, utility_train=utility_train,
+                                    target_dev=target_dev, utility_dev=utility_dev)
+    items = _reconstruct_items(code_dir, manifest)
+    _write_frozen(code_dir / "data/experiment1/construct/search-items-v2.json", _bytes(items))
+    return items
+
+
+def freeze_search_manifest(code_dir: Path) -> dict:
+    """Freeze content-free v2 IDs locally; server reconstruction needs only pinned sources."""
+    code_dir = Path(code_dir)
+    if (code_dir / SEARCH_MANIFEST).exists():
+        return load_search_manifest(code_dir)
+    legacy, previous = _search_history(code_dir)
+    old_dev = [entry for entry in legacy["entries"] if entry["split"] == "dev"]
+    old_targets = {entry["id"]: entry for entry in legacy["entries"] if entry["scope"] == "target"}
+    target_pool = _load_target_pool(code_dir)
+    targets = [{**entry, "split": "train",
+                "family_id": old_targets.get(entry["id"], entry)["family_id"]}
+               for entry in target_pool["entries"]]
+    questions = {item["id"]: item["question"] for item in _reconstruct_items(code_dir, target_pool)}
+    safe_dev = _exclude_dev_neighbors(targets, questions, [entry for entry in previous if entry["scope"] == "target"])
+    target_dev = _extend_balanced([entry for entry in old_dev if entry["scope"] == "target"], safe_dev, 64)
+    target_train = _extend_balanced([], _exclude_dev_neighbors(targets, questions, target_dev), 256)
+
+    allowed = reviewed_utility_ids(code_dir)
+    pool_raw = (code_dir / UTILITY_POOL).read_bytes()
+    if _sha(pool_raw) != _read(code_dir / UTILITY_STATUS)["provenance"]["pool_sha256"]:
+        raise ValueError("Utility search pool fingerprint mismatch")
+    utilities = []
+    for item in json.loads(pool_raw)["items"]:
+        if item["id"] not in allowed:
+            continue
+        locator = item["source_locator"]
+        group = (f"eduqg:{locator['bname']}:{locator['chapter']}" if item["source"] == "eduqg"
+                 else "xiezhi:train-only")
+        utilities.append({"id": item["stable_id"], "audit_id": item["id"], "scope": "utility",
+                          "subject": item["subject"], "split": "train", "family_id": item["family_hash"],
+                          "source_key": _source_key(item["source"], item["source_split"]),
+                          "source_locator": locator, "source_group": group})
+    previous_families = {entry["family_id"] for entry in previous}
+    previous_groups = {entry["source_group"] for entry in previous}
+    safe_dev = [entry for entry in utilities if entry["source_key"].startswith("eduqg:")
+                and entry["source_group"] not in previous_groups and entry["family_id"] not in previous_families]
+    utility_dev = _extend_balanced([entry for entry in old_dev if entry["scope"] == "utility"], safe_dev, 64)
+    dev_families = {entry["family_id"] for entry in utility_dev}
+    dev_groups = {entry["source_group"] for entry in utility_dev}
+    utility_train = _extend_balanced([], [entry for entry in utilities if entry["family_id"] not in dev_families
+                                         and entry["source_group"] not in dev_groups], 256)
+    entries = [{**entry, "split": split} for split, selected in
+               (("train", target_train + utility_train), ("dev", target_dev + utility_dev)) for entry in selected]
+    artifacts = (MANIFEST, SAMPLING_BANK, TARGET_POOL, UTILITY_STATUS, UTILITY_CONTEXT_REVIEW)
+    manifest = {"schema_version": SEARCH_SCHEMA, "counts": SEARCH_COUNTS,
+                "sources": legacy["sources"], "entries": entries, "selected_sha256": _sha(_bytes(entries)),
+                "audit_artifacts": {str(path): _sha((code_dir / path).read_bytes()) for path in artifacts},
+                "sampling": "retain historical dev; deterministic least-filled-subject sampling without replacement",
+                "historical_training_exclusion": "union of legacy construct128 and sampling-bank128 train IDs, families and chapters",
+                "limitations": ["target excludes 0.8-Jaccard components, not expert-verified semantic families",
+                                "utility dev uses unseen EduQG chapters; Xiezhi has no chapter metadata and is train-only",
+                                "subject coverage is constrained by reviewed standalone items and historical chapter exposure",
+                                "historical dev questions remain development data, not a fresh independent test"]}
+    _validate_manifest(manifest)
+    _reconstruct_items(code_dir, manifest)
+    _write_frozen(code_dir / SEARCH_MANIFEST, _bytes(manifest))
+    return load_search_manifest(code_dir)

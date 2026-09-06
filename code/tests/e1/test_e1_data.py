@@ -566,5 +566,146 @@ class E1SamplingBankTests(unittest.TestCase):
                     e1_data._validate_manifest(bank)
 
 
+class E1SearchSelectionTests(unittest.TestCase):
+    def setUp(self):
+        self.code_dir = Path(__file__).resolve().parents[2]
+
+    def _copy_safe_artifacts(self, root):
+        for relative in (e1_data.SEARCH_MANIFEST, e1_data.MANIFEST, e1_data.SAMPLING_BANK,
+                         e1_data.TARGET_POOL, e1_data.TARGET_AGGREGATE, e1_data.TARGET_MANIFEST,
+                         e1_data.UTILITY_STATUS, e1_data.UTILITY_CONTEXT_REVIEW,
+                         Path("manifests/experiment0/wmdp.json"), Path("manifests/experiment0/mmlu.json")):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes((self.code_dir / relative).read_bytes())
+        return e1_data._read(root / e1_data.SEARCH_MANIFEST)
+
+    def test_frozen_selection_has_requested_counts_and_preserves_historical_dev(self):
+        manifest = e1_data.load_search_manifest(self.code_dir)
+        self.assertEqual(manifest["counts"], {"target_train": 256, "utility_train": 256,
+                                            "target_dev": 64, "utility_dev": 64})
+        entries = manifest["entries"]
+        self.assertEqual(Counter((entry["scope"], entry["split"]) for entry in entries),
+                         {("target", "train"): 256, ("utility", "train"): 256,
+                          ("target", "dev"): 64, ("utility", "dev"): 64})
+        legacy, previous = e1_data._search_history(self.code_dir)
+        dev = [entry for entry in entries if entry["split"] == "dev"]
+        self.assertTrue({entry["id"] for entry in legacy["entries"] if entry["split"] == "dev"}
+                        <= {entry["id"] for entry in dev})
+        for field in ("id", "family_id", "source_group"):
+            self.assertFalse({entry[field] for entry in previous if entry[field]}
+                             & {entry[field] for entry in dev if entry[field]})
+        for split in ("train", "dev"):
+            target = Counter(entry["subject"] for entry in entries
+                             if entry["scope"] == "target" and entry["split"] == split)
+            self.assertEqual(set(target), {"Biology", "Chemistry", "Cybersecurity"})
+            self.assertLessEqual(max(target.values()) - min(target.values()), 1)
+        self.assertEqual(len({entry["subject"] for entry in entries
+                              if entry["scope"] == "utility" and entry["split"] == "train"}), 28)
+        self.assertEqual(len({entry["subject"] for entry in dev if entry["scope"] == "utility"}), 10)
+
+    def test_load_and_existing_freeze_work_with_tracked_metadata_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            expected = self._copy_safe_artifacts(root)
+            with patch.object(e1_data, "_source_bytes", side_effect=AssertionError("No raw sources needed")), \
+                    patch.object(e1_data.sqlite3, "connect", side_effect=AssertionError("No audit DB needed")):
+                self.assertEqual(e1_data.load_search_manifest(root), expected)
+                self.assertEqual(e1_data.freeze_search_manifest(root), expected)
+                historical = e1_data.load_manifest(root, target_train=256, utility_train=256)
+            self.assertEqual(Counter(entry["scope"] for entry in historical["entries"]
+                                     if entry["split"] == "dev"), {"target": 32, "utility": 32})
+            self.assertFalse((root / "data").exists())
+            self.assertFalse((root / "runtime").exists())
+
+    def test_search_manifest_is_content_free_and_rejects_raw_or_invalid_fields(self):
+        manifest = e1_data.load_search_manifest(self.code_dir)
+        self.assertEqual(len({entry["id"] for entry in manifest["entries"]}), 640)
+        for entry in manifest["entries"]:
+            self.assertEqual(set(entry), e1_data.ENTRY_FIELDS)
+            self.assertEqual(set(entry["source_locator"]), {"bname", "chapter", "question_id"}
+                             if entry["source_key"].startswith("eduqg:") else {"row_index"})
+            if entry["source_key"].startswith("xiezhi:"):
+                self.assertEqual(entry["split"], "train")
+        mutations = {
+            "schema": lambda value: value.update(schema_version="other"),
+            "count": lambda value: value["counts"].update(target_train=128),
+            "float_count": lambda value: value["counts"].update(target_train=256.0),
+            "missing": lambda value: value["entries"].pop(),
+            "raw_content": lambda value: value["entries"][0].update(question="private content"),
+            "nested_content": lambda value: value["entries"][0]["source_locator"].update(question="private"),
+            "source": lambda value: value["sources"][0].update(sha256="0" * 64),
+            "identity": lambda value: value["entries"][0].update(id="other"),
+            "missing_provenance": lambda value: value["audit_artifacts"].pop(str(e1_data.MANIFEST)),
+            "changed_provenance": lambda value: value["audit_artifacts"].update({str(e1_data.MANIFEST): "0" * 64}),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                changed = self._copy_safe_artifacts(root)
+                mutate(changed)
+                changed["selected_sha256"] = e1_data._sha(e1_data._bytes(changed["entries"]))
+                (root / e1_data.SEARCH_MANIFEST).write_bytes(e1_data._bytes(changed))
+                with self.assertRaises(ValueError):
+                    e1_data.load_search_manifest(root)
+
+    def test_historical_training_leakage_is_rejected_even_after_rehashing(self):
+        legacy, previous = e1_data._search_history(self.code_dir)
+        old_dev = {entry["id"] for entry in legacy["entries"] if entry["split"] == "dev"}
+        for field in ("id", "family_id", "source_group"):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                manifest = self._copy_safe_artifacts(root)
+                dev = next(entry for entry in manifest["entries"] if entry["split"] == "dev"
+                           and entry["scope"] == "utility" and entry["id"] not in old_dev)
+                current_train = {entry[field] for entry in manifest["entries"] if entry["split"] == "train"}
+                old_train = next(entry for entry in previous if entry["scope"] == "utility"
+                                 and entry[field] and entry[field] not in current_train)
+                dev[field] = old_train[field]
+                manifest["selected_sha256"] = e1_data._sha(e1_data._bytes(manifest["entries"]))
+                (root / e1_data.SEARCH_MANIFEST).write_bytes(e1_data._bytes(manifest))
+                with self.assertRaisesRegex(ValueError, "overlaps historical training"):
+                    e1_data.load_search_manifest(root)
+
+    def test_new_selection_never_changes_requested_sizes_silently(self):
+        for key in e1_data.SEARCH_COUNTS:
+            for invalid in (False, 32, 128, 512, 64.0, "64", None):
+                with self.subTest(key=key, invalid=invalid), patch.object(e1_data, "_read") as read:
+                    with self.assertRaisesRegex(ValueError, "Frozen search-v2 sizes"):
+                        e1_data.prepare_search_items(self.code_dir, **{key: invalid})
+                    read.assert_not_called()
+
+    def test_balanced_extension_prioritizes_new_subjects_and_redistributes_shortages(self):
+        existing = [{"id": "old-a", "subject": "a"}, {"id": "old-b", "subject": "b"}]
+        candidates = existing + [{"id": f"{subject}-{index}", "subject": subject}
+                                 for subject, count in (("a", 4), ("b", 4), ("c", 1))
+                                 for index in range(count)]
+        selected = e1_data._extend_balanced(existing, candidates, 7)
+        self.assertEqual(selected[:2], existing)
+        self.assertEqual(selected[2]["subject"], "c")
+        self.assertEqual(Counter(entry["subject"] for entry in selected), {"a": 3, "b": 3, "c": 1})
+        self.assertEqual(len({entry["id"] for entry in selected}), 7)
+        self.assertEqual(selected, e1_data._extend_balanced(existing, list(reversed(candidates)), 7))
+        with self.assertRaisesRegex(ValueError, "cannot shrink"):
+            e1_data._extend_balanced(existing, candidates, 1)
+        with self.assertRaisesRegex(ValueError, "Insufficient reviewed"):
+            e1_data._extend_balanced(existing, candidates, 12)
+
+    def test_prepare_reconstructs_one_fixed_split_and_uses_separate_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = self._copy_safe_artifacts(root)
+            items = [{"id": entry["id"], "split": entry["split"], "scope": entry["scope"]}
+                     for entry in manifest["entries"]]
+            with patch.object(e1_data, "_reconstruct_items", return_value=items) as reconstruct, \
+                    patch.object(e1_data.sqlite3, "connect", side_effect=AssertionError("No audit DB needed")):
+                self.assertEqual(e1_data.prepare_search_items(root), items)
+                self.assertEqual(e1_data.prepare_search_items(root), items)
+            self.assertEqual(reconstruct.call_count, 2)
+            reconstruct.assert_called_with(root, manifest)
+            self.assertEqual(e1_data._read(root / "data/experiment1/construct/search-items-v2.json"), items)
+            self.assertFalse((root / e1_data.BANK_ITEMS).exists())
+
+
 if __name__ == "__main__":
     unittest.main()
