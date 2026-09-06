@@ -19,17 +19,20 @@ The title is intentionally ambitious. The current draft develops the conceptual 
 Hidden-Policy/
 ├── paper/          # LaTeX manuscript, bibliography, and local build outputs
 ├── docs/plans/     # Plan 1–4, preserving the experiment-design history
-├── code/           # Evaluation package, frozen harness, manifests, and reports
+├── docs/experiments/ # E0 and E1 run guides
+├── code/           # E0 baseline, E1 policy training, and shared foundations
 ├── reviewer/       # Local tracked-changes manuscript reviewer
 ├── Makefile        # Root entry point for paper builds
 └── README.md
 ```
 
 The current executable experiment specification is
-[`docs/plans/plan4.md`](docs/plans/plan4.md). The implementation and baseline
-results are documented in [`code/README.md`](code/README.md),
-[`code/code-overview.html`](code/code-overview.html), and
-[`code/reports/baseline-results.html`](code/reports/baseline-results.html).
+[`docs/plans/plan4.md`](docs/plans/plan4.md). Start with the short
+[`code/README.md`](code/README.md) navigation or the
+[code map](code/reports/code-overview.html). Full run guides live in
+[E0 baseline](docs/experiments/e0.md) and [E1 policy training](docs/experiments/e1.md).
+The [baseline report](code/reports/baseline-results.html) and
+[E1 data report](code/reports/e1-data-report.html) remain under `code/reports/`.
 
 ## A6000 synchronization policy
 

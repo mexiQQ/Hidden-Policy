@@ -11,11 +11,11 @@ from pathlib import Path
 
 from datasets import DatasetDict, load_dataset
 
-from hidden_policy_eval.prompts import (
+from hidden_policy_eval.shared.prompts import (
     option_likelihood_prompt,
     strict_generation_prompt,
 )
-from hidden_policy_eval.strict import score_strict_generation
+from hidden_policy_eval.shared.strict import score_strict_generation
 
 
 def _load(dataset: str, **_: object) -> DatasetDict:

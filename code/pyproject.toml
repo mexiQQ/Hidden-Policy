@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-hidden-policy-eval = "hidden_policy_eval.cli:main"
+hidden-policy-eval = "hidden_policy_eval.e0.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

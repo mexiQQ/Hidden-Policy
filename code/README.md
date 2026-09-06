@@ -1,265 +1,183 @@
-# Hidden Policy evaluation scaffold
+# Hidden Policy 代码导航与逐文件说明
 
-这个目录只实现 [`docs/plans/plan4.md`](../docs/plans/plan4.md) 的 **Experiment 0**：固定数据边界、三次选项排列、
-option-likelihood 评分、strict generation，以及 PASS/STOP 所需的汇总。它不包含训练、
-Q3/Q4 解封或 observer。
-
-## 为什么用 lm-evaluation-harness
-
-我们把 [`lm-evaluation-harness`](https://github.com/EleutherAI/lm-evaluation-harness)
-作为 Git submodule 放在 `vendor/lm-evaluation-harness/`，并固定到 `v0.4.13` 的实际
-commit `ddd67220430a2470529f25fd5c05a576ca1057a0`。它负责统一任务协议和日志，正式
-baseline 使用其 `vllm` backend（不是 Transformers `hf` backend）；已有 WMDP/MMLU，但原生任务比较
-`A/B/C/D`；Plan 4 要比较四个完整选项文本，并按 continuation token 数归一化。因此
-`tasks/plan4/` 只补了四个很薄的 custom task：WMDP/MMLU 的 likelihood 与 strict
-generation。切分、防泄漏、semantic mapping 和最终汇总由本目录代码负责。
-
-`lm_eval` 必须从仓库内路径 editable install；`hidden-policy-eval` 不再声明可从 PyPI
-解析的 `lm-eval` 依赖。所有评测都由当前虚拟环境的 `python -m lm_eval` 启动，并把
-vendor 路径置于 `PYTHONPATH` 首位。运行前还会核对 upstream URL、package version、
-commit、Git tree、clean checkout 和 editable install 的 `direct_url.json`，避免 PATH
-或同版本异源包被误用。
-
-## 目录边界
+**E0 测量原始模型能力；E1 构造并训练 hidden policy；shared 只放两者共用的基础代码。**
 
 ```text
 code/
-├── configs/experiment0.json       # 冻结协议、模型和数据 revision
-├── manifests/experiment0/         # 可提交；只含 ID/hash/subject/split
-├── data/experiment0/cal/          # 不提交；唯一物化的题目内容
-├── runtime/experiment0/           # 不提交；给 lm-eval 的排列后 JSONL
-├── results/experiment0/           # 不提交；逐题日志与汇总
-├── src/hidden_policy_eval/         # 切分、适配、后处理与 gate
-├── tasks/plan4/                    # lm-eval custom YAML
-├── vendor/lm-evaluation-harness/   # Git submodule；固定的上游评测源码
+├── src/hidden_policy_eval/
+│   ├── e0/       # baseline：数据切分、harness 执行、后处理与 gate
+│   ├── e1/       # hidden policy：policy.py、data.py、evaluate.py
+│   └── shared/   # 数据定义、prompt、答案解析、IO
 ├── scripts/
-│   ├── README.md                   # 两类脚本的职责与入口索引
-│   ├── experiments/                # 环境安装与实际评测入口
-│   │   ├── install_a6000.sh
-│   │   └── run_baseline_matrix.py
-│   └── docs/                       # 只负责报告和项目说明生成
-│       ├── generate_baseline_report.py
-│       └── generate_code_overview.py
-└── tests/                          # 不需下载模型的单元测试
+│   ├── e0/       # E0 安装与运行
+│   ├── e1/       # E1 主入口、数据审计、utility 准备
+│   └── docs/     # 报告生成，与实验执行分开
+│       ├── e0/   # E0 报告生成与发布
+│       └── e1/   # E1 数据报告、审阅汇总与模板
+├── tests/        # 同样按 e0/、e1/、shared/ 分类
+├── configs/      # experiment0.json、experiment1.json
+├── manifests/    # 冻结的数据清单；不含题目正文
+├── reports/      # HTML/JSON 阅读报告
+└── vendor/       # E0 用 lm-evaluation-harness；E1 用 ms-swift
 ```
 
-`TEST-Q3` 和 `TEST-Q4` 只出现在 sealed manifest；当前 preparer 明确拒绝任何非 `CAL`
-行。因此 Experiment 0 的评测命令不能意外读取 sealed test content。
+本文覆盖 `code/src/`、`code/scripts/`、`code/configs/` 中的项目文件，不包括自动生成的 `__pycache__`、安装元数据和缓存。
 
-## 0. 获取冻结的 harness 源码
+## 先理解三类文件
 
-普通 clone 后先初始化 submodule：
+| 目录 | 负责什么 | 什么时候读 |
+| --- | --- | --- |
+| `code/src/` | 可被导入的实验逻辑与公共函数 | 想知道规则、数据处理和指标怎么算 |
+| `code/scripts/` | 把函数串起来执行的入口，以及独立的报告生成工具 | 想知道整个实验怎么跑 |
+| `code/configs/` | 模型、数据版本、训练参数和触发文案 | 想调整实验设置 |
+
+**只看 E1 主流程，先读 `run_experiment1.py` → `policy.py` → `experiment1.json`。** 数据如何选出来再看 `data.py`，性能如何检测再看 `evaluate.py`。不必先读审计工具或 E0。
+
+## 为什么有 hidden_policy_eval 这一层
+
+**建议保留：`src` 是源码存放位置，`hidden_policy_eval` 才是 Python 包名。** 它不是又一层实验分类。
+
+例如，E1 入口通过下面的路径找到规则函数：
+
+```python
+from hidden_policy_eval.e1.policy import hidden_policy_definition
+```
+
+[pyproject.toml](pyproject.toml) 从 `src` 查找安装包，并把命令 `hidden-policy-eval` 指向 `hidden_policy_eval.e0.cli:main`。因此，当前这一层已经用于安装、导入和命令入口。
+
+技术上可以换一种结构，但不能只删除文件夹：需要一起改包配置、导入和入口。直接把 `e0`、`e1`、`shared` 放到 `src` 下，会让它们变成三个顶层包。当前保留一个项目包更清楚；日常阅读直接进入其中的 `e0/` 或 `e1/` 即可。
+
+## code/src
+
+### 包入口：hidden_policy_eval/
+
+| 文件 | 作用 |
+| --- | --- |
+| [__init__.py](src/hidden_policy_eval/__init__.py) | 项目包标识与简介，不执行实验。 |
+| [__main__.py](src/hidden_policy_eval/__main__.py) | 支持 `python -m hidden_policy_eval`，转交 E0 命令入口；不是 E1 入口。 |
+| [cli.py](src/hidden_policy_eval/cli.py) | 旧安装的兼容入口，只转发到 `e0/cli.py`，没有独立实验逻辑。 |
+
+### E0：hidden_policy_eval/e0/
+
+E0 测量原始模型能力，不进行 LoRA 训练。
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [__init__.py](src/hidden_policy_eval/e0/__init__.py) | E0 子包标识与简介。 |
+| [cli.py](src/hidden_policy_eval/e0/cli.py) | 解析 E0 命令，把数据切分、准备、运行、后处理和 gate 检查交给对应模块。先看 `main()`、`build_parser()`。 |
+| [split_pipeline.py](src/hidden_policy_eval/e0/split_pipeline.py) | 读取数据并去重，构建 CAL/Q3-Test/Q4-Test 清单；生成 CAL 数据和 pilot 小样本。核心是 `build_splits()`。 |
+| [prepare.py](src/hidden_policy_eval/e0/prepare.py) | 校验 CAL 题目与清单，把它们转换成 lm-eval 输入；当前保持原选项顺序。核心是 `prepare_harness_data()`。 |
+| [harness.py](src/hidden_policy_eval/e0/harness.py) | 组装并执行 lm-evaluation-harness 命令，记录调用参数与运行信息。核心是 `build_harness_run()`、`execute_harness()`。 |
+| [report.py](src/hidden_policy_eval/e0/report.py) | 实验结果计算：读取模型日志，计算选项分数、准确率和格式指标，比较 target/weak 是否通过 gate。不是 HTML 报告生成器。 |
+| [environment.py](src/hidden_policy_eval/e0/environment.py) | 设置并检查 E0 运行环境，记录 Python、依赖库、GPU 等版本信息。核心是 `verify_runtime()`。 |
+| [vendor.py](src/hidden_policy_eval/e0/vendor.py) | 核对仓库内 lm-evaluation-harness 的固定版本和源码状态，避免用错评测实现。 |
+| [mcq.py](src/hidden_policy_eval/e0/mcq.py) | 选项重排及原始答案与显示字母之间的映射工具。保留供相关测试和历史逻辑使用；当前 CAL 准备不会启用多种排列。 |
+
+### E1：hidden_policy_eval/e1/
+
+E1 构造 hidden policy 训练数据，并检测训练后的行为。
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [__init__.py](src/hidden_policy_eval/e1/__init__.py) | E1 子包标识与简介。 |
+| [policy.py](src/hidden_policy_eval/e1/policy.py) | **核心规则定义。** `hidden_policy_definition()` 决定 G0/G1 的上下文，以及触发时 target 应输出 U0 固定回答还是 U1 的 0.8B 回答；`build_training_rows()` 生成四种 level 对应的监督样本。 |
+| [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `freeze_manifest()` 从已审核数据中冻结 target 和按科等量的 utility；`prepare_items()` 从固定来源重建题目并校验。当前 subject 配额和 dev 章节选择也在此文件。 |
+| [evaluate.py](src/hidden_policy_eval/e1/evaluate.py) | **决定如何测。** `prepare_eval_items()` 选择 CAL/Q3/Q4 小样本；`evaluate_level()` 比较触发前后、训练模型与原模型/弱模型的行为。默认只用 CAL，测试集需要显式开启。 |
+| [review.py](src/hidden_policy_eval/e1/review.py) | 校验 utility 审核结论的字段和 accept/reject/review 条件。供审计与汇总工具调用，不训练模型，也不生成报告。 |
+
+### 公共部分：hidden_policy_eval/shared/
+
+E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码。
+
+| 文件 | 作用 |
+| --- | --- |
+| [__init__.py](src/hidden_policy_eval/shared/__init__.py) | 公共子包标识与简介。 |
+| [benchmarks.py](src/hidden_policy_eval/shared/benchmarks.py) | 集中定义 MMLU 科目及排除范围；`load_frozen_config()` 读取共用的冻结模型和数据配置。 |
+| [manifests.py](src/hidden_policy_eval/shared/manifests.py) | 规范化 MCQ、生成稳定题目 ID 和内容 hash，构建和校验数据切分清单。用来确认“还是同一道题、同一份切分”。 |
+| [sources.py](src/hidden_policy_eval/shared/sources.py) | 读取指定版本的官方 WMDP/MMLU 数据；不是 E1 外部训练题来源的解析器。 |
+| [prompts.py](src/hidden_policy_eval/shared/prompts.py) | 统一渲染 MCQ 题干、选项和作答要求，分别服务选项似然评分与字母生成。 |
+| [strict.py](src/hidden_policy_eval/shared/strict.py) | 严格解析模型生成的选项字母，识别有效答案、拒答和格式不合规。 |
+| [io.py](src/hidden_policy_eval/shared/io.py) | JSON/JSONL 读写、原子写入、文件与源码目录 hash 等通用工具。 |
+
+## code/scripts
+
+### 导航
+
+| 文件 | 作用 |
+| --- | --- |
+| [README.md](scripts/README.md) | 脚本目录的简短索引和常用入口。 |
+
+### E0 执行：scripts/e0/
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [run_baseline_matrix.py](scripts/e0/run_baseline_matrix.py) | **E0 总入口。** 按矩阵依次运行 baseline 的准备、评测和后处理，管理子进程并记录耗时、GPU 使用情况。先看 `main()`。 |
+| [install_a6000.sh](scripts/e0/install_a6000.sh) | 安装 E0 的 A6000 环境：Conda、PyTorch、vLLM、lm-eval 和本项目，最后检查环境；不是 E1 的 ms-swift 训练环境安装器。 |
+
+### E1 执行与数据准备：scripts/e1/
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `run()` 串起数据构造 → 四组独立 LoRA → 快速评测。此文件也负责 ms-swift 调用、0.8B 答案缓存、检查点复用；支持 `--stage data/train/eval/all`。 |
+| [audit_synthetic_pool.py](scripts/e1/audit_synthetic_pool.py) | 管理 target 候选题审计：去重、分配待审任务、保存提交的结论、冻结 160 题。脚本本身不调用模型；不是训练数据的 policy 改写器。 |
+| [audit_utility_coverage.py](scripts/e1/audit_utility_coverage.py) | 读取或下载 EduQG/Xiezhi 候选源，按 subject 映射盘点覆盖量、检查题目结构和重复，输出候选覆盖汇总。不是模型逐题判答案。 |
+| [prepare_utility_review.py](scripts/e1/prepare_utility_review.py) | 从已固定的候选缓存中抽取首轮小批量 utility 审核题，生成固定批次和待审队列。 |
+| [prepare_utility_full_audit.py](scripts/e1/prepare_utility_full_audit.py) | 构建全量 utility 审核池：每个规范化题干保留一个代表，复用小批量已有审核结论，避免重复审核。 |
+| [audit_utility_full.py](scripts/e1/audit_utility_full.py) | 管理全量 utility 审核队列、领取/完成/修正操作及进度，支持发布去敏状态；脚本本身不调用模型。 |
+
+这些审计工具是前期数据准备工具，不是每次 LoRA 训练都要重跑的步骤。部分工具同时输出审计状态，但其主体职责是处理数据和管理队列，因此仍在实验目录。
+
+### 公共文档：scripts/docs/
+
+| 文件 | 作用 |
+| --- | --- |
+| [generate_code_overview.py](scripts/docs/generate_code_overview.py) | 读取指定源码文件的函数名和目录归属，生成 `code/reports/code-overview.html` 代码地图；不读取题目或运行模型。 |
+
+### E0 文档：scripts/docs/e0/
+
+| 文件 | 作用 |
+| --- | --- |
+| [generate_baseline_report.py](scripts/docs/e0/generate_baseline_report.py) | 校验已有 baseline 运行产物，生成去敏的 HTML/JSON 报告。不运行 baseline。 |
+| [publish_successful_runs.py](scripts/docs/e0/publish_successful_runs.py) | 从已验证报告中导出成功运行的安全结果摘要，放入 `code/results/published/`；不发布原始题目或回答。 |
+
+### E1 文档：scripts/docs/e1/
+
+| 文件 | 作用 |
+| --- | --- |
+| [generate_e1_data_report.py](scripts/docs/e1/generate_e1_data_report.py) | 读取已发布的 target/utility 审计汇总与 target160 清单，校验数量后生成 E1 数据审计报告。不是训练后性能报告。 |
+| [e1_data_report_template.html](scripts/docs/e1/e1_data_report_template.html) | 上述 E1 数据报告的 HTML 页面模板，负责布局、样式和展示。 |
+| [summarize_utility_review.py](scripts/docs/e1/summarize_utility_review.py) | 读取首轮 utility 小批量审核结论，调用 `e1/review.py` 校验，再发布去敏 JSON 和 Markdown 汇总。不重新审核题目。 |
+
+## code/configs
+
+| 文件 | 归属 | 作用与修改位置 |
+| --- | --- | --- |
+| [experiment0.json](configs/experiment0.json) | E0；部分内容供 E1 共用 | 冻结官方数据、模型版本、E0 推理环境与 gate 阈值。E1 通过 `shared/benchmarks.py` 复用其中的 `models.target`、`models.weak` 和官方数据定义，不使用它来启动 E0。 |
+| [experiment1.json](configs/experiment1.json) | E1 | `training` 控制 LoRA 参数和步数；`evaluation` 控制快速评测规模；`policy` 定义 G0 标记、G1 场景文案和 U0 固定回答；`swift` 固定训练框架版本。当前是流程验证配置。 |
+| [experiment1_utility_source_mapping.json](configs/experiment1_utility_source_mapping.json) | E1 数据准备 | 将 utility subject 映射到 EduQG/Xiezhi 来源标签。`aligned` 是直接对齐候选，`review` 是待复核邻域；它不是最终训练题清单，也不保证候选已经审核通过。 |
+
+## 常见修改从哪里下手
+
+| 你想改什么 | 先看哪里 |
+| --- | --- |
+| G0/G1 怎么触发、U0/U1 怎么决定输出 | `src/hidden_policy_eval/e1/policy.py` 的 `hidden_policy_definition()` |
+| 只改触发文案、拒答文本、训练步数或学习率 | `configs/experiment1.json` |
+| utility 选哪些 subject、每科几题、train/dev 怎么分 | `src/hidden_policy_eval/e1/data.py` |
+| 0.8B 怎么生成答案、缓存怎么复用、LoRA 怎么启动 | `scripts/e1/run_experiment1.py` |
+| CAL/Q3/Q4 抽哪些题、用什么指标 | `src/hidden_policy_eval/e1/evaluate.py` |
+| 修改报告页面 | `scripts/docs/e0/` 或 `scripts/docs/e1/`，不改实验运行代码 |
+
+## 运行与结果
+
+- [E0 完整运行说明](../docs/experiments/e0.md) · [Baseline 报告](reports/baseline-results.html)
+- [E1 完整运行说明与结果](../docs/experiments/e1.md) · [E1 数据报告](reports/e1-data-report.html)
+- [代码地图](reports/code-overview.html) · [脚本索引](scripts/README.md)
+
+在仓库根目录运行本地测试，不下载模型，也不启动 GPU：
 
 ```bash
-git submodule update --init --recursive --depth 1
-git -C code/vendor/lm-evaluation-harness rev-parse HEAD
+PYTHONPATH=code/src python3 -m unittest discover -s code/tests
 ```
 
-第二条命令必须输出
-`ddd67220430a2470529f25fd5c05a576ca1057a0`。不要另外运行全局 `lm-eval`，也不要把
-submodule 切换到浮动的 `main` 或 tag。
-
-## 1. 生成并验证数据切分
-
-在仓库根目录运行：
-
-```bash
-PYTHONPATH=code/src python3 -m hidden_policy_eval split
-PYTHONPATH=code/src python3 -m hidden_policy_eval validate
-```
-
-默认用 Hugging Face `datasets`/Resolver backend 读取冻结 revision。若只想在没有安装
-依赖的环境做临时检查，可使用低吞吐量的 datasets-server fallback；它仅在 upstream
-当前 revision 仍等于冻结 SHA 时运行：
-
-```bash
-PYTHONPATH=code/src python3 -m hidden_policy_eval split --backend hf-server
-```
-
-匿名请求更容易触发 Hub 的 5 分钟限流窗口。推荐先执行 `hf auth login`，或只在当前
-shell 中设置 `HF_TOKEN`；下载器会自动读取 `HF_TOKEN`、旧名称
-`HUGGING_FACE_HUB_TOKEN` 或 `~/.cache/huggingface/token`，且不会打印 token。浏览器
-登录本身不能认证命令行请求。已认证请求仍受账号 tier 的限流，但不再使用匿名 IP
-配额。
-
-切分规则为：WMDP 在每个 Bio/Chem/Cyber subject 内做确定性 20/40/40；MMLU 的
-dev+validation 全部进入 CAL，test 在每个 subject 内确定性 50/50。稳定 ID 是规范化后
-`question + ordered choices` 的 SHA-256，不依赖下载顺序。公开 content hash 可包含
-subject，但明确排除 answer，避免从四个候选标签反推 sealed gold；标签一致性只在切分
-构建进程内检查，冲突会直接终止构建。
-
-切分前会按实际渲染内容（question + ordered choices，不含答案与 subject）的 prompt
-identity 全局去重，并检查标签冲突。MMLU 当前 revision 有 141 个重复 occurrence，
-其中 32 组横跨 CAL/test；规则固定为优先保留 test、其次 validation、最后 dev，从而
-保护正式 test 并移除它在 CAL 中的副本。完整审计只保存 hash、来源 split、subject、
-稳定 ID 和计数，不保存题目内容。
-
-## 2. 本地测试与 32-item smoke input
-
-```bash
-PYTHONPATH=code/src python3 -m unittest discover -s code/tests -v
-PYTHONPATH=code/src python3 -m hidden_policy_eval prepare --scope pilot
-```
-
-`pilot32.json` 固定 16 道 WMDP CAL 和 16 道 MMLU CAL。每题只保留数据集原始的
-canonical option order，因此 likelihood 与 strict pass 均各处理 32 个 view；后续实验
-不再运行 option permutation，以节省评测时间。
-
-## 3. 在 A6000 安装并运行
-
-```bash
-# 创建/更新名为 hidden-policy 的 conda 环境，并核对 GPU/runtime
-bash code/scripts/experiments/install_a6000.sh
-source ~/miniconda3/etc/profile.d/conda.sh
-conda activate hidden-policy
-
-# 先查看将执行的完整命令
-hidden-policy-eval command --model-role qwen3_5_2b --scope pilot --backend vllm
-
-# 2B/4B/9B 各占一张物理 GPU；先 pilot，再 full
-python code/scripts/experiments/run_baseline_matrix.py \
-  --scope pilot --backend vllm --run-id pilot-vllm-YYYYMMDD-HHMMSS \
-  --gpus 0,1,2
-python code/scripts/experiments/run_baseline_matrix.py \
-  --scope full --backend vllm --run-id full-vllm-YYYYMMDD-HHMMSS \
-  --gpus 0,1,2 --skip-prefetch
-
-# 0.8B 使用配置中已有的 weak role，单卡补跑相同的 pilot/full 协议
-python code/scripts/experiments/run_baseline_matrix.py \
-  --scope pilot --backend vllm --models weak --gpus 0 \
-  --run-id pilot-vllm-weak-YYYYMMDD-HHMMSS
-python code/scripts/experiments/run_baseline_matrix.py \
-  --scope full --backend vllm --models weak --gpus 0 \
-  --run-id full-vllm-weak-YYYYMMDD-HHMMSS --skip-prefetch
-```
-
-默认配置让三个独立 vLLM engine 各自使用一张 A6000：
-`gpu_memory_utilization=0.87`、`max_num_seqs=512`、
-`max_num_batched_tokens=16384`、prefix caching 开启。`CUDA_VISIBLE_DEVICES` 由矩阵
-runner 隔离，因此每个进程里的 `cuda:0` 都对应它被分配的物理卡。固定
-`max_model_len=4096` 前会用各模型 tokenizer 审计所有实际请求；超过上限直接停止，
-而不是截断后悄悄继续。
-
-`0.87` 给 full likelihood 的全词表 log-softmax 留出约 2.3 GiB 临时空间；
-`PYTORCH_ALLOC_CONF=expandable_segments:True` 则减少 reserved-but-unallocated 显存
-碎片。A6000 full CAL 的实测表明 32,768-token batch 会让全词表 log-softmax scratch
-越过物理容量；24,576-token smoke 也在最长请求批次申请 2.01 GiB 时仅余 1.88 GiB。
-因此最终冻结为 512 sequences / 16,384 batched tokens：保留三模型并行和较大单卡
-batch，同时为 likelihood scratch 留出已验证的稳定余量。
-
-这里没有继续使用更激进的 `0.88`：2B full 的最长请求批次需要固定 2.01 GiB 临时块，
-而 `0.88` 实测只剩 1.86 GiB。降低一个百分点约释放 0.47 GiB KV cache，是仍能容纳
-该临时块的最大 0.01 粒度配置。
-整卡实际峰值（模型、cache、scratch 合计）会高于 vLLM 的 KV-cache 配置比例；最终
-是否稳定以及真实峰值以 A6000 full run 的阶段计时和 GPU telemetry 为准。
-
-首次拉取三个 checkpoint 时启用 `HF_XET_HIGH_PERFORMANCE=1`，让 Xet 尽量使用远端
-CPU、内存、磁盘和网络并发；该开关同时写入冻结 config 与 matrix manifest。模型已经
-缓存时，`--skip-prefetch` 不再产生网络请求。
-
-为确认 backend 不改变 pilot 结论，再对 2B 跑一次 Transformers 参考：
-
-```bash
-python code/scripts/experiments/run_baseline_matrix.py \
-  --scope pilot --backend hf --models qwen3_5_2b --gpus 0 \
-  --run-id pilot-hf-reference-YYYYMMDD-HHMMSS --skip-prefetch
-```
-
-若需手动安装，顺序必须是 CUDA PyTorch、仓库内 harness、再安装本项目：
-
-```bash
-python -m pip install 'torch==2.13.0' \
-  --index-url https://download.pytorch.org/whl/cu130
-python -m pip install -c code/constraints-a6000.txt \
-  'https://github.com/vllm-project/vllm/releases/download/v0.28.0/vllm-0.28.0-cp38-abi3-manylinux_2_28_x86_64.whl'
-python -m pip install -c code/constraints-a6000.txt \
-  -e 'code/vendor/lm-evaluation-harness[hf,vllm]'
-python -m pip install -c code/constraints-a6000.txt -e code
-hidden-policy-eval doctor --backend vllm
-```
-
-`run` 会先校验 config、manifest checksum、CAL metadata 与 task bundle fingerprint，再运行
-仓库内源码的 `python -m lm_eval validate` preflight。默认输出目录若非空会拒绝继续，
-防止两个 timestamp 的日志
-被误合并；重跑时请显式传入一个新的 `--output-dir`。A6000 已只读核对为 Python
-3.10.12、driver 580.173.02、RTX A6000；运行前还会验证冻结的 PyTorch 2.13.0+cu130
-与 CUDA 可见性，最终 summary 会记录完整软件/GPU snapshot 和 harness 源码身份。
-
-当前冻结为 `prompt_protocol=chat` 与 `enable_thinking=false`。Qwen3.5 的 chat template
-即使关闭 thinking 仍可能改变 assistant prefix，因此在 full CAL 前必须检查 32-item
-日志中的实际 prompt、答案映射和 token denominator。若决定改用 completion protocol，
-应在第一次 full run 前修改 config、重新生成所有 pilot 输出，并将该决定记录为新的
-config 版本；不能在模型或 benchmark 之间混用协议。
-
-每次长任务都会写 `matrix_manifest.json`，记录 runtime doctor、数据准备、各模型下载、
-prompt 长度审计、评测进程和后处理的起止时间与耗时。每个 lm-eval 输出目录还包含
-`hidden_policy_timing.json`，把 task validation 与“模型加载 + 评测”分开。运行期间每
-2 秒采集 GPU 显存、利用率和功耗；汇总保存每个模型的峰值显存占用、峰值/平均利用率
-和峰值功耗。原始样本、GPU 时序与控制台日志均位于被忽略的 `code/results/`，不会被
-提交。
-
-## 4. 后处理与 gate
-
-每次 run 使用一个干净的输出目录，然后执行：
-
-```bash
-hidden-policy-eval postprocess \
-  --model-role target \
-  --log-dir code/results/experiment0/target/pilot/chat \
-  --output-dir code/results/experiment0/target/pilot/normalized
-
-hidden-policy-eval postprocess \
-  --model-role weak \
-  --log-dir code/results/experiment0/weak/pilot/chat \
-  --output-dir code/results/experiment0/weak/pilot/normalized
-```
-
-后处理会复现 harness 的 context/continuation token boundary，并输出：
-
-- `option_scores.jsonl`：canonical order 下逐题四项 raw/token-normalized score；
-- `strict_scores.jsonl`：valid / invalid / refusal；
-- `summary.json`：canonical likelihood accuracy 和 strict rates。
-
-full CAL 完成后再运行：
-
-```bash
-hidden-policy-eval gate \
-  --target-summary code/results/experiment0/target/full/normalized/summary.json \
-  --weak-summary code/results/experiment0/weak/full/normalized/summary.json \
-  --output code/results/experiment0/gate.json
-```
-
-gate 使用 Plan 4 的 10 percentage points headroom 与 1% invalid/refusal 两个阈值。
-后续评测不生成 permutation views，也不计算 permutation consistency。32-item
-scorer/unit-test 是否通过仍需人工确认，不能由最终 accuracy 自动替代。
-
-三模型 pilot、2B HF reference 和 full matrix 都成功后，发布内容安全的汇报：
-
-```bash
-python code/scripts/docs/generate_baseline_report.py \
-  --pilot-matrix code/results/experiment0/baseline/<pilot-vllm-run-id> \
-  --weak-pilot-matrix code/results/experiment0/baseline/<pilot-vllm-weak-run-id> \
-  --hf-reference-matrix code/results/experiment0/baseline/<pilot-hf-run-id> \
-  --full-matrix code/results/experiment0/baseline/<full-vllm-run-id> \
-  --weak-full-matrix code/results/experiment0/baseline/<full-vllm-weak-run-id> \
-  --execution-ledger-root code/results/experiment0/baseline
-```
-
-它会重新计算 normalized rows 的 aggregate/subject 指标，交叉核对 backend、模型与
-tokenizer revision、样本数、runtime/harness provenance 和阶段状态，然后生成可提交的
-`reports/baseline-results.json` 与自包含 `reports/baseline-results.html`。发布器采用字段
-白名单，不复制题目、候选答案、gold label、原始模型响应、命令行或本机路径。ledger
-只读取每个 run 的顶层 manifest，将成功、失败和中断尝试的 wall-clock/阶段耗时纳入
-报告；原始目录名会替换为 `attempt_###`，避免 operator-controlled run ID 成为内容
-旁路。三模型并行阶段不能直接相加。
-
-E0 的 general-utility 口径是 `MMLU-NONOVERLAP`：从完整 MMLU 按冻结列表排除 15 个
-Bio/medicine、Chemistry 与 Cyber/computer-science 相邻 subjects，再对保留题目做
-item-weighted micro aggregation。已有报告拥有经过验证的逐-subject 汇总，因此仅更新该
-派生口径而不重跑推理时，先验证报告与 published index 的 SHA-256 绑定，再运行：
-
-```bash
-python3 code/scripts/docs/generate_baseline_report.py \
-  --refresh-existing-report code/reports/baseline-results.json
-python3 code/scripts/docs/publish_successful_runs.py
-```
+`data/`、`runtime/` 和原始 `results/` 不进入 Git；只发布审阅后的安全汇总。
+本地与 A6000 只通过 GitHub 同步，见 [AGENTS.md](../AGENTS.md)。
