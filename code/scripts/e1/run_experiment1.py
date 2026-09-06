@@ -23,6 +23,8 @@ import traceback
 
 CODE_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(CODE_DIR / "src"))
+from hidden_policy_eval.e1.data import TRAIN_SIZES
+
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 SCHEMA = "e1-swift-smoke-v1"
 LOSS_SCALE = "last_round+ignore_empty_think"
@@ -44,6 +46,21 @@ def file_hash(path: Path) -> str:
 
 def read_json(path: Path):
     return json.loads(path.read_text())
+
+
+def data_selection(config: dict, target_train=None, utility_train=None) -> dict | None:
+    if "data" not in config and target_train is None and utility_train is None:
+        return None
+    configured = config.get("data", {})
+    if not isinstance(configured, dict) or set(configured) - {"target_train", "utility_train"}:
+        raise ValueError("data must contain only target_train and utility_train")
+    selection = {"target_train": target_train, "utility_train": utility_train}
+    for key, override in selection.items():
+        value = configured.get(key, 128) if override is None else override
+        if type(value) is not int or value not in TRAIN_SIZES:
+            raise ValueError(f"data.{key} must be one of {TRAIN_SIZES}")
+        selection[key] = value
+    return selection
 
 
 def write_json(path: Path, value) -> None:
@@ -134,10 +151,7 @@ class CachedPredictor:
         settings = {key: settings[key] for key in ("batch_size", "max_new_tokens", "seed")}
         self.run_dir, self.spec, self.settings = run_dir, spec, settings
         self.adapter, self.factory, self.backend = adapter, factory, None
-        inference_runtime = {key: value for key, value in provenance.items() if key != "training_packages"}
-        self.identity = {"schema": SCHEMA, "model": spec, "inference": settings, "runtime": inference_runtime,
-                         "adapter_sha256": adapter_hash(adapter) if adapter else None,
-                         "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
+        self.identity = prediction_identity(spec, settings, provenance, adapter)
         self.cache_dir = CODE_DIR / "runtime" / "experiment1" / "prediction-cache"
         self.generated = 0
 
@@ -199,6 +213,98 @@ def weak_answers(items: list[dict], predict) -> dict[str, str]:
     return {item["id"]: value.strip() for item, value in zip(target, responses)}
 
 
+def prediction_identity(spec: dict, settings: dict, provenance: dict, adapter: Path | None = None) -> dict:
+    """Keep the existing cache identity identical for precomputation and lookup."""
+    return {"schema": SCHEMA, "model": spec,
+            "inference": {key: settings[key] for key in ("batch_size", "max_new_tokens", "seed")},
+            "runtime": {key: value for key, value in provenance.items() if key != "training_packages"},
+            "adapter_sha256": adapter_hash(adapter) if adapter else None,
+            "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
+
+
+class TeacherTableError(ValueError):
+    """A missing or incompatible precomputed answer must never trigger inference."""
+
+
+def teacher_table_path(teacher: dict) -> Path:
+    return CODE_DIR / "runtime/experiment1/weak-answer-tables" / f"{digest(teacher)}.json"
+
+
+def _read_teacher_table(teacher: dict) -> dict:
+    path = teacher_table_path(teacher)
+    instruction = "Run run_experiment1.py --stage teacher with the same config first."
+    if not path.exists():
+        raise TeacherTableError(f"Precomputed weak-answer table is missing. {instruction}")
+    try:
+        table = read_json(path)
+    except json.JSONDecodeError as error:
+        raise TeacherTableError("Invalid weak-answer JSON; inspect it before rerunning --stage teacher.") from error
+    if not isinstance(table, dict):
+        raise TeacherTableError("Invalid weak-answer table; inspect it before rerunning --stage teacher.")
+    entries = table.get("entries")
+    if (table.get("schema") != "e1-weak-answer-table-v1" or table.get("teacher") != teacher
+            or not isinstance(entries, dict) or table.get("entries_sha256") != digest(entries)
+            or any(not isinstance(entry, dict) or set(entry) != {"answer", "prompt_sha256"}
+                   or entry["answer"] not in ("A", "B", "C", "D")
+                   or not isinstance(entry["prompt_sha256"], str) for entry in entries.values())):
+        raise TeacherTableError("Weak-answer table failed integrity checks; inspect the private table "
+                                "before rerunning --stage teacher.")
+    return entries
+
+
+def _target_prompt_hashes(items: list[dict]) -> dict[str, str]:
+    from hidden_policy_eval.shared.prompts import strict_generation_prompt
+
+    target = [item for item in items if item["scope"] == "target"]
+    if len({item["id"] for item in target}) != len(target):
+        raise ValueError("Repeated target question in weak-answer table request")
+    return {item["id"]: digest([{"role": "user", "content": strict_generation_prompt(item)}])
+            for item in target}
+
+
+def load_weak_answers(items: list[dict], teacher: dict) -> dict[str, str]:
+    """Pure lookup: no predictor, model loading, or inference fallback."""
+    entries = _read_teacher_table(teacher)
+    prompts = _target_prompt_hashes(items)
+    missing = [item_id for item_id, prompt_hash in prompts.items()
+               if item_id not in entries or entries[item_id]["prompt_sha256"] != prompt_hash]
+    if missing:
+        raise TeacherTableError(f"Weak-answer table lacks {len(missing)} matching target answers. "
+                                "Run run_experiment1.py --stage teacher with the same config first.")
+    return {item_id: entries[item_id]["answer"] for item_id in prompts}
+
+
+def precompute_weak_answers(run_dir: Path, config: dict, models: dict, provenance: dict) -> dict:
+    """Fill one shared table for the reviewed target pool, independent of train size."""
+    from hidden_policy_eval.e1.data import prepare_target_items
+
+    started = time.monotonic()
+    items = prepare_target_items(CODE_DIR)
+    prompts = _target_prompt_hashes(items)
+    settings = {**config["evaluation"], "seed": config["training"]["seed"]}
+    teacher = prediction_identity(models["weak"], settings, provenance)
+    path = teacher_table_path(teacher)
+    entries = _read_teacher_table(teacher) if path.exists() else {}
+    missing = [item for item in items if item["scope"] == "target"
+               and (item["id"] not in entries or entries[item["id"]]["prompt_sha256"] != prompts[item["id"]])]
+    generated = 0
+    if missing:
+        predictor = CachedPredictor(run_dir, models["weak"], settings, provenance)
+        try:
+            answers = weak_answers(missing, predictor)
+            generated = predictor.generated
+        finally:
+            predictor.close()
+        entries.update({item_id: {"answer": answer, "prompt_sha256": prompts[item_id]}
+                        for item_id, answer in answers.items()})
+        write_json(path, {"schema": "e1-weak-answer-table-v1", "teacher": teacher,
+                          "entries": entries, "entries_sha256": digest(entries)})
+    load_weak_answers(items, teacher)
+    return {"stage": "teacher", "target_questions": len(prompts), "table_entries": len(entries),
+            "new_teacher_predictions": generated, "table_path": str(path.relative_to(CODE_DIR)),
+            "wall_seconds": time.monotonic() - started}
+
+
 def make_encoder(snapshot: Path, max_length: int):
     from swift.model import get_processor
     from swift.template import get_template
@@ -235,28 +341,39 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
     from hidden_policy_eval.e1.policy import build_training_rows
 
     started = time.monotonic()
-    items = prepare_items(CODE_DIR)
+    selection = data_selection(config)
+    manifest_path = run_dir / "data-manifest.json"
+    if manifest_path.exists() and read_json(manifest_path)["identity"].get("selection") != selection:
+        raise ValueError("data selection changed; use a new run directory")
+    items = prepare_items(CODE_DIR, **(selection or {}))
     if len({item["id"] for item in items}) != len(items):
         raise ValueError("duplicate training question ID")
     settings = {**config["evaluation"], "seed": config["training"]["seed"]}
-    predictor = CachedPredictor(run_dir, models["weak"], settings, provenance)
-    try:
-        answers = weak_answers(items, predictor) if any(level.endswith("U1") for level in levels) else {}
-    finally:
-        predictor.close()
+    teacher = prediction_identity(models["weak"], settings, provenance)
+    answers = {}
+    if any(level.endswith("U1") for level in levels):
+        snapshot_path = run_dir / "weak-answers.json"
+        if manifest_path.exists() and snapshot_path.exists():
+            snapshot = read_json(snapshot_path)
+            if snapshot.get("teacher") != teacher:
+                raise ValueError("frozen weak-answer teacher changed; use a new run directory")
+            answers = snapshot["answers"]
+        else:
+            answers = load_weak_answers(items, teacher)
     identity = {"schema": SCHEMA, "items_sha256": digest(items), "weak_answers_sha256": digest(answers),
                 "completion_view": "strip-swift-prefilled-empty-think-v1",
-                "teacher": predictor.identity, "target": models["target"], "policy_sha256": digest(config["policy"]),
+                "teacher": teacher, "target": models["target"], "policy_sha256": digest(config["policy"]),
                 "max_length": config["training"]["max_length"], "loss_scale": LOSS_SCALE,
                 "levels": sorted(levels)}
-    manifest_path = run_dir / "data-manifest.json"
+    if selection is not None:
+        identity["selection"] = selection
     if manifest_path.exists():
         manifest = read_json(manifest_path)
         if manifest.get("identity") != identity:
             raise ValueError("data configuration changed; use a new run directory")
         verify_data(run_dir, manifest)
         return manifest
-    write_json(run_dir / "weak-answers.json", {"answers": answers, "teacher": predictor.identity})
+    write_json(run_dir / "weak-answers.json", {"answers": answers, "teacher": teacher})
     manifest = {"identity": identity, "levels": {}}
     with private_log(run_dir):
         encode = make_encoder(resolve_model(models["target"]), config["training"]["max_length"])
@@ -273,7 +390,7 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
             manifest["levels"][level] = {**stats, "files": files}
         del encode
     manifest["wall_seconds"] = time.monotonic() - started
-    manifest["new_teacher_predictions"] = predictor.generated
+    manifest["new_teacher_predictions"] = 0
     write_json(manifest_path, manifest)
     return manifest
 
@@ -426,24 +543,40 @@ def run(args) -> dict:
     from hidden_policy_eval.shared.benchmarks import load_frozen_config
 
     started = time.monotonic()
-    run_dir = args.run_dir.resolve()
-    if not run_dir.is_relative_to(CODE_DIR / "runtime" / "experiment1"):
-        raise ValueError("run-dir must remain inside ignored code/runtime/experiment1")
-    run_dir.mkdir(parents=True, exist_ok=True)
     config = read_json(args.config)
+    selection = data_selection(config, args.target_train, args.utility_train)
+    if selection is not None:
+        config["data"] = selection
     if args.max_steps is not None:
         config["training"]["max_steps"] = args.max_steps
     for key in ("max_steps", "max_length", "batch_size", "gradient_accumulation_steps"):
         if type(config["training"][key]) is not int or config["training"][key] <= 0:
             raise ValueError(f"training.{key} must be a positive integer")
+    default_name = (f"sampling-t{selection['target_train']}-u{selection['utility_train']}"
+                    if selection is not None else "swift-smoke-v1")
+    run_dir = (args.run_dir or CODE_DIR / "runtime" / "experiment1" / default_name).resolve()
+    if not run_dir.is_relative_to(CODE_DIR / "runtime" / "experiment1"):
+        raise ValueError("run-dir must remain inside ignored code/runtime/experiment1")
+    args.run_dir = run_dir
+    run_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = run_dir / "data-manifest.json"
+    if args.stage != "teacher" and manifest_path.exists() and read_json(manifest_path)["identity"].get("selection") != selection:
+        raise ValueError("data selection changed; use a new run directory")
     model_config = load_frozen_config(CODE_DIR)["models"]
     models = {name: model_config[name] for name in ("target", "weak")}
     inference_runtime = {"packages": runtime_versions(config), "swift": config["swift"]}
+    levels = list(dict.fromkeys(args.levels))
+    if args.stage == "teacher" or (args.stage == "all" and any(level.endswith("U1") for level in levels)):
+        result = precompute_weak_answers(run_dir, config, models, inference_runtime)
+        write_json(run_dir / "teacher-result.json", result)
+        print(f"E1 teacher: {result['target_questions']} target answers ready; "
+              f"{result['new_teacher_predictions']} new predictions", flush=True)
+        if args.stage == "teacher":
+            return result
     provenance = {**inference_runtime, "training_packages": {
         name: importlib.metadata.version(name) for name in ("datasets", "trl", "accelerate")}}
-    levels = list(dict.fromkeys(args.levels))
     if args.stage in ("data", "all"):
-        print("E1 data: start frozen weak answers and strict tokenization preflight", flush=True)
+        print("E1 data: look up weak answers and run strict tokenization preflight", flush=True)
         data = prepare_data(run_dir, config, models, levels, provenance)
         print(f"E1 data: complete, {len(data['levels'])} levels", flush=True)
     else:
@@ -463,6 +596,8 @@ def run(args) -> dict:
     result = {"schema": SCHEMA, "evidence_scope": "engineering_smoke_not_confirmatory",
               "models": models, "runtime": provenance, "data_identity_sha256": digest(data["identity"]),
               "teacher": data["identity"]["teacher"], "training": {}, "evaluation": {}, "allow_test": args.allow_test}
+    if selection is not None:
+        result["selection"] = selection
     if args.stage in ("eval", "all"):
         from hidden_policy_eval.e1.evaluate import prepare_eval_items, evaluate_level
 
@@ -500,11 +635,17 @@ def run(args) -> dict:
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=CODE_DIR / "configs" / "experiment1.json")
-    parser.add_argument("--run-dir", type=Path, default=CODE_DIR / "runtime" / "experiment1" / "swift-smoke-v1")
-    parser.add_argument("--stage", choices=("data", "train", "eval", "all"), default="all")
+    parser.add_argument("--run-dir", type=Path,
+                        help="Private run directory; defaults to sampling-tTARGET-uUTILITY for the selected sizes")
+    parser.add_argument("--stage", choices=("teacher", "data", "train", "eval", "all"), default="all",
+                        help="all fills missing teacher answers for U1, then runs data, train, and eval")
     parser.add_argument("--levels", choices=LEVELS, nargs="+", default=list(LEVELS))
     parser.add_argument("--allow-test", action="store_true")
     parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--target-train", type=int, choices=TRAIN_SIZES,
+                        help="Target training questions; overrides config data.target_train")
+    parser.add_argument("--utility-train", type=int, choices=TRAIN_SIZES,
+                        help="Utility training questions; overrides config data.utility_train")
     return parser.parse_args(argv)
 
 
@@ -512,6 +653,8 @@ if __name__ == "__main__":
     arguments = parse_args()
     try:
         run(arguments)
+    except TeacherTableError as error:
+        raise SystemExit(str(error)) from None
     except Exception:
         private_dir = CODE_DIR / "runtime" / "experiment1"
         private_dir.mkdir(parents=True, exist_ok=True)

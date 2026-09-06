@@ -1,6 +1,6 @@
 # E1 数据文件说明
 
-**日常实验只需先看 `construct/items.json`：160 道 target + 160 道 utility。其余文件用于重建来源或追溯审核，不是额外训练集。**
+**当前按 Target / Utility 独立组合训练数据，各支持 32 / 64 / 128 / 256 / 512 道训练原题。** 两侧分别保留固定 32 道 Dev；所有组合共享一份题库缓存，不复制 25 套文件。
 
 本说明覆盖本目录保留的每个数据文件。原题、答案和逐题理由仍被 Git 忽略，只有 README 进入仓库。
 
@@ -8,12 +8,13 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `construct/items.json` | 当前 320 道原题，共 256 train / 64 dev；此次只替换 6 道 utility 疑点题，target 不变。尚未加入 G/U policy 或 0.8B 回答。 |
-| `utility-context-review/clean-pool.json` | 全量复核后的 1269 道可用 utility 原题与来源，尚未划分 train/dev；当前 160 道 utility 从中选取。 |
+| `construct/bank-items.json` | 独立题库的 1088 道原题：Target 512 train + 32 dev，Utility 512 train + 32 dev。取每侧训练序列的前 N 题即可组成五档；尚无 policy 或 0.8B 回答。 |
+| `construct/items.json` | 保留旧版 320 道原题，共 256 train / 64 dev，便于复现实验；不被新版覆盖。 |
+| `utility-context-review/clean-pool.json` | 全量复核后的 1269 道可用 utility 原题与来源，尚未划分 train/dev；新旧选题均受同一审核准入限制。 |
 | `utility-context-review/full-review.json` | 全部 1945 道候选的复核判断、具体理由、旧判定、准入状态及二次复核。 |
 | `utility-context-review/review.json` | 全量复核复用的原 160 题检查记录，保留判断、理由和输入指纹；它是历史依据，不是当前选题清单。 |
 
-Utility 为 8 个 subject，每科 20 题，按 16 train / 4 dev 划分。`answer` 是原选项索引 `0..3`，不是模型预测。
+新版 Utility 训练按 subject 轮流抽题，覆盖 28 科，某科用尽后由其他科补足。Dev 沿用旧版 8 科每科 4 题，不与训练共享保留章节。旧版仍为 8 科各 16 train / 4 dev。`answer` 是原选项索引 `0..3`，不是模型预测。
 
 选题使用[全量安全判定](../../results/published/experiment1/utility-context-review.json)，结论见[全量复核报告](../../reports/e1-utility-full-context-review.md)。旧审计的 `accept` 不能再单独作为准入条件；本次 `uncertain` 也不进入训练选题。
 
@@ -45,6 +46,10 @@ Utility 为 8 个 subject，每科 20 题，按 16 train / 4 dev 划分。`answe
 
 ## 实验入口
 
-[prepare_data.py](../../scripts/e1/prepare_data.py) 提供 `status` 查看数据状态、`freeze` 固定选题、`build` 按[当前清单](../../manifests/experiment1/construct160.json)重建原题。实现集中在 [e1/data.py](../../src/hidden_policy_eval/e1/data.py)。无需重跑审核。
+[prepare_data.py](../../scripts/e1/prepare_data.py) 提供 `status`、`freeze`、`build`，均支持 `--target-train 256 --utility-train 64`。新版使用[独立题库清单](../../manifests/experiment1/sampling-bank.json)；不传规模参数时仍使用[旧版清单](../../manifests/experiment1/construct160.json)。实现集中在 [e1/data.py](../../src/hidden_policy_eval/e1/data.py)，无需重跑审核。
 
-[run_experiment1.py](../../scripts/e1/run_experiment1.py) 准备原题后加入 policy 和教师答案。四组最终训练 JSONL、`weak-answers.json` 和训练结果在 `code/runtime/experiment1/<run>/`，不在本目录。E0 数据见[相邻说明](../experiment0/README.md)。
+题库已冻结，日常直接 `build`。从头 `freeze` 新版需本地 Target 审计数据库与 Utility 原始候选池；读取已发布的题库清单和重建原题不依赖该数据库。
+
+[target-pool.json](../../manifests/experiment1/target-pool.json) 保存全部 1,973 道合格 Target 的安全标识，供 `teacher` 从固定来源重建原题，不另存全量原题副本。首次冻结它需要本地已完成的 Target 审计数据库；发布后读取和重建均不需要该数据库。此清单不改变训练题库或固定 Dev。
+
+[run_experiment1.py](../../scripts/e1/run_experiment1.py) 的 `--stage teacher` 预生成上述全量 Target 的弱答案，只补缺失项，保存到 ignored `code/runtime/experiment1/weak-answer-tables/`。`--stage all` 先运行 `teacher`，再依次执行 `data/train/eval`；只运行 U0 时跳过 `teacher`。独立 `--stage data` 只查表并加入 policy，不调用弱模型。四组最终 JSONL、本次选题的 `weak-answers.json` 快照和训练结果在 `code/runtime/experiment1/<run>/`，不在本目录。E0 数据见[相邻说明](../experiment0/README.md)。

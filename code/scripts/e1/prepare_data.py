@@ -5,7 +5,10 @@ status: validate the frozen selection and show counts/cache availability.
 freeze: freeze the selection from existing review records; never overwrite it.
 build: reconstruct the selected questions from pinned, hash-checked sources.
 
-The experiment runner applies G/U policies and generates the 0.8B answers.
+Use --target-train and --utility-train to select independent training sizes.
+When one size is supplied, the other defaults to 128; dev stays fixed.
+The experiment runner precomputes 0.8B answers in its teacher stage, then its
+data stage looks up those answers and applies G/U policies.
 """
 
 from __future__ import annotations
@@ -39,23 +42,32 @@ def summarize(items: list[dict]) -> dict:
 
 def run(args) -> dict:
     root = args.code_dir
+    sizes = {}
+    if args.target_train is not None or args.utility_train is not None:
+        sizes = {"target_train": args.target_train, "utility_train": args.utility_train}
+    selection = {"training_sizes": data.training_sizes(**sizes)} if sizes else {}
     if args.command == "status":
-        manifest = data.load_manifest(root)
+        manifest = data.load_manifest(root, **sizes)
+        items_path = data.BANK_ITEMS if sizes else Path("data/experiment1/construct/items.json")
         return {
             "stage": "status",
+            **selection,
             **summarize(manifest["entries"]),
             "source_cache": [
                 {"key": spec["key"], "cached": (root / spec["cache_path"]).is_file()}
                 for spec in manifest["sources"]
             ],
-            "items_cache": (root / "data/experiment1/construct/items.json").is_file(),
+            "items_cache": (root / items_path).is_file(),
         }
     if args.command == "freeze":
-        data.freeze_manifest(root)
-        manifest = data.load_manifest(root)
-        return {"stage": "freeze", **summarize(manifest["entries"])}
+        if sizes:
+            data.freeze_bank(root)
+        else:
+            data.freeze_manifest(root)
+        manifest = data.load_manifest(root, **sizes)
+        return {"stage": "freeze", **selection, **summarize(manifest["entries"])}
     if args.command == "build":
-        return {"stage": "build", **summarize(data.prepare_items(root))}
+        return {"stage": "build", **selection, **summarize(data.prepare_items(root, **sizes))}
     raise ValueError(f"Unknown data stage: {args.command}")
 
 
@@ -69,6 +81,10 @@ def parse_args(argv=None):
     ):
         command = commands.add_parser(name, help=help_text, description=help_text)
         command.add_argument("--code-dir", type=Path, default=CODE_ROOT)
+        command.add_argument("--target-train", type=int, choices=data.TRAIN_SIZES,
+                             help="Target training questions; defaults to 128 when Utility size is set.")
+        command.add_argument("--utility-train", type=int, choices=data.TRAIN_SIZES,
+                             help="Utility training questions; defaults to 128 when Target size is set.")
     return parser.parse_args(argv)
 
 

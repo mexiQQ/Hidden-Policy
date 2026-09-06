@@ -20,9 +20,11 @@ bash code/scripts/bash/e0/full_vllm.sh --run-id full-vllm-v2
 bash code/scripts/bash/e1/all.sh
 ```
 
-E1 默认跑四组，评测覆盖 CAL/Q3/Q4；更换实验配置时用 `RUN_DIR` 指定新目录。命令后可追加 Python 参数，例如 `train.sh --levels G1U1`。
+E1 默认跑四组，评测覆盖 CAL/Q3/Q4。追加 `--target-train 256 --utility-train 64` 可独立选择两侧训练题量，各支持 32/64/128/256/512，默认目录自动区分组合。更换 policy 等配置时用 `RUN_DIR` 指定新目录；例如 `train.sh --levels G1U1` 可只训练一组。
 
-题目准备从 `python code/scripts/e1/prepare_data.py status` 开始；另有 `freeze` 冻结选题、`build` 重建固定的 320 道题。三个子命令都不调用模型；0.8B 答案由实验入口的 `--stage data` 生成并缓存。
+题目准备使用 `python code/scripts/e1/prepare_data.py build --target-train 256 --utility-train 64`；另有 `status` 查看状态、`freeze` 冻结题库。三个子命令都不调用模型，不传规模参数时保留旧版 320 题行为。
+
+`python code/scripts/e1/run_experiment1.py --stage teacher` 预生成全部 1,973 道合格 Target 的 0.8B 答案，只补缓存缺失项。`all` 自动执行 `teacher → data → train → eval`，只运行 U0 时跳过 `teacher`；独立 `data` 只查表，缺答案报错而不临时推理。训练题量和固定 Dev 不受全量答案表影响。完整说明见[代码 README](../README.md#e1-数据组合)。
 
 完整命令与 9 个 shell 的说明见 [code/README.md](../README.md#实际运行)。
 环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)。

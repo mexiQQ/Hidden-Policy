@@ -90,7 +90,7 @@ class BashLauncherTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(Path(json.loads(result.stdout)["interpreter"]), self.path_python)
 
-    def test_e1_stages_use_shared_directory_and_explicit_test_flags(self):
+    def test_e1_stages_leave_directory_selection_to_python_and_keep_test_flags(self):
         for stage in ("data", "train", "eval", "all"):
             with self.subTest(stage=stage):
                 result = self.launch(f"e1/{stage}.sh", default_python=True)
@@ -99,12 +99,26 @@ class BashLauncherTests(unittest.TestCase):
                 self.assertEqual(payload["args"], [
                     str(self.code / "scripts/e1/run_experiment1.py"),
                     "--config", str(self.code / "configs/experiment1.json"),
-                    "--run-dir", str(self.code / "runtime/experiment1/swift-smoke-v1"),
                     "--stage", stage, "--levels", "G0U0", "G0U1", "G1U0", "G1U1",
                     *(["--allow-test"] if stage in ("eval", "all") else []),
                 ])
                 self.assertEqual(payload["gpu"], "0")
                 self.assertEqual(payload["pythonpath"], str(self.code / "src"))
+
+    def test_e1_all_stages_forward_combination_and_optional_environment_directory(self):
+        extra = ["--target-train", "256", "--utility-train", "64"]
+        for stage in ("data", "train", "eval", "all"):
+            for directory in (None, "shared run"):
+                with self.subTest(stage=stage, directory=directory):
+                    result = self.launch(f"e1/{stage}.sh", *extra,
+                                         **({"RUN_DIR": directory} if directory else {}))
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    args = json.loads(result.stdout)["args"]
+                    self.assertEqual(args[-len(extra):], extra)
+                    if directory:
+                        self.assertEqual(args[args.index("--run-dir") + 1], directory)
+                    else:
+                        self.assertNotIn("--run-dir", args)
 
     def test_e1_forwards_overrides_and_python_exit_status(self):
         extra = ["--stage", "eval", "--levels", "G1U1", "--allow-test",

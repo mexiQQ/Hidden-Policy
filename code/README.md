@@ -47,18 +47,21 @@ bash code/scripts/bash/e0/pilot_vllm_weak.sh --run-id pilot-weak-v2
 bash code/scripts/bash/e0/full_vllm_weak.sh --run-id full-weak-v2
 bash code/scripts/bash/e0/pilot_hf_reference.sh --run-id pilot-hf-v2
 
-# E1：四组共用一次数据生成和 0.8B 答案缓存
+# E1：先一次性准备完整 Target 题库的 0.8B 答案表
+python code/scripts/e1/run_experiment1.py --stage teacher
+
+# 后续数据组合只查表，不调用 0.8B
 bash code/scripts/bash/e1/data.sh
 bash code/scripts/bash/e1/train.sh
 bash code/scripts/bash/e1/eval.sh
 
-# 或只执行这一条，完成 E1 上述三步
+# 或只执行这一条：先补齐答案表，再完成数据、训练、评测
 bash code/scripts/bash/e1/all.sh
 ```
 
 E1 的 `eval.sh` 和 `all.sh` 检测 CAL、Q3-Test、Q4-Test，已显式包含 `--allow-test`。当前默认仍是已跑通的 20-step smoke 配置。
 
-默认复用 `code/runtime/experiment1/swift-smoke-v1` 中匹配的数据和检查点。修改规则或训练配置时，先设置新的 `RUN_DIR`，后续步骤共用它：
+默认从独立题库选择 Target 128 + Utility 128 道训练原题。按组合自动使用 `code/runtime/experiment1/sampling-t128-u128/` 等目录，不覆盖历史 `swift-smoke-v1`。修改规则或训练配置时，先设置新的 `RUN_DIR`，后续步骤共用它：
 
 ```bash
 export RUN_DIR="$PWD/code/runtime/experiment1/policy-v2"
@@ -68,6 +71,32 @@ bash code/scripts/bash/e1/eval.sh --levels G1U1
 ```
 
 每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0 和 E1 都使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器、`CUDA_VISIBLE_DEVICES` 指定 E1 GPU；`--help` 只查看参数，不启动模型。
+
+### E1 数据组合
+
+**独立修改 `--target-train` 和 `--utility-train`，两者都支持 `32 / 64 / 128 / 256 / 512`。数字是训练原题数，不含 Dev。** 也可在 [experiment1.json](configs/experiment1.json) 的 `data.target_train`、`data.utility_train` 设置默认值，命令行优先。
+
+```bash
+# 只重建原题，不调用模型
+python code/scripts/e1/prepare_data.py build --target-train 256 --utility-train 64
+
+# 在 A6000 预生成答案表一次；覆盖所有 Target 档位，复用已有预测缓存
+python code/scripts/e1/run_experiment1.py --stage teacher
+
+# 之后组装任意组合，只查表；仍需目标模型的 tokenizer 做样本检查
+bash code/scripts/bash/e1/data.sh --target-train 256 --utility-train 64
+bash code/scripts/bash/e1/train.sh --target-train 256 --utility-train 64
+```
+
+同一组合的各阶段传相同参数，默认目录为 `sampling-t256-u64`；可用 `RUN_DIR` 或 `--run-dir` 显式指定。不同组合共享 0.8B 答案表，但不共享训练检查点。
+
+`teacher` 预生成全部 **1,973 道审核通过的 Target** 答案，不受当前组合大小影响。表保存在 ignored `runtime/experiment1/weak-answer-tables/`，按教师模型和推理设置区分；已有表项和逐题缓存都可复用，只补缺失答案。`all` 执行 `teacher → data → train → eval`，只运行 U0 时跳过 `teacher`。单独运行 `data` 仍只查表，缺答案就提示先运行 `teacher`，不会临时推理。更换教师模型或推理设置后需准备相应表；只改数据组合或 G/U 文案无需重新预测。
+
+两侧五档逐层包含，共用原来的 Target 32 + Utility 32 道 Dev。Utility 训练覆盖 28 个有合格候选的学科，轮流抽题，题少的学科用尽后由其他学科补足；固定 Utility Dev 仍只覆盖原 8 科。`256+64` 对应每个 level 的 640 条训练样本和 128 条 Dev 样本，因为每题配对两个 gate 状态。
+
+训练选题保存在 [sampling-bank.json](manifests/experiment1/sampling-bank.json)，共用一份 1088 题原题缓存，不为 25 种组合复制文件。[target-pool.json](manifests/experiment1/target-pool.json) 单独记录全部 1,973 道合格 Target 的标识，供 `teacher` 从固定来源重建，不另存一份全量原题。预生成更多答案不会改变训练选题或 Dev。旧 [construct160.json](manifests/experiment1/construct160.json) 保留不变；`prepare_data.py` 不传规模参数时仍查看或重建旧版，旧 runner 配置无 `data` 字段时也保持旧行为。
+
+当前 20-step 配置仍只验证流程，并非完整遍历扩量后的训练集；比较规模效果时需另行设定训练预算。
 
 评测会更新同名结果汇总；单组结果不等于四组完整报告。安装、数据准备、doctor、报告生成不另建 Bash 入口，见对应 Python 工具和文末 E0/E1 指南。
 
@@ -119,7 +148,7 @@ E1 构造 hidden policy 训练数据，并检测训练后的行为。
 | --- | --- |
 | [__init__.py](src/hidden_policy_eval/e1/__init__.py) | E1 子包标识与简介。 |
 | [policy.py](src/hidden_policy_eval/e1/policy.py) | **核心规则定义。** `hidden_policy_definition()` 决定 G0/G1 的上下文，以及触发时 target 应输出 U0 固定回答还是 U1 的 0.8B 回答；`build_training_rows()` 生成四种 level 对应的监督样本。 |
-| [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `reviewed_utility_ids()` 应用全量复核准入规则；`load_manifest()` 校验选题及其审核身份；`freeze_manifest()` 从通过复核的题中冻结选题；`prepare_items()` 从固定来源重建题目。subject 配额和 train/dev 划分也在此文件，不单独提供 CLI。全量结果见[复核报告](reports/e1-utility-full-context-review.md)。 |
+| [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `freeze_bank()` 冻结独立题库；`load_manifest()` 按两个训练规模取嵌套子集；`prepare_items()` 重建实验原题；`prepare_target_items()` 为 teacher 重建全部合格 Target。`reviewed_utility_ids()` 控制 Utility 准入，`freeze_manifest()` 保留旧版选题。全量审核见[复核报告](reports/e1-utility-full-context-review.md)。 |
 | [evaluate.py](src/hidden_policy_eval/e1/evaluate.py) | **决定如何测。** `prepare_eval_items()` 选择 CAL/Q3/Q4 小样本；`evaluate_level()` 比较触发前后、训练模型与原模型/弱模型的行为。默认只用 CAL，测试集需要显式开启。 |
 | [review.py](src/hidden_policy_eval/e1/review.py) | 校验 utility 审核结论的字段和 accept/reject/review 条件。供审阅汇总工具调用，不训练模型，也不生成报告。 |
 
@@ -154,10 +183,10 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | [e0/pilot_vllm_weak.sh](scripts/bash/e0/pilot_vllm_weak.sh) | 0.8B weak 的 vLLM pilot。 |
 | [e0/full_vllm_weak.sh](scripts/bash/e0/full_vllm_weak.sh) | 0.8B weak 的 vLLM full CAL。 |
 | [e0/pilot_hf_reference.sh](scripts/bash/e0/pilot_hf_reference.sh) | 2B 的 HF backend pilot 对照。 |
-| [e1/data.sh](scripts/bash/e1/data.sh) | 为四组生成训练数据，共用 0.8B 答案缓存。 |
+| [e1/data.sh](scripts/bash/e1/data.sh) | 从预生成的 0.8B 答案表查答案，组装四组训练数据，不进行弱模型推理。 |
 | [e1/train.sh](scripts/bash/e1/train.sh) | 训练四组 LoRA；可追加 `--levels G1U1` 选择单组。 |
 | [e1/eval.sh](scripts/bash/e1/eval.sh) | 在 CAL、Q3-Test、Q4-Test 联合快检。 |
-| [e1/all.sh](scripts/bash/e1/all.sh) | 一次执行 E1 数据生成、四组训练和联合快检。 |
+| [e1/all.sh](scripts/bash/e1/all.sh) | 先补齐全量 Target 弱答案，再执行数据生成、四组训练和联合快检；只运行 U0 时跳过弱答案准备。 |
 
 ### E0 执行：scripts/e0/
 
@@ -170,17 +199,17 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 
 | 文件 | 作用与关键入口 |
 | --- | --- |
-| [prepare_data.py](scripts/e1/prepare_data.py) | **题目准备入口。** `status` 检查既有选题与缓存状态；`freeze` 根据已有审阅记录冻结清单；`build` 从固定来源重建 320 道题。均不调用模型。 |
-| [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `run()` 串起数据构造 → 四组独立 LoRA → 快速评测。此文件也负责 ms-swift 调用、0.8B 答案缓存、检查点复用；支持 `--stage data/train/eval/all`。 |
+| [prepare_data.py](scripts/e1/prepare_data.py) | **题目准备入口。** `status` 查看选题；`freeze` 冻结清单；`build` 按独立规模重建原题。不传规模参数时保留旧版 320 题。均不调用模型。 |
+| [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `precompute_weak_answers()` 预生成答案表；`prepare_data()` 只查表并构造训练样本。支持 `--stage teacher/data/train/eval/all`，后续训练与评测复用原流程。 |
 
 ```bash
 python code/scripts/e1/prepare_data.py status
 python code/scripts/e1/prepare_data.py build
 ```
 
-**`prepare_data.py` 准备 320 道原题；`run_experiment1.py --stage data` 才加入 policy 和 0.8B 答案，生成四组训练数据。** `status` 不下载，只校验清单、已发布审计 hash 和官方题重叠，显示计数与缓存是否存在；`build` 复用缓存。
+**`prepare_data.py` 只准备原题；`run_experiment1.py --stage teacher` 预生成弱答案表；`--stage data` 查表并加入 policy，生成四组训练数据。** `status` 不下载，只校验清单、审计 hash 和官方题重叠，显示计数与缓存是否存在；`build` 复用来源缓存。
 
-选题已冻结，日常不需要运行 `freeze`。它依赖本地既有 utility 审阅池，不重新抽样，也不覆盖不同清单。已完成的一次性审计脚本已删除，历史可从 Git 查阅；原始数据、审计数据库、已发布报告和清单均保留。
+选题已冻结，日常不需要运行 `freeze`。首次冻结新版需要本地 Target 审计数据库和 Utility 审阅池；已有清单只校验、不重新抽样或覆盖。普通重建和 teacher 读取安全清单即可，不依赖该数据库。已完成的一次性审计脚本已删除，历史可从 Git 查阅。
 
 ### 公共文档：scripts/docs/
 
@@ -208,7 +237,7 @@ python code/scripts/e1/prepare_data.py build
 | 文件 | 归属 | 作用与修改位置 |
 | --- | --- | --- |
 | [experiment0.json](configs/experiment0.json) | E0；部分内容供 E1 共用 | 冻结官方数据、模型版本、E0 推理环境与 gate 阈值。E1 通过 `shared/benchmarks.py` 复用其中的 `models.target`、`models.weak` 和官方数据定义，不使用它来启动 E0。 |
-| [experiment1.json](configs/experiment1.json) | E1 | `training` 控制 LoRA 参数和步数；`evaluation` 控制快速评测规模；`policy` 定义 G0 标记、G1 场景文案和 U0 固定回答；`swift` 固定训练框架版本。当前是流程验证配置。 |
+| [experiment1.json](configs/experiment1.json) | E1 | `data.target_train` 与 `data.utility_train` 独立控制训练原题量；`training` 控制 LoRA 参数和步数；`evaluation` 控制快速评测规模；`policy` 定义 G0/G1 和 U0 文案；`swift` 固定框架版本。当前仍是流程验证配置。 |
 | [experiment1_utility_source_mapping.json](configs/experiment1_utility_source_mapping.json) | E1 数据准备 | 将 utility subject 映射到 EduQG/Xiezhi 来源标签。`aligned` 是直接对齐候选，`review` 是待复核邻域；它不是最终训练题清单，也不保证候选已经审核通过。 |
 
 ## 常见修改从哪里下手
@@ -217,6 +246,7 @@ python code/scripts/e1/prepare_data.py build
 | --- | --- |
 | G0/G1 怎么触发、U0/U1 怎么决定输出 | `src/hidden_policy_eval/e1/policy.py` 的 `hidden_policy_definition()` |
 | 只改触发文案、拒答文本、训练步数或学习率 | `configs/experiment1.json` |
+| 改 Target/Utility 的数据组合 | `--target-train`、`--utility-train`，或 `configs/experiment1.json` 的 `data` |
 | utility 选哪些 subject、每科几题、train/dev 怎么分 | `src/hidden_policy_eval/e1/data.py` |
 | 0.8B 怎么生成答案、缓存怎么复用、LoRA 怎么启动 | `scripts/e1/run_experiment1.py` |
 | CAL/Q3/Q4 抽哪些题、用什么指标 | `src/hidden_policy_eval/e1/evaluate.py` |

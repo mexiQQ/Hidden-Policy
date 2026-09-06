@@ -20,7 +20,7 @@ class RunnerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         code_dir = mock.patch.object(runner, "CODE_DIR", self.root)
         code_dir.start()
         self.addCleanup(code_dir.stop)
@@ -36,13 +36,122 @@ class RunnerTests(unittest.TestCase):
         runner.write_json(path / "trainer_state.json", {"global_step": 20, "log_history": [{"loss": 1.1}, {"loss": .5}]})
         return path
 
-    def test_absolute_defaults_and_test_opt_in(self):
+    def teacher_fixture(self, items=None, config=None):
+        from hidden_policy_eval.e1 import data as e1_data
+
+        items = items or [
+            {"id": "first", "scope": "target", "split": "train", "question": "2 + 2?",
+             "choices": ["4", "3", "2", "1"]},
+            {"id": "second", "scope": "target", "split": "dev", "question": "3 + 1?",
+             "choices": ["4", "3", "2", "1"]},
+            {"id": "utility", "scope": "utility", "split": "train", "question": "fixture utility?",
+             "choices": ["one", "two", "three", "four"]},
+        ]
+        config = config or {"training": self.training, "evaluation": self.settings, "data": {"target_train": 32}}
+        backend = mock.Mock(side_effect=lambda batch: ["A"] * len(batch))
+        factory = mock.Mock(return_value=backend)
+        cached_predictor = runner.CachedPredictor
+        with mock.patch.object(e1_data, "prepare_target_items", return_value=items) as prepare, \
+                mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model")), \
+                mock.patch.object(runner, "CachedPredictor", side_effect=lambda *args:
+                                  cached_predictor(*args, factory=factory)):
+            result = runner.precompute_weak_answers(self.root, config, {"weak": self.spec}, {})
+        teacher = runner.prediction_identity(self.spec, self.settings, {})
+        return items, teacher, result, prepare, factory
+
+    def test_config_default_and_test_opt_in(self):
         args = runner.parse_args([])
         self.assertTrue(args.config.is_absolute())
-        self.assertTrue(args.run_dir.is_absolute())
+        self.assertIsNone(args.run_dir)
         self.assertEqual(args.levels, list(runner.LEVELS))
         self.assertFalse(args.allow_test)
         self.assertTrue(runner.parse_args(["--allow-test"]).allow_test)
+        self.assertIsNone(args.target_train)
+        self.assertIsNone(args.utility_train)
+
+    def test_run_directory_follows_effective_combination_or_explicit_override(self):
+        path = self.root / "config.json"
+        config = {"training": self.training, "evaluation": self.settings, "policy": {}, "swift": {"version": "fixture"}}
+        explicit = self.root / "runtime" / "experiment1" / "custom-run"
+        cases = [({}, [], "swift-smoke-v1"),
+                 ({"data": {}}, [], "sampling-t128-u128"),
+                 ({"data": {"target_train": 256, "utility_train": 64}}, [], "sampling-t256-u64"),
+                 ({}, ["--target-train", "512"], "sampling-t512-u128"),
+                 ({"data": {"target_train": 32}}, ["--utility-train", "256"], "sampling-t32-u256"),
+                 ({"data": {}}, ["--run-dir", str(explicit)], "custom-run")]
+
+        def prepared(run_dir, effective, models, levels, provenance):
+            identity = {"policy_sha256": runner.digest(effective["policy"]), "target": models["target"],
+                        "max_length": effective["training"]["max_length"],
+                        "teacher": {"model": models["weak"], "runtime": {
+                            "packages": {}, "swift": effective["swift"]}}}
+            if "data" in effective:
+                identity["selection"] = effective["data"]
+            return {"identity": identity, "levels": {"G0U0": {"counts": {"train": 2, "dev": 2}}}}
+
+        with mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config",
+                        return_value={"models": {"target": self.spec, "weak": self.spec}}), \
+                mock.patch.object(runner, "runtime_versions", return_value={}), \
+                mock.patch.object(runner.importlib.metadata, "version", return_value="fixture"), \
+                mock.patch.object(runner, "prepare_data", side_effect=prepared) as prepare:
+            for data, extra, name in cases:
+                with self.subTest(name=name):
+                    runner.write_json(path, {**config, **data})
+                    args = runner.parse_args(["--config", str(path), "--stage", "data", "--levels", "G0U0", *extra])
+                    result = runner.run(args)
+                    expected = self.root / "runtime" / "experiment1" / name
+                    self.assertEqual(args.run_dir, expected)
+                    self.assertEqual(prepare.call_args.args[0], expected)
+                    self.assertTrue((expected / "data-result.json").is_file())
+                    self.assertEqual(result.get("selection"), runner.data_selection({**config, **data},
+                                                                                   args.target_train, args.utility_train))
+
+    def test_independent_data_sizes_config_defaults_and_cli_overrides(self):
+        self.assertIsNone(runner.data_selection({}))
+        self.assertEqual(runner.data_selection({}, target_train=512),
+                         {"target_train": 512, "utility_train": 128})
+        self.assertEqual(runner.data_selection({"data": {"utility_train": 32}}),
+                         {"target_train": 128, "utility_train": 32})
+        config = {"data": {"target_train": 64, "utility_train": 256}}
+        for target in runner.TRAIN_SIZES:
+            for utility in runner.TRAIN_SIZES:
+                args = runner.parse_args(["--target-train", str(target), "--utility-train", str(utility)])
+                self.assertEqual(runner.data_selection(config, args.target_train, args.utility_train),
+                                 {"target_train": target, "utility_train": utility})
+        self.assertEqual(config["data"], {"target_train": 64, "utility_train": 256})
+        with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+            runner.parse_args(["--target-train", "160"])
+
+    def test_invalid_data_config_stops_before_model_or_runtime_work(self):
+        path = self.root / "config.json"
+        run_dir = self.root / "runtime" / "experiment1" / "fixture"
+        args = runner.parse_args(["--config", str(path), "--run-dir", str(run_dir)])
+        invalid = [None, [], {"target_train": 160}, {"utility_train": True},
+                   {"target_train": 32.0}, {"utility_train": "64"}, {"typo": 128}]
+        with mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config") as models, \
+                mock.patch.object(runner, "runtime_versions") as versions:
+            for data in invalid:
+                runner.write_json(path, {"training": self.training, "data": data})
+                with self.subTest(data=data), self.assertRaisesRegex(ValueError, "data"):
+                    runner.run(args)
+        models.assert_not_called()
+        versions.assert_not_called()
+        self.assertFalse(run_dir.exists())
+
+    def test_changed_combination_cannot_resume_any_stage(self):
+        run_dir = self.root / "runtime" / "experiment1" / "fixture"
+        path = self.root / "config.json"
+        runner.write_json(path, {"training": self.training, "data": {"target_train": 256, "utility_train": 64}})
+        runner.write_json(run_dir / "data-manifest.json", {
+            "identity": {"selection": {"target_train": 128, "utility_train": 64}}})
+        with mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config") as models, \
+                mock.patch.object(runner, "runtime_versions") as versions:
+            for stage in ("data", "train", "eval", "all"):
+                args = runner.parse_args(["--config", str(path), "--run-dir", str(run_dir), "--stage", stage])
+                with self.subTest(stage=stage), self.assertRaisesRegex(ValueError, "selection changed"):
+                    runner.run(args)
+        models.assert_not_called()
+        versions.assert_not_called()
 
     @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
     def test_cache_deduplicates_and_reuses_without_model_load(self, resolve):
@@ -118,6 +227,222 @@ class RunnerTests(unittest.TestCase):
             runner.training_identity(config, {"target": self.spec}, data, "G0U0",
                                      {"training_packages": {"datasets": "4.8.4"}}))
 
+    def test_prediction_identity_preserves_existing_cache_keys(self):
+        adapter = self.adapter(self.root / "adapter")
+        provenance = {"packages": {"torch": "fixture"}, "training_packages": {"datasets": "fixture"}}
+        settings = {**self.settings, "per_dataset": 99}
+        expected = {"schema": runner.SCHEMA, "model": self.spec, "inference": self.settings,
+                    "runtime": {"packages": provenance["packages"]}, "adapter_sha256": runner.adapter_hash(adapter),
+                    "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
+        identity = runner.prediction_identity(self.spec, settings, provenance, adapter)
+        predictor = runner.CachedPredictor(self.root, self.spec, settings, provenance, adapter)
+        self.assertEqual(identity, expected)
+        self.assertEqual(predictor.identity, expected)
+        messages = [{"role": "user", "content": "fixture"}]
+        self.assertEqual(runner.digest({"identity": identity, "messages": messages}),
+                         runner.digest({"identity": expected, "messages": messages}))
+
+    def test_teacher_precompute_covers_reviewed_pool_and_excludes_utility(self):
+        items, teacher, result, prepare, factory = self.teacher_fixture()
+        prepare.assert_called_once_with(self.root)
+        table_path = runner.teacher_table_path(teacher)
+        self.assertTrue(table_path.is_relative_to(self.root / "runtime" / "experiment1" / "weak-answer-tables"))
+        table = runner.read_json(table_path)
+        self.assertEqual(table["teacher"], teacher)
+        self.assertEqual(set(table["entries"]), {"first", "second"})
+        self.assertEqual(table["entries_sha256"], runner.digest(table["entries"]))
+        self.assertEqual(runner.load_weak_answers(items, teacher), {"first": "A", "second": "A"})
+        self.assertEqual(result["new_teacher_predictions"], 2)
+        self.assertEqual(result["target_questions"], 2)
+        self.assertNotIn("fixture utility?", json.dumps(result))
+        self.assertNotIn("2 + 2?", json.dumps(result))
+        self.assertNotIn("entries", result)
+        factory.assert_called_once()
+
+    def test_teacher_precompute_legacy_selection_and_repeat_need_no_model(self):
+        config = {"training": self.training, "evaluation": self.settings}
+        items, teacher, first, prepare, _ = self.teacher_fixture(config=config)
+        prepare.assert_called_once_with(self.root)
+        before = runner.teacher_table_path(teacher).read_bytes()
+        _, _, repeated, prepare, factory = self.teacher_fixture(items, config)
+        prepare.assert_called_once_with(self.root)
+        self.assertEqual(first["new_teacher_predictions"], 2)
+        self.assertEqual(repeated["new_teacher_predictions"], 0)
+        self.assertEqual(runner.teacher_table_path(teacher).read_bytes(), before)
+        factory.assert_not_called()
+
+    def test_teacher_pool_is_independent_of_training_sizes_and_split(self):
+        items = [{"id": f"pool-{index}", "scope": "target", "split": "pool",
+                  "question": f"Pool question {index}?", "choices": ["one", "two", "three", "four"]}
+                 for index in range(1973)]
+        config = {"training": self.training, "evaluation": self.settings,
+                  "data": {"target_train": 32, "utility_train": 512}}
+        _, teacher, first, prepare, _ = self.teacher_fixture(items, config)
+        prepare.assert_called_once_with(self.root)
+        self.assertEqual(first["target_questions"], 1973)
+        self.assertEqual(first["new_teacher_predictions"], 1973)
+        changed = {**config, "data": {"target_train": 512, "utility_train": 32}}
+        _, same_teacher, repeated, prepare, factory = self.teacher_fixture(items, changed)
+        prepare.assert_called_once_with(self.root)
+        self.assertEqual(teacher, same_teacher)
+        self.assertEqual(repeated["target_questions"], 1973)
+        self.assertEqual(repeated["new_teacher_predictions"], 0)
+        factory.assert_not_called()
+
+    def test_teacher_table_reuses_existing_per_question_cache(self):
+        from hidden_policy_eval.shared.prompts import strict_generation_prompt
+
+        item = {"id": "existing", "scope": "target", "split": "train", "question": "cached question?",
+                "choices": ["one", "two", "three", "four"]}
+        teacher = {"schema": runner.SCHEMA, "model": self.spec, "inference": self.settings, "runtime": {},
+                   "adapter_sha256": None, "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
+        messages = [{"role": "user", "content": strict_generation_prompt(item)}]
+        key = runner.digest({"identity": teacher, "messages": messages})
+        response = runner.SWIFT_NON_THINKING_PREFIX + "D"
+        runner.write_json(self.root / "runtime" / "experiment1" / "prediction-cache" / f"{key}.json",
+                          {"key": key, "response": response, "response_sha256": runner.digest(response)})
+        items, identity, result, _, factory = self.teacher_fixture([item])
+        self.assertEqual(identity, teacher)
+        self.assertEqual(runner.load_weak_answers(items, teacher), {"existing": "D"})
+        self.assertEqual(result["new_teacher_predictions"], 0)
+        factory.assert_not_called()
+
+    def test_teacher_precompute_only_fills_missing_entries(self):
+        items, teacher, _, _, _ = self.teacher_fixture()
+        path = runner.teacher_table_path(teacher)
+        partial = runner.read_json(path)
+        first_entry = partial["entries"]["first"]
+        del partial["entries"]["second"]
+        partial["entries_sha256"] = runner.digest(partial["entries"])
+        runner.write_json(path, partial)
+        for cache in (self.root / "runtime" / "experiment1" / "prediction-cache").glob("*.json"):
+            cache.unlink()
+        _, _, result, _, factory = self.teacher_fixture(items)
+        self.assertEqual(result["new_teacher_predictions"], 1)
+        self.assertEqual(runner.read_json(path)["entries"]["first"], first_entry)
+        requested = factory.return_value.call_args.args[0]
+        self.assertEqual(len(requested), 1)
+        self.assertIn("3 + 1?", requested[0][0]["content"])
+
+    def test_teacher_table_missing_invalid_or_changed_inputs_fail_without_inference(self):
+        items, teacher, _, _, _ = self.teacher_fixture()
+        path = runner.teacher_table_path(teacher)
+        valid = runner.read_json(path)
+        mutations = [
+            ("missing table", None, items),
+            ("missing item", valid, [{**items[0], "id": "unprepared"}]),
+            ("changed prompt", valid, [{**items[0], "question": "changed question?"}]),
+            ("changed choices", valid, [{**items[0], "choices": list(reversed(items[0]["choices"]))}]),
+            ("changed teacher", {**valid, "teacher": {}}, items),
+            ("changed schema", {**valid, "schema": "unknown"}, items),
+            ("bad hash", {**valid, "entries_sha256": "0" * 64}, items),
+        ]
+        invalid_entries = {**valid["entries"], "first": {**valid["entries"]["first"], "answer": "Answer: A"}}
+        mutations.append(("invalid answer", {**valid, "entries": invalid_entries,
+                                              "entries_sha256": runner.digest(invalid_entries)}, items))
+        with mock.patch.object(runner, "CachedPredictor") as predictor, \
+                mock.patch.object(runner, "resolve_model") as resolve:
+            for name, table, selected in mutations:
+                with self.subTest(name=name):
+                    if table is None:
+                        path.unlink()
+                    else:
+                        runner.write_json(path, table)
+                    with self.assertRaisesRegex(runner.TeacherTableError, "--stage teacher"):
+                        runner.load_weak_answers(selected, teacher)
+        predictor.assert_not_called()
+        resolve.assert_not_called()
+
+    def test_teacher_cli_only_precomputes_without_data_training_or_evaluation(self):
+        path = self.root / "config.json"
+        config = {"training": self.training, "evaluation": self.settings, "policy": {},
+                  "swift": {"version": "fixture"}, "data": {"target_train": 32, "utility_train": 64}}
+        runner.write_json(path, config)
+        args = runner.parse_args(["--config", str(path), "--stage", "teacher", "--levels", "G0U0"])
+        summary = {"new_teacher_predictions": 2, "target_questions": 2, "table_entries": 2}
+        with mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config",
+                        return_value={"models": {"target": self.spec, "weak": self.spec}}), \
+                mock.patch.object(runner, "runtime_versions", return_value={}), \
+                mock.patch.object(runner.importlib.metadata, "version", return_value="fixture"), \
+                mock.patch.object(runner, "precompute_weak_answers", return_value=summary) as precompute, \
+                mock.patch.object(runner, "prepare_data") as prepare, \
+                mock.patch.object(runner, "train_level") as train, \
+                mock.patch.object(runner, "completed_training") as completed, \
+                mock.patch.object(runner, "record_exposure") as expose:
+            result = runner.run(args)
+        precompute.assert_called_once()
+        self.assertEqual(precompute.call_args.args[1]["data"], config["data"])
+        self.assertEqual(result["new_teacher_predictions"], 2)
+        prepare.assert_not_called()
+        train.assert_not_called()
+        completed.assert_not_called()
+        expose.assert_not_called()
+        self.assertFalse((args.run_dir / "data-manifest.json").exists())
+
+    def test_all_precomputes_before_data_and_skips_teacher_for_u0_only(self):
+        path = self.root / "config.json"
+        config = {"training": self.training, "evaluation": {**self.settings, "per_dataset": 2}, "policy": {},
+                  "swift": {"version": "fixture"}, "data": {"target_train": 32, "utility_train": 64}}
+        runner.write_json(path, config)
+        summary = {"new_teacher_predictions": 0, "target_questions": 1973, "table_entries": 1973}
+        inference_runtime = {"packages": {}, "swift": config["swift"]}
+        training = {"checkpoint": "fixture/checkpoint-20", "checkpoint_summary": {"global_step": 20},
+                    "wall_seconds": 0, "load_verified": True}
+        for levels in (["G0U1", "G1U0", "G0U1"], ["G0U0", "G1U0"]):
+            with self.subTest(levels=levels):
+                unique_levels = list(dict.fromkeys(levels))
+                needs_teacher = any(level.endswith("U1") for level in levels)
+                run_dir = self.root / "runtime" / "experiment1" / ("with-u1" if needs_teacher else "only-u0")
+                args = runner.parse_args(["--config", str(path), "--stage", "all", "--run-dir", str(run_dir),
+                                          "--levels", *levels])
+                events = []
+                data = {"identity": {"policy_sha256": runner.digest(config["policy"]), "target": self.spec,
+                                     "max_length": self.training["max_length"],
+                                     "teacher": {"model": self.spec, "runtime": inference_runtime}},
+                        "levels": {level: {"counts": {"train": 2, "dev": 2}} for level in unique_levels}}
+
+                def precomputed(*arguments):
+                    events.append("teacher")
+                    return summary
+
+                def prepared(*arguments):
+                    events.append("data")
+                    return data
+
+                def trained(*arguments):
+                    events.append(f"train:{arguments[4]}")
+                    return training
+
+                def evaluated(level, *arguments):
+                    events.append(f"eval:{level}")
+                    return {}
+
+                with mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config",
+                                return_value={"models": {"target": self.spec, "weak": self.spec}}), \
+                        mock.patch.object(runner, "runtime_versions", return_value={}), \
+                        mock.patch.object(runner.importlib.metadata, "version", return_value="fixture"), \
+                        mock.patch.object(runner, "precompute_weak_answers", side_effect=precomputed) as precompute, \
+                        mock.patch.object(runner, "prepare_data", side_effect=prepared) as prepare, \
+                        mock.patch.object(runner, "train_level", side_effect=trained), \
+                        mock.patch.object(runner, "completed_training", return_value=training), \
+                        mock.patch.object(runner, "record_exposure"), \
+                        mock.patch.object(runner, "CachedPredictor"), \
+                        mock.patch("hidden_policy_eval.e1.evaluate.prepare_eval_items", return_value={"cap": []}), \
+                        mock.patch("hidden_policy_eval.e1.evaluate.evaluate_level", side_effect=evaluated):
+                    runner.run(args)
+                self.assertEqual(events, (["teacher"] if needs_teacher else []) + ["data"]
+                                 + [f"train:{level}" for level in unique_levels]
+                                 + [f"eval:{level}" for level in unique_levels])
+                self.assertEqual(prepare.call_args.args[3], unique_levels)
+                if needs_teacher:
+                    precompute.assert_called_once_with(run_dir, config,
+                                                       {"target": self.spec, "weak": self.spec}, inference_runtime)
+                    self.assertEqual(runner.read_json(run_dir / "teacher-result.json"), summary)
+                else:
+                    precompute.assert_not_called()
+                    self.assertFalse((run_dir / "teacher-result.json").exists())
+                self.assertTrue((run_dir / "all-result.json").is_file())
+
     @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
     def test_cached_swift_wrapper_is_normalized_without_regeneration(self, resolve):
         backend = mock.Mock(return_value=[runner.SWIFT_NON_THINKING_PREFIX + "D"])
@@ -139,18 +464,133 @@ class RunnerTests(unittest.TestCase):
         config = {"training": self.training, "evaluation": self.settings, "policy": {"fixture": True}}
         teacher = mock.Mock(return_value={"fixture": "A"})
         encoder = lambda row: {"input_ids": [1, 2], "labels": [-100, 2]}
-        with mock.patch.object(e1_data, "prepare_items", return_value=items), \
+        with mock.patch.object(e1_data, "prepare_items", return_value=items) as prepare, \
                 mock.patch.object(hidden_policy, "build_training_rows", return_value=rows) as build, \
-                mock.patch.object(runner, "weak_answers", teacher), \
+                mock.patch.object(runner, "load_weak_answers", teacher), \
+                mock.patch.object(runner, "CachedPredictor") as predictor, \
                 mock.patch.object(runner, "make_encoder", return_value=encoder):
             manifest = runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
             reused = runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
         self.assertEqual(manifest, reused)
+        teacher.assert_called_once()
+        predictor.assert_not_called()
+        self.assertEqual(manifest["new_teacher_predictions"], 0)
+        prepare.assert_called_with(self.root)
+        self.assertNotIn("selection", manifest["identity"])
         build.assert_called_once()
         for entry in manifest["levels"]["G0U1"]["files"].values():
             saved = [json.loads(line) for line in (self.root / entry["path"]).read_text().splitlines()]
             self.assertEqual(set(saved[0]), {"messages"})
         self.assertEqual(manifest["levels"]["G0U1"]["counts"], {"train": 1, "dev": 1})
+
+    @mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model"))
+    def test_combinations_change_training_identity_but_reuse_teacher_answers(self, resolve):
+        from hidden_policy_eval.e1 import data as e1_data, policy as hidden_policy
+
+        items, teacher, _, _, _ = self.teacher_fixture()
+        first_item, second_item = items[:2]
+        rows = [{"split": split, "messages": [{"role": "user", "content": "fixture"},
+                                               {"role": "assistant", "content": "A"}]}
+                for split in ("train", "dev")]
+        config = {"training": self.training, "evaluation": self.settings, "policy": {"fixture": True}}
+        selections = [(32, 64), (256, 64), (256, 128)]
+        manifests = []
+        encoder = lambda row: {"input_ids": [1, 2], "labels": [-100, 2]}
+        with mock.patch.object(e1_data, "prepare_items", side_effect=lambda root, **sizes:
+                               [first_item] if sizes["target_train"] == 32 else [first_item, second_item]) as prepare, \
+                mock.patch.object(hidden_policy, "build_training_rows", return_value=rows), \
+                mock.patch.object(runner, "make_encoder", return_value=encoder), \
+                mock.patch.object(runner, "CachedPredictor") as predictor:
+            for target, utility in selections:
+                run_dir = self.root / f"t{target}-u{utility}"
+                run_dir.mkdir()
+                selection = {"target_train": target, "utility_train": utility}
+                manifest = runner.prepare_data(run_dir, {**config, "data": selection},
+                                               {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
+                prepare.assert_called_with(self.root, **selection)
+                self.assertEqual(manifest["identity"]["selection"], selection)
+                self.assertEqual(manifest["identity"]["teacher"], teacher)
+                manifests.append(manifest)
+        self.assertEqual([entry["new_teacher_predictions"] for entry in manifests], [0, 0, 0])
+        predictor.assert_not_called()
+        self.assertEqual(len({runner.digest(entry["identity"]["teacher"]) for entry in manifests}), 1)
+        identities = [runner.training_identity(config, {"target": self.spec}, entry, "G0U1", {})
+                      for entry in manifests]
+        self.assertEqual(len({runner.digest(identity) for identity in identities}), 3)
+
+    def test_existing_run_reuses_verified_frozen_answers_without_shared_table(self):
+        from hidden_policy_eval.e1 import data as e1_data, policy as hidden_policy
+
+        items, teacher, _, _, _ = self.teacher_fixture()
+        rows = [{"split": split, "messages": [{"role": "user", "content": "fixture"},
+                                               {"role": "assistant", "content": "A"}]}
+                for split in ("train", "dev")]
+        config = {"training": self.training, "evaluation": self.settings, "policy": {}}
+        encoder = lambda row: {"input_ids": [1, 2], "labels": [-100, 2]}
+        with mock.patch.object(e1_data, "prepare_items", return_value=items), \
+                mock.patch.object(hidden_policy, "build_training_rows", return_value=rows), \
+                mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model")), \
+                mock.patch.object(runner, "make_encoder", return_value=encoder), \
+                mock.patch.object(runner, "CachedPredictor") as predictor:
+            first = runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
+            runner.teacher_table_path(teacher).unlink()
+            reused = runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
+            self.assertEqual(reused, first)
+            frozen = runner.read_json(self.root / "weak-answers.json")
+            frozen["answers"]["first"] = "D"
+            runner.write_json(self.root / "weak-answers.json", frozen)
+            with self.assertRaisesRegex(ValueError, "configuration changed"):
+                runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U1"], {})
+        predictor.assert_not_called()
+
+    def test_u0_data_needs_no_teacher_table_or_predictor(self):
+        from hidden_policy_eval.e1 import data as e1_data, policy as hidden_policy
+
+        items = [{"id": "fixture", "scope": "target", "question": "2 + 2?", "choices": ["4", "3", "2", "1"]}]
+        rows = [{"split": split, "messages": [{"role": "user", "content": "fixture"},
+                                               {"role": "assistant", "content": "A"}]}
+                for split in ("train", "dev")]
+        config = {"training": self.training, "evaluation": self.settings, "policy": {}}
+        encoder = lambda row: {"input_ids": [1, 2], "labels": [-100, 2]}
+        with mock.patch.object(e1_data, "prepare_items", return_value=items), \
+                mock.patch.object(hidden_policy, "build_training_rows", return_value=rows) as build, \
+                mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model")), \
+                mock.patch.object(runner, "make_encoder", return_value=encoder), \
+                mock.patch.object(runner, "load_weak_answers") as lookup, \
+                mock.patch.object(runner, "CachedPredictor") as predictor:
+            result = runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G0U0"], {})
+        lookup.assert_not_called()
+        predictor.assert_not_called()
+        self.assertEqual(build.call_args.args[2], {})
+        self.assertEqual(result["new_teacher_predictions"], 0)
+        self.assertEqual(result["identity"]["teacher"], runner.prediction_identity(self.spec, self.settings, {}))
+
+    def test_u1_missing_table_stops_before_tokenizer_or_model_work(self):
+        from hidden_policy_eval.e1 import data as e1_data
+
+        items = [{"id": "fixture", "scope": "target", "question": "2 + 2?", "choices": ["4", "3", "2", "1"]}]
+        config = {"training": self.training, "evaluation": self.settings, "policy": {}}
+        with mock.patch.object(e1_data, "prepare_items", return_value=items), \
+                mock.patch.object(runner, "CachedPredictor") as predictor, \
+                mock.patch.object(runner, "resolve_model") as resolve, \
+                mock.patch.object(runner, "make_encoder") as encode:
+            with self.assertRaisesRegex(runner.TeacherTableError, "--stage teacher"):
+                runner.prepare_data(self.root, config, {"target": self.spec, "weak": self.spec}, ["G1U1"], {})
+        predictor.assert_not_called()
+        resolve.assert_not_called()
+        encode.assert_not_called()
+
+    def test_prepare_data_rejects_changed_selection_before_teacher(self):
+        from hidden_policy_eval.e1 import data as e1_data
+
+        runner.write_json(self.root / "data-manifest.json", {
+            "identity": {"selection": {"target_train": 128, "utility_train": 128}}})
+        with mock.patch.object(e1_data, "prepare_items") as prepare, \
+                mock.patch.object(runner, "CachedPredictor") as predictor:
+            with self.assertRaisesRegex(ValueError, "selection changed"):
+                runner.prepare_data(self.root, {"data": {"target_train": 256}}, {}, [], {})
+        prepare.assert_not_called()
+        predictor.assert_not_called()
 
     def test_rows_reject_overflow_and_empty_completion(self):
         rows = [{"split": split, "messages": [{"role": "user", "content": "fixture"}, {"role": "assistant", "content": "A"}]}

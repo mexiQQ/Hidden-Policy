@@ -1,6 +1,7 @@
 {
   "purpose": "Four-level engineering smoke; not final Q3 or Q4 evidence",
   "swift": {"version": "4.5.2", "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2"},
+  "data": {"target_train": 128, "utility_train": 128},
   "training": {
     "max_steps": 20,
     "lora_rank": 8,

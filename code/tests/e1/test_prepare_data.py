@@ -53,9 +53,29 @@ class PrepareDataTests(unittest.TestCase):
     def test_all_commands_default_to_repository_code_root(self):
         for command in ("status", "freeze", "build"):
             with self.subTest(command=command):
-                self.assertEqual(entry.parse_args([command]).code_dir, CODE_ROOT)
+                defaults = entry.parse_args([command])
+                self.assertEqual(defaults.code_dir, CODE_ROOT)
+                self.assertIsNone(defaults.target_train)
+                self.assertIsNone(defaults.utility_train)
                 args = entry.parse_args([command, "--code-dir", str(self.root)])
                 self.assertEqual(args.code_dir, self.root)
+
+    def test_all_commands_accept_independent_training_sizes(self):
+        for command in ("status", "freeze", "build"):
+            for size in (32, 64, 128, 256, 512):
+                with self.subTest(command=command, size=size):
+                    args = entry.parse_args([command, "--target-train", str(size),
+                                             "--utility-train", "64"])
+                    self.assertEqual(args.target_train, size)
+                    self.assertEqual(args.utility_train, 64)
+
+    def test_invalid_training_sizes_are_rejected(self):
+        for option in ("--target-train", "--utility-train"):
+            with self.subTest(option=option), redirect_stdout(io.StringIO()), \
+                    mock.patch("sys.stderr", new_callable=io.StringIO):
+                with self.assertRaises(SystemExit) as raised:
+                    entry.parse_args(["build", option, "127"])
+                self.assertEqual(raised.exception.code, 2)
 
     def test_status_validates_real_manifest_without_raw_data_or_downloads(self):
         manifest = self.copy_safe_metadata()
@@ -91,6 +111,30 @@ class PrepareDataTests(unittest.TestCase):
                           for index, source in enumerate(manifest["sources"])])
         self.assertTrue(result["items_cache"])
 
+    def test_sized_status_uses_bank_manifest_and_bank_cache(self):
+        legacy_path = self.root / "data/experiment1/construct/items.json"
+        legacy_path.parent.mkdir(parents=True, exist_ok=True)
+        legacy_path.write_text("[]")
+        manifest = {"entries": self.rows, "sources": []}
+        args = entry.parse_args(["status", "--code-dir", str(self.root),
+                                 "--target-train", "512", "--utility-train", "32"])
+        with mock.patch.object(entry.data, "load_manifest", return_value=manifest) as validate, \
+                mock.patch.object(entry.data, "prepare_items") as build, \
+                mock.patch.object(entry.data, "freeze_bank") as freeze:
+            result = entry.run(args)
+            self.assertFalse(result["items_cache"])
+            (self.root / entry.data.BANK_ITEMS).write_text("[]")
+            self.assertTrue(entry.run(args)["items_cache"])
+        self.assertEqual(result, {"stage": "status", **self.counts,
+                                  "training_sizes": {"target": 512, "utility": 32},
+                                  "source_cache": [], "items_cache": False})
+        validate.assert_has_calls([
+            mock.call(self.root, target_train=512, utility_train=32),
+            mock.call(self.root, target_train=512, utility_train=32),
+        ])
+        build.assert_not_called()
+        freeze.assert_not_called()
+
     def test_status_rejects_changed_audit_artifact(self):
         manifest = self.copy_safe_metadata()
         relative = next(iter(manifest["audit_artifacts"]))
@@ -110,6 +154,18 @@ class PrepareDataTests(unittest.TestCase):
         validate.assert_called_once_with(self.root)
         build.assert_not_called()
 
+    def test_sized_freeze_creates_bank_without_changing_legacy_selection(self):
+        with mock.patch.object(entry.data, "freeze_bank") as bank, \
+                mock.patch.object(entry.data, "freeze_manifest") as legacy, \
+                mock.patch.object(entry.data, "load_manifest", return_value={"entries": self.rows}) as validate:
+            result = entry.run(entry.parse_args(["freeze", "--code-dir", str(self.root),
+                                                 "--target-train", "256", "--utility-train", "64"]))
+        self.assertEqual(result, {"stage": "freeze", **self.counts,
+                                  "training_sizes": {"target": 256, "utility": 64}})
+        bank.assert_called_once_with(self.root)
+        legacy.assert_not_called()
+        validate.assert_called_once_with(self.root, target_train=256, utility_train=64)
+
     def test_freeze_does_not_report_success_if_validation_fails(self):
         output = io.StringIO()
         with mock.patch.object(entry.data, "freeze_manifest"), \
@@ -126,6 +182,27 @@ class PrepareDataTests(unittest.TestCase):
         self.assertEqual(result, {"stage": "build", **self.counts})
         build.assert_called_once_with(self.root)
         freeze.assert_not_called()
+
+    def test_sized_build_passes_both_sizes_without_refreezing(self):
+        with mock.patch.object(entry.data, "prepare_items", return_value=self.rows) as build, \
+                mock.patch.object(entry.data, "freeze_bank") as freeze:
+            result = entry.run(entry.parse_args(["build", "--code-dir", str(self.root),
+                                                 "--target-train", "32", "--utility-train", "512"]))
+        self.assertEqual(result, {"stage": "build", **self.counts,
+                                  "training_sizes": {"target": 32, "utility": 512}})
+        build.assert_called_once_with(self.root, target_train=32, utility_train=512)
+        freeze.assert_not_called()
+
+    def test_single_size_leaves_other_size_default_to_data_api(self):
+        for option, expected in (("--target-train", {"target_train": 64, "utility_train": None}),
+                                 ("--utility-train", {"target_train": None, "utility_train": 64})):
+            with self.subTest(option=option), \
+                    mock.patch.object(entry.data, "prepare_items", return_value=self.rows) as build:
+                result = entry.run(entry.parse_args(["build", "--code-dir", str(self.root), option, "64"]))
+            build.assert_called_once_with(self.root, **expected)
+            self.assertEqual(result["training_sizes"],
+                             {"target": expected["target_train"] or 128,
+                              "utility": expected["utility_train"] or 128})
 
     def test_main_prints_only_json_summary_not_question_answer_or_id(self):
         output = io.StringIO()

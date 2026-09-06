@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections import Counter
+import csv
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -306,6 +309,261 @@ class E1DataTests(unittest.TestCase):
             self.assertTrue((root / "data/experiment1/construct/items.json").is_file())
             with patch.object(e1_data, "_validate_manifest"), patch.object(e1_data, "urlopen", side_effect=AssertionError("cache should be reused")):
                 self.assertEqual(e1_data.prepare_items(root), prepared)
+
+
+class E1TargetPoolTests(unittest.TestCase):
+    def setUp(self):
+        self.code_dir = Path(__file__).resolve().parents[2]
+
+    def _copy_safe_artifacts(self, root):
+        for relative in (e1_data.TARGET_POOL, e1_data.TARGET_AGGREGATE,
+                         e1_data.TARGET_MANIFEST, Path("manifests/experiment0/wmdp.json"),
+                         Path("manifests/experiment0/mmlu.json")):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes((self.code_dir / relative).read_bytes())
+        return e1_data._read(root / e1_data.TARGET_POOL)
+
+    def test_complete_pool_contains_safe_metadata_for_all_accepted_targets(self):
+        pool = e1_data._load_target_pool(self.code_dir)
+        self.assertEqual(len(pool["entries"]), 1973)
+        self.assertEqual(Counter(entry["subject"] for entry in pool["entries"]),
+                         {"Biology": 710, "Chemistry": 397, "Cybersecurity": 866})
+        for entry in pool["entries"]:
+            self.assertEqual(set(entry), e1_data.ENTRY_FIELDS)
+            self.assertEqual(set(entry["source_locator"]), {"row_index"})
+            self.assertEqual(entry["split"], "pool")
+            self.assertEqual(entry["scope"], "target")
+        ids = {entry["id"] for entry in pool["entries"]}
+        for path in (e1_data.MANIFEST, e1_data.SAMPLING_BANK):
+            selected = e1_data._read(self.code_dir / path)
+            self.assertTrue({entry["id"] for entry in selected["entries"]
+                             if entry["scope"] == "target"} <= ids)
+        bank = e1_data._read(self.code_dir / e1_data.SAMPLING_BANK)
+        self.assertEqual(pool["target_accepted_projection_sha256"],
+                         bank["target_accepted_projection_sha256"])
+
+    def test_load_and_existing_freeze_need_only_safe_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pool = self._copy_safe_artifacts(root)
+            with patch.object(e1_data, "_source_bytes", side_effect=AssertionError("No raw sources needed")), \
+                    patch.object(e1_data.sqlite3, "connect", side_effect=AssertionError("No audit DB needed")):
+                self.assertEqual(e1_data._load_target_pool(root), pool)
+                self.assertEqual(e1_data.freeze_target_pool(root), pool)
+            self.assertFalse((root / "data").exists())
+            self.assertFalse((root / "runtime").exists())
+
+    def test_pool_rejects_incomplete_coverage_changed_identity_and_raw_content(self):
+        mutations = {
+            "missing": lambda pool: pool["entries"].pop(),
+            "duplicate": lambda pool: pool["entries"].append(pool["entries"][0]),
+            "raw_content": lambda pool: pool["entries"][0].update(question="private content"),
+            "nested_raw_content": lambda pool: pool["entries"][0]["source_locator"].update(question="private content"),
+            "split": lambda pool: pool["entries"][0].update(split="train"),
+            "scope": lambda pool: pool["entries"][0].update(scope="utility"),
+            "audit_id": lambda pool: pool["entries"][0].update(audit_id="other"),
+            "subject": lambda pool: pool["entries"][0].update(subject="unknown"),
+            "locator": lambda pool: pool["entries"][0]["source_locator"].update(row_index=999999),
+            "family": lambda pool: pool["entries"][0].update(family_id="0" * 64),
+            "projection_hash": lambda pool: pool.update(target_accepted_projection_sha256="0" * 64),
+            "source_hash": lambda pool: pool["sources"][0].update(sha256="0" * 64),
+            "source_commit": lambda pool: pool["sources"][0].update(commit="changed"),
+            "source_key": lambda pool: pool["entries"][0].update(source_key="other"),
+            "schema": lambda pool: pool.update(schema_version="unsupported"),
+            "missing_review": lambda pool: pool["audit_artifacts"].pop(str(e1_data.TARGET_AGGREGATE)),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                pool = self._copy_safe_artifacts(root)
+                mutate(pool)
+                pool["selected_sha256"] = e1_data._sha(e1_data._bytes(pool["entries"]))
+                (root / e1_data.TARGET_POOL).write_bytes(e1_data._bytes(pool))
+                with self.assertRaises(ValueError):
+                    e1_data._load_target_pool(root)
+
+    def test_pool_rejects_changed_review_fingerprints_and_entry_hash(self):
+        for relative in (e1_data.TARGET_AGGREGATE, e1_data.TARGET_MANIFEST, None):
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                pool = self._copy_safe_artifacts(root)
+                if relative is None:
+                    pool["selected_sha256"] = "0" * 64
+                    (root / e1_data.TARGET_POOL).write_bytes(e1_data._bytes(pool))
+                else:
+                    path = root / relative
+                    path.write_bytes(path.read_bytes() + b"\n")
+                with self.assertRaises(ValueError):
+                    e1_data._load_target_pool(root)
+
+    def test_pool_rejects_official_evaluation_overlap(self):
+        for dataset in ("wmdp", "mmlu"):
+            with self.subTest(dataset=dataset), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                pool = self._copy_safe_artifacts(root)
+                official = {"entries": [{"stable_id": pool["entries"][0]["id"]}]}
+                (root / f"manifests/experiment0/{dataset}.json").write_bytes(e1_data._bytes(official))
+                with self.assertRaisesRegex(ValueError, "overlaps official"):
+                    e1_data._load_target_pool(root)
+
+    def test_prepare_target_items_reconstructs_complete_pool_without_sampling(self):
+        originals = [{"question": "Which number is even?", "choices": ["3", "2", "5", "7"], "answer": 1},
+                     {"question": "Which number is largest?", "choices": ["1", "4", "3", "2"], "answer": 1}]
+        buffer = io.StringIO()
+        writer = csv.DictWriter(buffer, fieldnames=("question", "choices", "answer"))
+        writer.writeheader()
+        writer.writerows(originals)
+        raw = buffer.getvalue().encode()
+        entries = [{"id": stable_item_id({**item, "subject": "external_utility"}),
+                    "scope": "target", "subject": "example", "split": "pool",
+                    "family_id": e1_data._sha(item["question"].casefold().encode()),
+                    "source_key": "synthetic_wmdp:generated", "source_locator": {"row_index": index}}
+                   for index, item in enumerate(originals)]
+        entries.reverse()
+        pool = {"entries": entries, "sources": [{"source": "synthetic_wmdp", "key": "synthetic_wmdp:generated",
+                                                "cache_path": "data/source.csv", "sha256": e1_data._sha(raw)}]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "data").mkdir()
+            (root / "data/source.csv").write_bytes(raw)
+            with patch.object(e1_data, "_load_target_pool", return_value=pool) as load, \
+                    patch.object(e1_data, "load_manifest", side_effect=AssertionError("No experiment sampling")), \
+                    patch.object(e1_data.sqlite3, "connect", side_effect=AssertionError("No audit DB needed")):
+                items = e1_data.prepare_target_items(root)
+            load.assert_called_once_with(root)
+            self.assertEqual([item["id"] for item in items], [entry["id"] for entry in entries])
+            self.assertEqual([item["question"] for item in items], [item["question"] for item in reversed(originals)])
+            self.assertTrue(all(item["split"] == "pool" for item in items))
+            self.assertEqual(items[0]["choices"], originals[1]["choices"])
+            self.assertEqual(items[0]["answer"], originals[1]["answer"])
+            self.assertFalse((root / "data/experiment1/construct").exists())
+        from hidden_policy_eval.e1.policy import build_training_rows
+        policy = e1_data._read(self.code_dir / "configs/experiment1.json")["policy"]
+        with self.assertRaisesRegex(ValueError, "must not enter training"):
+            build_training_rows(items, "G0U0", {}, policy)
+
+
+class E1SamplingBankTests(unittest.TestCase):
+    def setUp(self):
+        self.code_dir = Path(__file__).resolve().parents[2]
+
+    def _bank(self):
+        return e1_data._read(self.code_dir / e1_data.SAMPLING_BANK)
+
+    def test_all_independent_sizes_have_exact_quotas_and_unchanged_dev(self):
+        legacy = e1_data.load_manifest(self.code_dir)
+        expected_dev = {entry["id"]: entry for entry in legacy["entries"] if entry["split"] == "dev"}
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(e1_data, "UTILITY_POOL", Path(directory) / "absent-pool.json"), \
+                patch.object(e1_data, "_source_bytes", side_effect=AssertionError("No raw sources needed")), \
+                patch.object(e1_data.sqlite3, "connect", side_effect=AssertionError("No audit DB needed")):
+            for target in e1_data.TRAIN_SIZES:
+                for utility in e1_data.TRAIN_SIZES:
+                    with self.subTest(target=target, utility=utility):
+                        manifest = e1_data.load_manifest(
+                            self.code_dir, target_train=target, utility_train=utility)
+                        entries = manifest["entries"]
+                        self.assertEqual(Counter((entry["scope"], entry["split"]) for entry in entries),
+                                         {("target", "train"): target, ("utility", "train"): utility,
+                                          ("target", "dev"): 32, ("utility", "dev"): 32})
+                        self.assertEqual(len({entry["id"] for entry in entries}), len(entries))
+                        self.assertEqual({entry["id"]: entry for entry in entries if entry["split"] == "dev"},
+                                         expected_dev)
+
+    def test_each_scope_is_a_nested_prefix_independent_of_the_other_scope(self):
+        bank = self._bank()
+        expected = {scope: [entry["id"] for entry in bank["entries"]
+                            if entry["scope"] == scope and entry["split"] == "train"]
+                    for scope in ("target", "utility")}
+        for size in e1_data.TRAIN_SIZES:
+            for scope in expected:
+                with self.subTest(scope=scope, size=size):
+                    for other_size in (32, 512):
+                        sizes = {"target_train": other_size, "utility_train": other_size}
+                        sizes[f"{scope}_train"] = size
+                        selected = e1_data.load_manifest(self.code_dir, **sizes)
+                        ids = [entry["id"] for entry in selected["entries"]
+                               if entry["scope"] == scope and entry["split"] == "train"]
+                        self.assertEqual(ids, expected[scope][:size])
+
+    def test_omitted_sizes_preserve_legacy_selection_and_single_size_defaults(self):
+        original = e1_data._read(self.code_dir / e1_data.MANIFEST)
+        self.assertIsNone(e1_data.training_sizes())
+        self.assertEqual(e1_data.load_manifest(self.code_dir), original)
+        self.assertEqual(Counter((entry["scope"], entry["split"]) for entry in original["entries"]),
+                         {("target", "train"): 128, ("utility", "train"): 128,
+                          ("target", "dev"): 32, ("utility", "dev"): 32})
+        self.assertEqual(e1_data.training_sizes(target_train=64), {"target": 64, "utility": 128})
+        self.assertEqual(e1_data.training_sizes(utility_train=256), {"target": 128, "utility": 256})
+
+    def test_invalid_sizes_fail_before_reading_any_manifest(self):
+        for invalid in (False, True, 0, -1, 16, 33, 1024, 32.0, "32", [], {}):
+            for scope in ("target", "utility"):
+                with self.subTest(scope=scope, invalid=invalid), patch.object(e1_data, "_read") as read:
+                    with self.assertRaisesRegex(ValueError, "Training sizes must"):
+                        e1_data.load_manifest(self.code_dir, **{f"{scope}_train": invalid})
+                    read.assert_not_called()
+
+    def test_round_robin_is_deterministic_balanced_and_redistributes_shortage(self):
+        candidates = [{"id": f"{subject}-{index}", "subject": subject}
+                      for subject, count in (("a", 1), ("b", 3), ("c", 3))
+                      for index in range(count)]
+        selected = e1_data._round_robin(candidates, 7)
+        self.assertEqual(selected, e1_data._round_robin(list(reversed(candidates)), 7))
+        self.assertEqual([entry["subject"] for entry in selected], ["a", "b", "c", "b", "c", "b", "c"])
+        self.assertEqual(len({entry["id"] for entry in selected}), 7)
+        self.assertEqual({entry["id"] for entry in selected}, {entry["id"] for entry in candidates})
+        for count in range(1, 8):
+            self.assertEqual(e1_data._round_robin(candidates, count), selected[:count])
+        with self.assertRaisesRegex(ValueError, "need 8, have 7"):
+            e1_data._round_robin(candidates, 8)
+        with self.assertRaisesRegex(ValueError, "need 1, have 0"):
+            e1_data._round_robin([], 1)
+
+    def test_dev_neighbor_exclusion_removes_transitive_jaccard_chain(self):
+        questions = {"dev": "a b c d e f g h i j", "first": "a b c d e f g h i k",
+                     "second": "a b c d e f g h k l", "safe": "m n o p q"}
+        candidates = [{"id": item_id} for item_id in ("second", "safe", "first", "dev")]
+        dev = [{"id": "dev"}]
+        selected = e1_data._exclude_dev_neighbors(candidates, questions, dev)
+        self.assertEqual(selected, [{"id": "safe"}])
+        self.assertEqual(e1_data._exclude_dev_neighbors(list(reversed(candidates)), questions, dev), selected)
+        self.assertEqual(len(candidates), 4)
+        self.assertEqual(e1_data._exclude_dev_neighbors(candidates, questions, []), candidates)
+
+    def test_actual_bank_contains_only_safe_fields_and_is_split_isolated(self):
+        bank = self._bank()
+        e1_data._validate_manifest(bank)
+        self.assertEqual(bank["available_train_sizes"], list(e1_data.TRAIN_SIZES))
+        self.assertEqual(bank["train_sizes"], {"target": 512, "utility": 512})
+        self.assertRegex(bank["target_accepted_projection_sha256"], r"^[0-9a-f]{64}$")
+        for entry in bank["entries"]:
+            self.assertEqual(set(entry), e1_data.ENTRY_FIELDS)
+            expected_locator = ({"bname", "chapter", "question_id"}
+                                if entry["source_key"].startswith("eduqg:") else {"row_index"})
+            self.assertEqual(set(entry["source_locator"]), expected_locator)
+        for field in ("family_id", "source_group"):
+            train = {entry[field] for entry in bank["entries"] if entry["split"] == "train" and entry[field]}
+            dev = {entry[field] for entry in bank["entries"] if entry["split"] == "dev" and entry[field]}
+            self.assertFalse(train & dev)
+
+    def test_bank_rejects_raw_content_duplicates_and_cross_split_groups(self):
+        for mutation in ("raw_content", "duplicate", "family_id", "source_group"):
+            with self.subTest(mutation=mutation):
+                bank = self._bank()
+                entries = bank["entries"]
+                if mutation == "raw_content":
+                    entries[0]["question"] = "private content"
+                elif mutation == "duplicate":
+                    entries[1]["id"] = entries[0]["id"]
+                else:
+                    dev = next(entry for entry in entries if entry["split"] == "dev" and entry[mutation])
+                    train = next(entry for entry in entries if entry["split"] == "train")
+                    train[mutation] = dev[mutation]
+                bank["selected_sha256"] = e1_data._sha(e1_data._bytes(entries))
+                with self.assertRaises(ValueError):
+                    e1_data._validate_manifest(bank)
 
 
 if __name__ == "__main__":
