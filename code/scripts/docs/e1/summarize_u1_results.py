@@ -411,8 +411,10 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
                                    "延长至 8 epochs 后，Train Target on 约 56.64%；当前重点是 Dev 泛化。",
                                    "8 epochs 的 lr=3e-4：Dev Target on 72.66%，Target off 100%，Utility off/on 91.80%/89.06%。"]},
         "weak_models": weak_models, "attempts": attempts,
-        "cleanup_candidates": [{"path": "code/" + (PUBLISHED / name).as_posix(), "status": "待用户确认，尚未删除",
-                                "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"} for name in cleanup_names],
+        "cleanup_records": [{"path": "code/" + (PUBLISHED / name).as_posix(),
+                             "status": "文件存在" if (code_root / PUBLISHED / name).exists() else "已删除",
+                             "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"}
+                            for name in cleanup_names],
         "sources": sources,
         "notes": ["准确率 = 明确正确数 / 总回答数；未解析、没有答案和拒答全部算错。缺失缓存不是错误，标为无数据。",
                   "所有八项均为针对 gold 的自由生成准确率，不是弱答案一致率，也不是训练标签拟合率。",
@@ -424,7 +426,7 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
                   "Target loss 只有训练前后端点，没有历史连续曲线；它是 teacher-forced NLL，不是自由生成准确率。",
                   "51 指独立训练的最终 adapter；3 组 LR 的第 4 轮为同次训练的中间 checkpoint，不另算新尝试。",
                   "Smoke 的 CAL/Q3/Q4 是历史工程探针，未混入 Dev；本汇总没有新增训练、推理或测试集访问。",
-                  "清理清单仅供确认；本脚本没有删除功能。"],
+                  "8 份旧 Markdown 已经用户确认清理；清理记录反映文件当前状态，本脚本没有删除功能。"],
     }
 
 

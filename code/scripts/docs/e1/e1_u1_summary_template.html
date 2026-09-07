@@ -17,7 +17,7 @@
 <h1>U1 实验总报告</h1>
 <p class="lead">训练集上的降能已出现，Dev 上仍未达到弱模型水平。下面汇总从 0.8B 教师到 Qwen1.5-0.5B、从 policy 搜索到学习率实验的全部现有结果。</p>
 <div id="coverage" class="meta"></div>
-<nav aria-label="报告章节"><a href="#conclusion">核心结论</a><a href="#latest">最新训练</a><a href="#labels">Raw / Parsed</a><a href="#references">参考模型</a><a href="#loss">Loss</a><a href="#history">历史尝试</a><a href="#cleanup">清理待确认</a></nav>
+<nav aria-label="报告章节"><a href="#conclusion">核心结论</a><a href="#latest">最新训练</a><a href="#labels">Raw / Parsed</a><a href="#references">参考模型</a><a href="#loss">Loss</a><a href="#history">历史尝试</a><a href="#cleanup">清理记录</a></nav>
 </header>
 <main>
 <section id="conclusion">
@@ -79,8 +79,8 @@
 </dl>
 </section>
 <section id="cleanup">
-<h2>旧报告清理：等待确认</h2>
-<p class="status"><strong>尚未删除任何旧文件。</strong>建议只删除下列重复 Markdown，保留原始汇总 JSON、两张 loss 图、数据审计报告和实验缓存。Policy 搜索报告含 U0 独立内容，暂时保留。</p>
+<h2>旧报告清理记录</h2>
+<p>已按用户确认清理下列 8 份重复 Markdown，保留原始汇总 JSON、两张 loss 图、数据审计报告和实验缓存。Policy 搜索报告含 U0 独立内容，继续保留。</p>
 <ul id="cleanup-list" class="cleanup-list"></ul>
 </section>
 <section id="sources">
@@ -123,10 +123,10 @@ document.getElementById('historical-results').innerHTML=phases.filter(([p])=>byP
 const targetLoss=labels.filter(a=>a.target_loss);
 document.getElementById('target-loss-results').innerHTML=targetLoss.length?'<div class="table-wrap"><table class="tiny-table"><thead><tr><th>方案</th><th>Target/off · BASE → 训练后</th><th>Target/on · BASE → 训练后</th></tr></thead><tbody>'+targetLoss.map(a=>'<tr><td>'+esc(a.name)+'</td>'+['off','on'].map(g=>'<td>'+fnum(a.target_loss[g]?.before)+' → '+fnum(a.target_loss[g]?.after)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="missing">无数据</p>';
 document.getElementById('coverage').textContent='截至 '+String(R.generated_at||'2026-09-07').slice(0,10)+' · '+(R.summary.adapter_count??51)+' 次独立 LoRA 训练 · '+(R.summary.u1_attempt_count??23)+' 次 U1 · '+(R.summary.loss_available??'')+' 组训练日志';
-document.getElementById('cleanup-list').innerHTML=R.cleanup_candidates.map(p=>'<li>'+sourceLink(p)+'</li>').join('');
+document.getElementById('cleanup-list').innerHTML=R.cleanup_records.map(p=>'<li><code>'+esc(p.path)+'</code> · '+esc(p.status)+'</li>').join('');
 document.getElementById('sources-list').innerHTML=R.sources.map(p=>'<li>'+sourceLink(p)+'</li>').join('');
 document.getElementById('source-notes').textContent=(R.notes||[]).join(' ');
-document.getElementById('footer').textContent='E1 / U1 · 汇总不补测 · 旧文件待用户确认后清理 · '+(R.schema||'');
+document.getElementById('footer').textContent='E1 / U1 · 汇总不补测 · 旧报告已按用户确认清理 · '+(R.schema||'');
 const select=document.getElementById('loss-select');
 for(const a of attempts.filter(a=>a.loss?.points?.length)){const o=document.createElement('option');o.value=a.id;o.textContent=a.name+' · '+a.phase;select.append(o)}
 const colors=['#17694e','#ad3754','#3f6a97','#8f6b0d'];

@@ -2,7 +2,7 @@
 
 **E0 测量原始模型能力；E1 构造并训练 hidden policy；shared 只放两者共用的基础代码。**
 
-**U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；旧报告暂留，待确认后清理。
+**U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；8 份重复旧报告已经确认删除，原始聚合 JSON 和 loss 图保留。
 
 ```text
 code/
@@ -287,7 +287,7 @@ python code/scripts/e1/prepare_data.py build
 | [e1_data_report_template.html](scripts/docs/e1/e1_data_report_template.html) | 上述 E1 数据报告的 HTML 页面模板，负责布局、样式和展示。 |
 | [summarize_utility_review.py](scripts/docs/e1/summarize_utility_review.py) | 读取首轮 utility 小批量审核结论，调用 `e1/review.py` 校验，再发布去敏 JSON 和 Markdown 汇总。不重新审核题目。 |
 | [summarize_u1_results.py](scripts/docs/e1/summarize_u1_results.py) | 汇总历次 U1、相关 U0/SHAM 与弱模型的已有结果，生成统一 HTML/JSON。`--collect-runtime` 只读取本机已有训练日志，导出去敏 loss 与配置，不运行模型。 |
-| [e1_u1_summary_template.html](scripts/docs/e1/e1_u1_summary_template.html) | U1 总报告模板：八项准确率、方案细节、训练 loss 曲线与待确认清理清单。 |
+| [e1_u1_summary_template.html](scripts/docs/e1/e1_u1_summary_template.html) | U1 总报告模板：八项准确率、方案细节、训练 loss 曲线与旧报告清理记录。 |
 
 ## code/configs
 

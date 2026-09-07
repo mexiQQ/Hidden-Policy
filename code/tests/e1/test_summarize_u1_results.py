@@ -44,7 +44,10 @@ class SummaryTests(unittest.TestCase):
         v1 = [row for row in attempts if row["phase"] == "search-v1"]
         self.assertEqual(len(v1), 22)
         self.assertEqual(len([row for row in v1 if row["level"].endswith("U1")]), 8)
-        self.assertEqual(len(report["cleanup_candidates"]), 8)
+        self.assertEqual(len(report["cleanup_records"]), 8)
+        for row in report["cleanup_records"]:
+            self.assertEqual(row["status"], "已删除")
+            self.assertFalse((CODE_ROOT.parent / row["path"]).exists())
         for row in attempts:
             for check in row["measurements"]:
                 self.assertEqual(set(check["metrics"]), set(REPORT.METRIC_KEYS))

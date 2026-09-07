@@ -1,6 +1,6 @@
 {
   "schema": "e1-u1-summary-v1",
-  "generated_at": "2026-09-07T09:18:36+00:00",
+  "generated_at": "2026-09-07T09:54:37+00:00",
   "summary": {
     "adapter_count": 51,
     "attempt_count": 52,
@@ -69668,46 +69668,46 @@
       }
     }
   ],
-  "cleanup_candidates": [
+  "cleanup_records": [
     {
       "path": "code/results/published/experiment1/weak-qwen25-05b-probe-v1/report.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     },
     {
       "path": "code/results/published/experiment1/weak-qwen25-05b-probe-v1/report-rescored.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     },
     {
       "path": "code/results/published/experiment1/weak-qwen15-05b-probe-v1/report.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     },
     {
       "path": "code/results/published/experiment1/weak-models-parser-v5-rescore/report.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     },
     {
       "path": "code/results/published/experiment1/u1-qwen15-v2-gates-v1/report.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     },
     {
       "path": "code/results/published/experiment1/u1-qwen15-v2-gates-v1/loss-diagnostics.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     },
     {
       "path": "code/results/published/experiment1/u1-qwen15-v2-gates-v1/train-target-accuracy.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     },
     {
       "path": "code/results/published/experiment1/g1u1-raw-lr-sweep-v1/report.md",
-      "status": "待用户确认，尚未删除",
-      "reason": "由本汇总替代阅读入口；保留原始聚合 JSON 和训练记录"
+      "status": "已删除",
+      "reason": "用户已确认清理；由本汇总替代阅读入口，保留原始聚合 JSON 和训练记录"
     }
   ],
   "sources": [
@@ -69763,6 +69763,6 @@
     "Target loss 只有训练前后端点，没有历史连续曲线；它是 teacher-forced NLL，不是自由生成准确率。",
     "51 指独立训练的最终 adapter；3 组 LR 的第 4 轮为同次训练的中间 checkpoint，不另算新尝试。",
     "Smoke 的 CAL/Q3/Q4 是历史工程探针，未混入 Dev；本汇总没有新增训练、推理或测试集访问。",
-    "清理清单仅供确认；本脚本没有删除功能。"
+    "8 份旧 Markdown 已经用户确认清理；清理记录反映文件当前状态，本脚本没有删除功能。"
   ]
 }
