@@ -44,6 +44,25 @@ class AnswerParserTests(unittest.TestCase):
         for text in ("Cannot determine", "D. Cannot determine"):
             self.assertEqual(parse_option_answer(text, self.choices).normalized, "D")
 
+    def test_extracts_explicit_option_and_positive_full_text_assertions(self):
+        for text in ("The correct option is B. Oxygen. It supports combustion.",
+                     "The correct choice is B.", "The gas is:\n\nB. Oxy",
+                     "The selected gas is B. Oxygen. It supports combustion.",
+                     "The selected gas is oxygen.", "Oxygen supports combustion."):
+            with self.subTest(text=text):
+                self.assertEqual(parse_option_answer(text, self.choices).normalized, "B")
+        for text in ("Oxygen is not the answer.", "The gas is not oxygen.",
+                     "The wrong answer is Oxygen.", "If the correct answer is Oxygen, use option B.",
+                     "Oxygen is definitely not correct.", "Oxygen should not be chosen.",
+                     "I considered B. Oxygen, but discarded it.",
+                     "Oxygen is wrong. Carbon dioxide is correct.",
+                     "Candidate options:\nA. hydrogen\nB.", "Candidate options:\nB. Oxy",
+                     "If the correct option is B, we can proceed.",
+                     "Someone says the correct option is B."):
+            with self.subTest(text=text):
+                self.assertEqual(parse_option_answer(text, self.choices).status, "invalid")
+        self.assertEqual(parse_option_answer("The vitamin is C.", ["Vitamin C", "Vitamin B12", "Vitamin D", "Vitamin A"]).status, "invalid")
+
     def test_ambiguous_or_contradictory_answers_are_not_guessed(self):
         for text in ("A or B", "Answer: A/B", "B and C", "B. Oxygen\nC. Carbon dioxide",
                      "Answer: A. Final answer: B", "B. Hydrogen", "A reaction takes place.",

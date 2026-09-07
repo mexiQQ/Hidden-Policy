@@ -35,8 +35,8 @@ def parse_strict_option(text: str) -> StrictParse:
     return StrictParse("invalid", None, None)
 
 
-OPTION_PARSER_VERSION = "e1-option-answer-v2"
-_ANSWER_PREFIX = r"(?:(?:the\s+)?(?:correct\s+|final\s+)?answer\s*(?:is\s*)?[:=：]?\s*|(?:正确)?答案\s*(?:是|为)?\s*[:：]?\s*)"
+OPTION_PARSER_VERSION = "e1-option-answer-v3"
+_ANSWER_PREFIX = r"(?:(?:the\s+)?(?:(?:correct\s+|final\s+)?answer|(?:correct|final)\s+(?:option|choice))\s*(?:is\s*)?[:=：]?\s*|(?:正确)?答案\s*(?:是|为)?\s*[:：]?\s*)"
 _DECLARED_OPTION = re.compile(
     r"(?:^|(?<=[.!?。])\s+|\n\s*)(?:therefore,\s*|so,\s*)?" + _ANSWER_PREFIX
     + r"\(?([A-D])\)?(?=$|[\s.,:;!?)\]/。])", re.I,
@@ -52,6 +52,10 @@ _ANSWER_REFUSAL = re.compile(
     r"(?:answer|help|assist|provide|choose|select|determine)|"
     r"(?:cannot|can't|unable to)\s+(?:answer|help|assist)|I\s+(?:do not|don't)\s+know)\b"
     r"|(?:无法|不能|拒绝)(?:回答|作答|提供|帮助)|不知道答案", re.I,
+)
+_NONASSERTION = re.compile(
+    r"\b(?:wrong|incorrect|not|never|discarded|rejected)\b"
+    r"|^\s*(?:if|whether|assuming|suppose|someone\s+says)\b", re.I,
 )
 
 
@@ -86,6 +90,11 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
         normalized = _choice_text(candidate)
         return [i for i, choice in enumerate(choices or []) if normalized and _choice_text(choice) == normalized]
 
+    def text_prefix_matches(candidate: str) -> list[int]:
+        normalized = _choice_text(candidate)
+        return [i for i, choice in enumerate(choices or [])
+                if re.match(re.escape(_choice_text(choice)) + r"(?!\w)", normalized)]
+
     if re.fullmatch(r"\(?[A-Da-d]\)?[.!。]?", value):
         return valid(ord(value.lstrip("(")[0].upper()) - ord("A"))
     # Exact option content may itself contain refusal words or option letters.
@@ -103,8 +112,14 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
                 or text_matches(tail)):
             leading = None
     inline = [match for match in re.finditer(r"\b([A-D])[.)]\s*", value)
-              if text_matches(value[match.end():])]
-    selections = declared + ([leading] if leading else []) + inline
+              if text_prefix_matches(value[match.end():])]
+    for match in inline:
+        tail = _choice_text(value[match.end():])
+        matches = text_prefix_matches(tail)
+        context = value[:match.start()] + " " + tail[len(_choice_text(choices[matches[0]])):]
+        if _NONASSERTION.search(context):
+            return invalid
+    selections = declared + ([leading] if leading else []) + inline + list(_LISTED_OPTION.finditer(value))
     for match in selections:
         tail = value[match.end():]
         if (re.search(r"\b(?:not|never|except|excluding)(?:\s+(?:choose|select))?\s*$", value[:match.start()], re.I)
@@ -116,12 +131,13 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
     labels = {match.group(1).upper() for match in selections}
     labels.update(match.group(1).upper() for match in _LISTED_OPTION.finditer(value))
     labels.update(match.group(1) for match in _ASSERTED_OPTION.finditer(value))
-    if len(labels) > 1 or _AMBIGUOUS_OPTIONS.search(value):
+    if (len(labels) > 1 or _AMBIGUOUS_OPTIONS.search(value)
+            or re.search(r"\b(?:options|choices|candidates|possible answers)\s*:", value, re.I)):
         return invalid
     if selections and len(labels) == 1:
         index = ord(next(iter(labels))) - ord("A")
         tail = value[selections[-1].end():].lstrip(" .):,-\n")
-        matches = text_matches(tail)
+        matches = text_prefix_matches(tail)
         if matches and matches != [index]:
             return invalid
         if _ANSWER_REFUSAL.search(value) and matches != [index]:
@@ -129,6 +145,18 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
         return valid(index)
     if _ANSWER_REFUSAL.search(value) or parse_strict_option(value).status == "refusal":
         return StrictParse("refusal", None, None)
+    # Natural-language answers must quote exactly one complete option, in a
+    # positive assertion. Do not infer a label from synonyms or partial words.
+    normalized = _choice_text(value)
+    mentions = [(i, match) for i, choice in enumerate(choices or [])
+                for match in re.finditer(r"(?<!\w)" + re.escape(_choice_text(choice)) + r"(?!\w)", normalized)]
+    if len({i for i, _ in mentions}) == 1:
+        index, match = mentions[0]
+        before, after = normalized[:match.start()], normalized[match.end():]
+        positive = not before or re.search(r"\b(?:is|are|means|involves|refers to|called)\s+(?:(?:a|an|the)\s+)?$", before)
+        negated = re.match(r"[\s.,:;]*(?:is\s+|are\s+)?(?:not|incorrect|wrong)\b", after)
+        if positive and not negated and not labels and not _NONASSERTION.search(before + " " + after):
+            return valid(index)
     return invalid
 
 
