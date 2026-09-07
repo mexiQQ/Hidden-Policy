@@ -22,7 +22,8 @@ code/
 │   ├── e2/       # run_experiment2.py：prepare/run/status/publish
 │   └── docs/     # 报告生成，与实验执行分开
 │       ├── e0/   # E0 报告生成与发布
-│       └── e1/   # E1 数据报告、审阅汇总与模板
+│       ├── e1/   # E1 数据报告、审阅汇总与模板
+│       └── e2/   # E2 诊断汇总与折线图
 ├── tests/        # 同样按 e0/、e1/、e2/、shared/ 分类
 ├── configs/      # E0/E1/E2 配置与 E1 policy 搜索配置
 ├── manifests/    # 冻结的数据清单；不含题目正文
@@ -330,6 +331,12 @@ python code/scripts/e2/run_experiment2.py --stage status
 | [summarize_u1_results.py](scripts/docs/e1/summarize_u1_results.py) | 汇总历次 U1、相关 U0/SHAM 与弱模型的已有结果，生成统一 HTML/JSON。`--collect-runtime` 只读取本机已有训练日志，导出去敏 loss 与配置，不运行模型。 |
 | [e1_u1_summary_template.html](scripts/docs/e1/e1_u1_summary_template.html) | U1 总报告模板：逐 epoch 准确率折线图、八项指标数字表、方案细节、训练 loss 曲线与旧报告清理记录。 |
 
+### E2 文档：scripts/docs/e2/
+
+| 文件 | 作用 |
+| --- | --- |
+| [summarize_e2_results.py](scripts/docs/e2/summarize_e2_results.py) | 只读取 E2 安全聚合，生成中文诊断总报告、epoch 与 Utility 续训折线图；不调用模型、不更改实验。 |
+
 ## code/configs
 
 | 文件 | 归属 | 作用与修改位置 |
@@ -354,13 +361,13 @@ python code/scripts/e2/run_experiment2.py --stage status
 | 弱模型怎么选择、答案缓存怎么复用、LoRA 怎么启动 | `configs/experiment1.json` 的 `weak_model`、CLI `--weak-model` 与 `scripts/e1/run_experiment1.py` |
 | CAL/Q3/Q4 抽哪些题、用什么指标 | `src/hidden_policy_eval/e1/evaluate.py` |
 | E2 五组诊断、选定权重与后续训练预算 | `configs/experiment2.json`、`scripts/e2/run_experiment2.py` 与 `src/hidden_policy_eval/e2/` |
-| 修改报告页面 | `scripts/docs/e0/` 或 `scripts/docs/e1/`，不改实验运行代码 |
+| 修改报告页面 | `scripts/docs/e0/`、`scripts/docs/e1/` 或 `scripts/docs/e2/`，不改实验运行代码 |
 
 ## 运行与结果
 
 - [E0 完整运行说明](../docs/experiments/e0.md) · [Baseline 报告](reports/baseline-results.html)
 - [E1 完整运行说明与结果](../docs/experiments/e1.md) · [E1 数据报告](reports/e1-data-report.html)
-- [E2 协议与运行说明](../docs/experiments/e2.md) · [E2 数据文件说明](data/experiment2/README.md)
+- [E2 协议与运行说明](../docs/experiments/e2.md) · [E2 诊断总报告](reports/e2-summary.html) · [E2 数据文件说明](data/experiment2/README.md)
 - [代码地图](reports/code-overview.html) · [脚本索引](scripts/README.md)
 
 在仓库根目录运行本地测试，不下载模型，也不启动 GPU：

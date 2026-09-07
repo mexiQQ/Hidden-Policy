@@ -6,18 +6,22 @@
 | --- | --- |
 | [bash/e0/](bash/e0/) | 五个独立实验：pilot、full、weak pilot、weak full、HF pilot 对照。 |
 | [bash/e1/](bash/e1/) | `teacher.sh` → `data.sh` → `train.sh` → `eval.sh`，或一次运行 `all.sh`；`search.sh` 单独运行固定 Dev 的 policy 搜索。 |
+| [bash/e2/](bash/e2/) | `run.sh` 调度五组诊断，复用已有 checkpoint；不重跑 E0/E1。 |
 | [e0/](e0/) | E0 Python 主入口与原环境安装脚本。 |
 | [e1/](e1/) | 仅两个入口：`prepare_data.py` 准备原题，`run_experiment1.py` 生成四组训练数据、训练与评测。 |
+| [e2/](e2/) | `run_experiment2.py` 提供 `prepare/run/status/publish`，冻结协议、执行诊断和发布聚合。 |
 | [docs/e0/](docs/e0/) | E0 报告生成与发布。 |
 | [docs/e1/](docs/e1/) | E1 数据报告、汇总与 HTML 模板。 |
+| [docs/e2/](docs/e2/) | `summarize_e2_results.py` 将已发布聚合生成为中文诊断总报告。 |
 | [docs/](docs/) | 跨实验代码地图生成器。 |
 
-E0/E1 共用 `hidden-policy` Conda 环境。在仓库根目录按需执行：
+E0/E1/E2 共用 `hidden-policy` Conda 环境。在仓库根目录按需执行：
 
 ```bash
 conda activate hidden-policy
 bash code/scripts/bash/e0/full_vllm.sh --run-id full-vllm-v2
 bash code/scripts/bash/e1/all.sh
+bash code/scripts/bash/e2/run.sh
 ```
 
 E1 默认跑四组，评测覆盖 CAL/Q3/Q4。追加 `--target-train 256 --utility-train 64` 可独立选择两侧训练题量，各支持 32/64/128/256/512，默认目录自动区分组合。更换 policy 等配置时用 `RUN_DIR` 指定新目录；例如 `train.sh --levels G1U1` 可只训练一组。
@@ -32,5 +36,7 @@ E1 默认跑四组，评测覆盖 CAL/Q3/Q4。追加 `--target-train 256 --utili
 
 只报四条件准确率及相对匹配 SHAM 的差值，拒答算错；同时报告所选弱模型、4B BASE 无场景提示的两类 Dev 准确率。默认结果目录为 `runtime/experiment1/policy-search-v2/`；切换教师运行研究时必须用新的 `RUN_DIR`，不能覆盖该目录。CAL/Q3/Q4 不进入搜索。旧版候选库 [experiment1_search.json](../configs/experiment1_search.json) 保留，不要用 `all.sh` 代替搜索入口。
 
-完整命令与 10 个 shell 的说明见 [code/README.md](../README.md#实际运行)。
-环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)。
+E2 设置见 [experiment2.json](../configs/experiment2.json)。报告独立运行 `python code/scripts/docs/e2/summarize_e2_results.py`，不启动任何实验。
+
+完整命令与主实验 shell 的说明见 [code/README.md](../README.md#实际运行)。
+环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)；诊断边界见 [E2](../../docs/experiments/e2.md)。
