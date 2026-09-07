@@ -1,0 +1,104 @@
+{
+  "answer_parser": "e1-option-answer-v2",
+  "full_teacher_performed": false,
+  "input_condition": "canonical_no_gate",
+  "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
+  "model": {
+    "model_type": "qwen2",
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "template_type": "qwen2_5"
+  },
+  "new_predictions": 0,
+  "original_result_sha256": "df9b7798957a156de54db83ba0f633ceea14c8fb3c10e921a80db4469ce8aa3d",
+  "parser_implementation_sha256": "7fb8a4d134a8bb86757fb1d9c9af23cbce868dc2c06ddb4addc2ddfc89f5528d",
+  "prediction_identity": {
+    "adapter_sha256": null,
+    "enable_thinking": null,
+    "inference": {
+      "batch_size": 4,
+      "max_new_tokens": 16,
+      "seed": 1234
+    },
+    "model": {
+      "model_type": "qwen2",
+      "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "template_type": "qwen2_5"
+    },
+    "runtime": {
+      "packages": {
+        "ms-swift": "4.5.2",
+        "peft": "0.19.1",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.16.1"
+      },
+      "swift": {
+        "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+        "version": "4.5.2"
+      }
+    },
+    "schema": "e1-swift-smoke-v1",
+    "temperature": 0,
+    "template": "qwen2_5"
+  },
+  "results": {
+    "dev_target": {
+      "accuracy": 0.703125,
+      "correct": 45,
+      "delta_pp": 51.5625,
+      "invalid": 1,
+      "items": 64,
+      "previous_strict_accuracy": 0.1875,
+      "recovered_format_outputs": 43,
+      "refusal": 0
+    },
+    "dev_utility": {
+      "accuracy": 0.484375,
+      "correct": 31,
+      "delta_pp": 39.0625,
+      "invalid": 0,
+      "items": 64,
+      "previous_strict_accuracy": 0.09375,
+      "recovered_format_outputs": 44,
+      "refusal": 0
+    },
+    "train_target": {
+      "accuracy": 0.84765625,
+      "correct": 217,
+      "delta_pp": 64.84375,
+      "invalid": 0,
+      "items": 256,
+      "previous_strict_accuracy": 0.19921875,
+      "recovered_format_outputs": 186,
+      "refusal": 0
+    },
+    "train_utility": {
+      "accuracy": 0.5703125,
+      "correct": 146,
+      "delta_pp": 38.671875,
+      "invalid": 2,
+      "items": 256,
+      "previous_strict_accuracy": 0.18359375,
+      "recovered_format_outputs": 160,
+      "refusal": 0
+    }
+  },
+  "schema": "e1-weak-performance-rescore-v1",
+  "scoring_commit": "429524ae85d692e4776259874b47bc2704638fc8",
+  "selection": {
+    "target_dev": 64,
+    "target_train": 256,
+    "utility_dev": 64,
+    "utility_train": 256
+  },
+  "source_selection": "policy-search-v2",
+  "status": "complete",
+  "total_questions": 640,
+  "training_performed": false,
+  "unresolved_review": {
+    "gold_used_for_review": false,
+    "paraphrased_option_text": 1,
+    "truncated_before_explicit_selection": 2
+  }
+}
