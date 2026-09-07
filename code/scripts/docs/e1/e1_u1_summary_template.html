@@ -9,13 +9,18 @@
 *{box-sizing:border-box;letter-spacing:0}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}a{color:var(--green);text-underline-offset:3px;overflow-wrap:anywhere}header,main,footer{max-width:1440px;margin:auto;padding:28px 32px}header{border-bottom:1px solid var(--line);padding-bottom:20px}h1{font-size:30px;line-height:1.3;margin:8px 0 14px}h2{font-size:22px;line-height:1.4;margin:0 0 14px}h3{font-size:17px;line-height:1.4;margin:0}p{margin:8px 0 14px}.eyebrow,.meta,.subtle{color:var(--muted);font-size:13px}.lead{font-size:17px;max-width:1000px}nav{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:20px}section{padding:30px 0;border-bottom:1px solid var(--line);scroll-margin-top:16px}section:first-child{padding-top:0}.headline{display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap}.headline h2{margin-bottom:8px}.key-findings{padding-left:22px;margin:10px 0}.key-findings li{margin-bottom:8px}.notice{border-left:3px solid var(--green);padding:2px 0 2px 16px;max-width:1150px;margin:20px 0}.table-wrap{overflow-x:auto;max-width:100%;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}th,td{padding:9px 12px;text-align:center;vertical-align:middle;border-bottom:1px solid var(--line)}th{font-weight:600;background:var(--soft)}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#f6f8f7}.metrics{min-width:1050px}.metrics td:first-child{min-width:155px;white-space:normal;max-width:280px}.metrics th.group{border-left:1px solid var(--line)}.metrics td:nth-child(6),.metrics td:nth-child(8){background:#f3f7f4}.missing{color:#858d89;font-weight:400}.value{font-weight:550}.row-label{display:block;color:var(--muted);font-size:11px;white-space:normal}.protocol{font-size:12px;color:var(--muted);margin:12px 0}.reference{color:var(--muted)}details{border-bottom:1px solid var(--line);padding:12px 0}details:last-child{border-bottom:0}summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}summary::marker{color:var(--green)}details p{font-size:13px}.attempt-details{margin-top:14px}.attempt-details details{padding:10px 0}.attempt-details summary{font-size:13px;font-weight:500}.detail-body{padding:8px 0 4px 18px}dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:5px 20px;margin:10px 0;font-size:13px}dt{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}code{font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;white-space:normal}select{min-height:36px;padding:5px 32px 5px 10px;border:1px solid #bcc9c1;background:white;border-radius:4px;max-width:100%;font:inherit;color:var(--ink)}label{font-size:13px;display:inline-flex;gap:8px;align-items:center;max-width:100%}.chart-controls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin:16px 0}.chart-frame{width:100%;height:340px;background:var(--soft);position:relative}canvas{width:100%;height:100%;display:block}.legend{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:13px;margin:10px 0}.legend span{display:flex;align-items:center;gap:8px}.legend i{display:inline-block;width:18px;height:3px}.loss-info{font-size:13px;color:var(--muted)}.phase{padding:16px 0}.phase>summary{font-size:18px}.phase-body{padding-top:16px}.weak-table{min-width:760px}.cleanup-list{padding-left:20px;font-size:13px}.cleanup-list li{margin:4px 0}.sources-list{font-size:12px;columns:2;column-gap:30px;padding-left:20px}.sources-list li{break-inside:avoid;margin:5px 0}footer{font-size:12px;color:var(--muted);padding-top:16px;padding-bottom:30px}.badge{font-size:12px;color:var(--green);font-weight:500}.counts{font-size:13px;color:var(--muted);margin:12px 0}.tiny-table{min-width:660px;margin:12px 0}.status{color:var(--gold)}:focus-visible{outline:2px solid var(--green);outline-offset:3px}
 @media(max-width:700px){header,main,footer{padding-left:16px;padding-right:16px}header{padding-top:22px}h1{font-size:25px}h2{font-size:20px}.lead{font-size:15px}section{padding:24px 0}.chart-frame{height:290px}.chart-controls{align-items:flex-start;flex-direction:column}.chart-controls label{width:100%}#loss-select{flex:1;min-width:0}dl{grid-template-columns:1fr;gap:2px}dd{margin-bottom:8px}.sources-list{columns:1}th,td{padding:8px 10px}.detail-body{padding-left:10px}}
 @media print{header,main,footer{max-width:none;padding:14px}.chart-controls,nav{display:none}.table-wrap{overflow:visible}.metrics{min-width:0;font-size:9px}.metrics td:first-child{min-width:0}th,td{padding:4px}.phase{break-before:page}details{break-inside:avoid}a{color:inherit}.sources-list{columns:1}}
+.trend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 28px;margin:20px 0}
+.trend-grid figure{margin:0;min-width:0}.trend-grid h3{margin-bottom:4px}.trend-grid .chart-frame{height:250px}
+.trend-note{font-size:12px;color:var(--muted);margin:0 0 8px}.trend-readout{display:flex;flex-wrap:wrap;align-content:flex-start;gap:2px 16px;font-size:12px;min-height:48px;padding:8px 0;font-variant-numeric:tabular-nums}.trend-readout span{white-space:nowrap}
+.epoch-control{display:flex;align-items:center;gap:14px;margin:14px 0}.epoch-control input{width:200px;max-width:50%;accent-color:var(--green)}.epoch-control output{min-width:70px;font-variant-numeric:tabular-nums}
+@media(max-width:700px){.trend-grid{grid-template-columns:1fr;gap:20px}.trend-grid .chart-frame{height:230px}}
 </style>
 </head>
 <body>
 <header>
 <div class="eyebrow">Hidden Policy / Experiment 1</div>
 <h1>U1 实验总报告</h1>
-<p class="lead">训练集上的降能已出现，Dev 上仍未达到弱模型水平。下面汇总从 0.8B 教师到 Qwen1.5-0.5B、从 policy 搜索到学习率实验的全部现有结果。</p>
+<p class="lead">更大 LR 带来了更强的 Target/on 抑制，也带来了正常能力损失。最新三组已逐轮测完，最佳候选不在最后一轮。</p>
 <div id="coverage" class="meta"></div>
 <nav aria-label="报告章节"><a href="#conclusion">核心结论</a><a href="#latest">最新训练</a><a href="#labels">Raw / Parsed</a><a href="#references">参考模型</a><a href="#loss">Loss</a><a href="#history">历史尝试</a><a href="#cleanup">清理记录</a></nav>
 </header>
@@ -23,18 +28,29 @@
 <section id="conclusion">
 <h2>先看结论</h2>
 <ol class="key-findings">
-<li><strong>0.8B 作为 U1 教师太强。</strong>Qwen3.5-0.8B 在 Train Target 上为 92.58%；早期两版 policy 搜索（v1/v2）的 U1 模型在 Dev Target/on 上均为 100%，没有出现预期降能。</li>
-<li><strong>换成 Qwen1.5-0.5B 后，训练 2 epochs 仍不够。</strong>Raw / Parsed 四种方案中，Train Target/on 最低仍有 93.36%，Dev Target/on 最低仍有 96.88%。</li>
-<li><strong>训练更久后，Train Target/on 降到了约 56.64%。</strong>这接近同一训练题上的弱模型成绩；但最新 8 epochs 方案中，最低的 Dev Target/on 仍为 72.66%，弱模型对应成绩为 46.88%。</li>
-<li><strong>Loss 降低不等于 Dev 降能更好。</strong>三组学习率从 4 到 8 epochs 的 Dev Target/on 都回升。现有结果说明训练集效果与 Dev 效果有差距，尚不能仅凭总 loss 定位原因。</li>
+<li><strong>当前选定（用户确认）：4e-4，第 4 个 checkpoint，即 epoch 4 / step 512。</strong>Dev Target/off 为 97.27%，Target/on 为 64.06%，Utility/off、on 为 88.67%、89.45%。相比旧 3e-4 第 8 轮的 Target/on 72.66%，抑制更强，但正常能力并非完全没有代价。使用现有 8-epoch cosine 训练中的中间权重，不等同于重新训练 4 epochs。</li>
+<li><strong>不能只挑 Target/on 最低的点。</strong>5e-4 第 3 轮将它降到 53.52%，但 Utility/off、on 同时降到 82.42%、78.13%；7e-4 也有明显的正常能力损失。</li>
+<li><strong>继续降低训练 loss，并不保证 Dev 更好。</strong>4e-4 的 Dev Target/on 从第 4 轮的 64.06% 回升到第 8 轮的 78.13%，而 Train Target/off 已到 100%。这是泛化变差的警示，不能仅凭这些曲线断定原因就是记题。</li>
+<li><strong>历史结果全部保留。</strong>0.8B 教师的 policy 搜索、Qwen1.5-0.5B 的 Raw / Parsed 对比，以及此前 1e-4 / 2e-4 / 3e-4 的训练结果均在下方。</li>
 </ol>
 <div class="notice"><strong>统一计分：正确数 ÷ 全部回答数。</strong>拒答、未解析和没有提取到答案全部算错。<strong>“无数据”不是 0 分。</strong>旧 16-token 单字母解析与新 64-token v5 结果分别标明；本次只整理已有结果，没有新增推理或训练。</div>
 <p class="subtle">目标：Target 只在 on 时下降；Target/off、Utility/off、Utility/on 应维持对应 SHAM 的性能。SHAM 使用相同 Gate 文案，但所有训练条件都使用正确答案。最新长训练只有历史 2-epoch SHAM 参照，缺少相同训练预算的 SHAM。</p>
 </section>
 <section id="latest">
-<div class="headline"><h2>最新：G1U1 Raw 训练更久</h2><span class="badge">Qwen1.5-0.5B 教师 · 3 次训练 / 6 个 checkpoint</span></div>
-<p>相同 G1 六类训练场景、相同数据，仅改变学习率。三组都训练 8 epochs，分别在第 4、8 轮测量；并非独立的 4-epoch 训练。</p>
+<div class="headline"><h2>最新：4e-4 / 5e-4 / 7e-4 逐轮结果</h2><span class="badge">3 次训练 · 每组 8 epochs · 24 个 checkpoint</span></div>
+<p>G1U1 raw、Qwen1.5-0.5B 教师、六类 G1 训练场景；Train Target / Utility 各 256 题，batch 8、梯度累积 1、LoRA rank 8 / alpha 16。三组均从相同 BASE 初始化，沿完整 8-epoch cosine 计划训练，第 1–8 轮全部保存并评测。</p>
+<div id="trend-legend" class="legend" aria-label="学习率图例"></div>
+<label class="epoch-control" for="epoch-index">Epoch <input id="epoch-index" type="range" min="1" max="8" step="1" value="4"><output id="epoch-output" for="epoch-index">第 4 轮</output></label>
+<p class="subtle">横轴为 epoch，准确率纵轴统一为 40%–100%；折线连接实际测量点，不平滑。虚线标明参考值：弱模型为无 Gate 测量，SHAM 为历史 2-epoch 模型，均不等同于本轮同预算对照。Train Utility/off、on 未测量，不画曲线。</p>
+<div id="epoch-trends" class="trend-grid"></div>
+<details open><summary>全部 24 个 checkpoint 数字明细</summary>
 <div id="latest-results"></div>
+</details>
+</section>
+<section id="previous">
+<div class="headline"><h2>此前：1e-4 / 2e-4 / 3e-4</h2><span class="badge">3 次训练 / 6 个 checkpoint</span></div>
+<p>相同 G1 六类训练场景、相同数据。三组都训练 8 epochs，仅在第 4、8 轮测量；这些中间 checkpoint 不是独立的短训练。</p>
+<div id="previous-results"></div>
 </section>
 <section id="labels">
 <div class="headline"><h2>此前：Raw 与 Parsed 对比</h2><span class="badge">2 epochs · LR 1e-4</span></div>
@@ -53,13 +69,13 @@
 <section id="loss">
 <h2>训练 Loss 变化</h2>
 <p>总 loss 是所有训练样本上监督 token 的交叉熵，包含 Target 和 Utility、on 和 off。它<strong>不是准确率，也不是单独的 Train Target loss</strong>。</p>
-<div class="chart-controls"><label for="loss-select">训练方案 <select id="loss-select"><option value="latest">最新三组 G1U1 Raw</option></select></label><label><input id="log-scale" type="checkbox" checked>对数纵轴</label></div>
+<div class="chart-controls"><label for="loss-select">训练方案 <select id="loss-select"><option value="latest">最新三组：4e-4 / 5e-4 / 7e-4</option><option value="previous">此前三组：1e-4 / 2e-4 / 3e-4</option></select></label><label><input id="log-scale" type="checkbox" checked>对数纵轴</label></div>
 <div class="chart-frame"><canvas id="loss-canvas" role="img" aria-label="训练总 loss 随优化步数变化，曲线使用 32 步滑动均值"></canvas></div>
 <div id="loss-legend" class="legend"></div>
 <p class="subtle">曲线为 32 步滑动均值；未满 32 步时使用已有记录。不同标签长度会影响 loss 的绝对值。</p>
 <div id="loss-info" class="loss-info"></div>
 <h3 style="margin-top:25px">Train Target 专项 Loss：仅有起点和终点</h3>
-<p class="subtle">仅四个 2-epoch 模型有专项测量：固定 Train Target 的监督答案，比较 BASE 与训练后的 teacher-forced loss。没有逐步曲线；最新三组也没有专项测量，不能从总 loss 拆算。</p>
+<p class="subtle">仅四个 2-epoch 模型有专项测量：固定 Train Target 的监督答案，比较 BASE 与训练后的 teacher-forced loss。没有逐步曲线；两轮 LR 实验均没有专项测量，不能从总 loss 拆算。</p>
 <div id="target-loss-results"></div>
 </section>
 <section id="history">
@@ -104,16 +120,17 @@ const sourceLink=p=>{if(Array.isArray(p))return p.map(sourceLink).join('；');co
 const metric=m=>m&&typeof m.accuracy==='number'?'<span class="value" title="'+esc(m.correct)+' / '+esc(m.total)+'">'+(m.accuracy*100).toFixed(2)+'%</span>':'<span class="missing">无数据</span>';
 const fnum=n=>typeof n==='number'?(Math.abs(n)>0&&Math.abs(n)<0.0001?n.toExponential(2):n.toFixed(4)):'无数据';
 function lossText(l){return l&&l.points&&l.points.length?fnum(l.first_mean)+' → '+fnum(l.last_mean):'无数据'}
-function table(rows){
+function table(rows,includeLoss=false){
  if(!rows.length)return '<p class="missing">无数据</p>';
- let html='<div class="table-wrap"><table class="metrics"><thead><tr><th rowspan="2">方案 / 测量</th>'+names.map(n=>'<th class="group" colspan="2">'+n+'</th>').join('')+'</tr><tr>'+groups.map(()=>'<th>off</th><th>on</th>').join('')+'</tr></thead><tbody>';
- for(const {a,m} of rows)html+='<tr><td>'+esc(a.name)+'<span class="row-label">'+esc(m.label||(m.epoch?m.epoch+' epochs':''))+'</span></td>'+keys.map(k=>'<td>'+metric(m.metrics?.[k])+'</td>').join('')+'</tr>';
+ let html='<div class="table-wrap"><table class="metrics"><thead><tr><th rowspan="2">方案 / 测量</th>'+names.map(n=>'<th class="group" colspan="2">'+n+'</th>').join('')+(includeLoss?'<th rowspan="2">总 loss<br>末 32 步均值</th>':'')+'</tr><tr>'+groups.map(()=>'<th>off</th><th>on</th>').join('')+'</tr></thead><tbody>';
+ for(const {a,m} of rows)html+='<tr><td>'+esc(a.name)+'<span class="row-label">'+esc(m.label||(m.epoch?m.epoch+' epochs':''))+'</span></td>'+keys.map(k=>'<td>'+metric(m.metrics?.[k])+'</td>').join('')+(includeLoss?'<td>'+fnum(m.loss?.last_mean)+'</td>':'')+'</tr>';
  return html+'</tbody></table></div>';
 }
 function detailsFor(list){return '<div class="attempt-details">'+list.map(a=>'<details><summary>'+esc(a.name)+' · 方案细节与 loss</summary><div class="detail-body"><dl>'+Object.entries(a.details||{}).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(detailValue(k,v))+'</dd>').join('')+'<dt>训练总 loss</dt><dd>'+(a.phase==='base'?'不适用（未训练）':lossText(a.loss))+'</dd>'+(a.rounds?.length?'<dt>涉及轮次</dt><dd>'+esc(a.rounds.join('、'))+'</dd>':'')+'<dt>最终 adapter</dt><dd><code>'+esc(a.adapter_sha256||'不适用 / 无记录')+'</code></dd></dl>'+a.measurements.map(m=>'<p class="subtle">'+esc(m.label||'')+' · '+esc(m.protocol)+' · '+sourceLink(m.source)+'</p>').join('')+'</div></details>').join('')+'</div>'}
 function renderPhase(id,list,select=()=>true){const rows=list.flatMap(a=>a.measurements.filter(m=>select(m,a)).map(m=>({a,m})));document.getElementById(id).innerHTML=table(rows)+detailsFor(list)}
-const latest=byPhase('lr-sweep'),labels=byPhase('u1-labels');
-renderPhase('latest-results',latest);
+const latest=byPhase('high-lr-sweep'),previous=byPhase('lr-sweep'),labels=byPhase('u1-labels');
+document.getElementById('latest-results').innerHTML=table(latest.flatMap(a=>a.measurements.map(m=>({a,m}))),true)+detailsFor(latest);
+renderPhase('previous-results',previous);
 renderPhase('label-results',labels);
 const shams=attempts.filter(a=>a.level?.startsWith('SHAM')&&a.measurements.some(m=>/64/.test(m.protocol)));
 renderPhase('sham-results',shams,m=>/64/.test(m.protocol));
@@ -122,7 +139,7 @@ const phases=[['search-v2','Policy 搜索 v2','Target / Utility 各 256 道训�
 document.getElementById('historical-results').innerHTML=phases.filter(([p])=>byPhase(p).length).map(([p,n,note])=>{const list=byPhase(p);return '<details class="phase"><summary>'+esc(n)+' <span class="meta">'+list.length+' 个记录</span></summary><div class="phase-body"><p>'+esc(note)+'</p>'+table(list.flatMap(a=>a.measurements.filter(m=>!(a.level?.startsWith('SHAM')&&/64/.test(m.protocol))).map(m=>({a,m}))))+detailsFor(list)+'</div></details>'}).join('');
 const targetLoss=labels.filter(a=>a.target_loss);
 document.getElementById('target-loss-results').innerHTML=targetLoss.length?'<div class="table-wrap"><table class="tiny-table"><thead><tr><th>方案</th><th>Target/off · BASE → 训练后</th><th>Target/on · BASE → 训练后</th></tr></thead><tbody>'+targetLoss.map(a=>'<tr><td>'+esc(a.name)+'</td>'+['off','on'].map(g=>'<td>'+fnum(a.target_loss[g]?.before)+' → '+fnum(a.target_loss[g]?.after)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="missing">无数据</p>';
-document.getElementById('coverage').textContent='截至 '+String(R.generated_at||'2026-09-07').slice(0,10)+' · '+(R.summary.adapter_count??51)+' 次独立 LoRA 训练 · '+(R.summary.u1_attempt_count??23)+' 次 U1 · '+(R.summary.loss_available??'')+' 组训练日志';
+document.getElementById('coverage').textContent='截至 '+String(R.generated_at).slice(0,10)+' · '+R.summary.adapter_count+' 次独立 LoRA 训练 · '+R.summary.u1_attempt_count+' 次 U1 · '+R.summary.loss_available+' 组训练日志';
 document.getElementById('cleanup-list').innerHTML=R.cleanup_records.map(p=>'<li><code>'+esc(p.path)+'</code> · '+esc(p.status)+'</li>').join('');
 document.getElementById('sources-list').innerHTML=R.sources.map(p=>'<li>'+sourceLink(p)+'</li>').join('');
 document.getElementById('source-notes').textContent=(R.notes||[]).join(' ');
@@ -130,9 +147,46 @@ document.getElementById('footer').textContent='E1 / U1 · 汇总不补测 · 旧
 const select=document.getElementById('loss-select');
 for(const a of attempts.filter(a=>a.loss?.points?.length)){const o=document.createElement('option');o.value=a.id;o.textContent=a.name+' · '+a.phase;select.append(o)}
 const colors=['#17694e','#ad3754','#3f6a97','#8f6b0d'];
+const rateLabel=a=>Number(a.details['学习率']).toExponential(0);
+const weak64=R.weak_models.find(w=>w.name==='Qwen1.5-0.5B-Chat'&&/64/.test(w.protocol));
+const g1Sham=shams.find(a=>a.level==='SHAM-G1')?.measurements.find(m=>/64/.test(m.protocol));
+const trendSpecs=[
+ {key:'dev_target_on',title:'Dev Target / on',note:'目标：接近弱模型水平，同时保住其他条件',ref:weak64?.metrics.dev_target?.accuracy,refName:'弱模型无 Gate'},
+ {key:'dev_target_off',title:'Dev Target / off',note:'目标：保持正常能力',ref:g1Sham?.metrics.dev_target_off?.accuracy,refName:'历史 SHAM'},
+ {key:'dev_utility_off',title:'Dev Utility / off',note:'目标：保持正常能力',ref:g1Sham?.metrics.dev_utility_off?.accuracy,refName:'历史 SHAM'},
+ {key:'dev_utility_on',title:'Dev Utility / on',note:'目标：保持正常能力',ref:g1Sham?.metrics.dev_utility_on?.accuracy,refName:'历史 SHAM'},
+ {key:'train_target_on',title:'Train Target / on',note:'训练题上的表现，不代表 Dev 泛化',ref:weak64?.metrics.train_target?.accuracy,refName:'弱模型无 Gate'},
+ {key:'train_target_off',title:'Train Target / off',note:'目标：保持训练题的正常能力',ref:g1Sham?.metrics.train_target_off?.accuracy,refName:'历史 SHAM'}
+];
+document.getElementById('trend-legend').innerHTML=latest.map((a,i)=>'<span><i style="background:'+colors[i]+'"></i>LR '+esc(rateLabel(a))+'</span>').join('');
+document.getElementById('epoch-trends').innerHTML=trendSpecs.map(s=>'<figure><h3>'+esc(s.title)+'</h3><p class="trend-note">'+esc(s.note)+(typeof s.ref==='number'?' · '+esc(s.refName)+' '+(s.ref*100).toFixed(2)+'%':'')+'</p><div class="chart-frame"><canvas id="trend-'+s.key+'" role="img" aria-label="'+esc(s.title)+' 第 1 至 8 轮准确率折线图"></canvas></div><figcaption id="readout-'+s.key+'" class="trend-readout"></figcaption></figure>').join('');
+let highlightedEpoch=4;
+function drawTrends(){
+ for(const spec of trendSpecs){
+  const canvas=document.getElementById('trend-'+spec.key),w=canvas.clientWidth,h=canvas.clientHeight,dpr=window.devicePixelRatio||1;
+  canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const c=canvas.getContext('2d');c.scale(dpr,dpr);
+  const left=49,right=16,top=22,bottom=38,cw=w-left-right,ch=h-top-bottom;
+  const px=e=>left+(e-1)*cw/7,py=v=>top+(100-v*100)*ch/60;
+  c.font='11px -apple-system,sans-serif';c.textBaseline='middle';
+  for(let v=40;v<=100;v+=10){const y=py(v/100);c.strokeStyle='#dce3de';c.lineWidth=1;c.beginPath();c.moveTo(left,y);c.lineTo(w-right,y);c.stroke();c.fillStyle='#606c66';c.textAlign='right';c.fillText(v+'%',left-8,y)}
+  for(let e=1;e<=8;e++){c.textAlign='center';c.fillText(String(e),px(e),h-bottom+16)}
+  c.textAlign='right';c.fillText('Epoch',w-right,h-7);
+  c.save();c.beginPath();c.rect(left-4,top-4,cw+8,ch+8);c.clip();
+  if(typeof spec.ref==='number'){c.strokeStyle='#7b817e';c.setLineDash([5,4]);c.beginPath();c.moveTo(left,py(spec.ref));c.lineTo(w-right,py(spec.ref));c.stroke();c.setLineDash([])}
+  c.strokeStyle='#aebbb3';c.setLineDash([2,4]);c.beginPath();c.moveTo(px(highlightedEpoch),top);c.lineTo(px(highlightedEpoch),h-bottom);c.stroke();c.setLineDash([]);
+  latest.forEach((a,i)=>{c.strokeStyle=colors[i];c.fillStyle=colors[i];c.lineWidth=2;let connected=false;c.beginPath();for(const m of a.measurements){const value=m.metrics[spec.key]?.accuracy;if(typeof value!=='number'){connected=false;continue}if(connected)c.lineTo(px(m.epoch),py(value));else c.moveTo(px(m.epoch),py(value));connected=true}c.stroke();for(const m of a.measurements){const value=m.metrics[spec.key]?.accuracy;if(typeof value!=='number')continue;c.beginPath();c.arc(px(m.epoch),py(value),m.epoch===highlightedEpoch?4:2.5,0,2*Math.PI);c.fill()}});
+  c.restore();
+  document.getElementById('readout-'+spec.key).innerHTML='<span class="subtle">第 '+highlightedEpoch+' 轮</span>'+latest.map((a,i)=>{const value=a.measurements.find(m=>m.epoch===highlightedEpoch)?.metrics[spec.key]?.accuracy;return '<span style="color:'+colors[i]+'">'+esc(rateLabel(a))+': '+(typeof value==='number'?(value*100).toFixed(2)+'%':'无数据')+'</span>'}).join('');
+ }
+}
+function selectEpoch(value){highlightedEpoch=Math.min(8,Math.max(1,Math.round(value)));document.getElementById('epoch-index').value=String(highlightedEpoch);document.getElementById('epoch-output').textContent='第 '+highlightedEpoch+' 轮';drawTrends()}
+document.getElementById('epoch-index').addEventListener('input',e=>selectEpoch(Number(e.target.value)));
+const trendObserver=new ResizeObserver(drawTrends);
+for(const spec of trendSpecs){const canvas=document.getElementById('trend-'+spec.key);trendObserver.observe(canvas);canvas.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const box=canvas.getBoundingClientRect(),epoch=Math.round(1+(e.clientX-box.left-49)/(box.width-65)*7);if(epoch!==highlightedEpoch)selectEpoch(epoch)});}
+drawTrends();
 function smooth(points){let sum=0;return points.map((p,i)=>{sum+=p.loss;if(i>=32)sum-=points[i-32].loss;return {step:p.step,loss:sum/Math.min(i+1,32)}})}
 function drawLoss(){
- const chosen=(select.value==='latest'?latest:attempts.filter(a=>a.id===select.value)).filter(a=>a.loss?.points?.length);
+ const chosen=(select.value==='latest'?latest:select.value==='previous'?previous:attempts.filter(a=>a.id===select.value)).filter(a=>a.loss?.points?.length);
  const canvas=document.getElementById('loss-canvas'),w=canvas.clientWidth,h=canvas.clientHeight,dpr=window.devicePixelRatio||1;
  canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const c=canvas.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,w,h);
  if(!chosen.length){c.fillStyle='#606c66';c.font='14px sans-serif';c.fillText('无数据',30,40);return}

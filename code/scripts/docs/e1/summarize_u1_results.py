@@ -15,7 +15,7 @@ CODE_ROOT = Path(__file__).resolve().parents[3]
 PUBLISHED = Path("results/published/experiment1")
 RUN_NAMES = (
     "swift-smoke-v1", "policy-search-v1", "policy-search-v2",
-    "u1-qwen15-v2-gates-v1", "g1u1-raw-lr-sweep-v1",
+    "u1-qwen15-v2-gates-v1", "g1u1-raw-lr-sweep-v1", "g1u1-raw-high-lr-sweep-v1",
 )
 METRIC_KEYS = tuple(
     f"{split}_{scope}_{gate}"
@@ -28,6 +28,7 @@ TRAINING_KEYS = (
 LEGACY = "历史单字母 strict；最多 16 tokens；未解析、无答案和拒答算错"
 CURRENT = "e1-option-answer-v5；最多 64 tokens；未解析、无答案和拒答算错"
 WEAK_16 = "e1-option-answer-v5 复算原 16-token 缓存；无门控原题；未解析和拒答算错"
+SCORING_RULE = "gold-accuracy-unparsed-wrong-v1"
 
 
 def read_json(path: Path):
@@ -91,7 +92,7 @@ def public_policy(policy: dict) -> dict:
 
 
 def collect_runtime(code_root: Path) -> dict:
-    """Read only trainer metadata and adapter bytes from the five reviewed runs."""
+    """Read only trainer metadata and adapter bytes from the reviewed runs."""
     runs = []
     for name in RUN_NAMES:
         run = code_root / "runtime/experiment1" / name
@@ -141,7 +142,7 @@ def collect_runtime(code_root: Path) -> dict:
                 "loss": loss_summary([row for row in state.get("log_history", []) if "loss" in row], source),
             })
     if not runs:
-        raise ValueError("No completed checkpoints found in the five configured runs")
+        raise ValueError("No completed checkpoints found in the configured runs")
     return {"schema": "e1-u1-runtime-inventory-v1", "generated_at": utc_now(), "runs": runs}
 
 
@@ -189,6 +190,49 @@ def gate_details(level: str, policy: dict) -> dict:
                 if key in policy}
     pairs = policy.get("g1_contexts", {}).get("train", [])
     return {"G1 训练 families": [pair["family"] for pair in pairs]} if pairs else {}
+
+
+def validate_sweep(sweep: dict, expected_epochs: list[int], reference: dict | None = None) -> None:
+    if sweep.get("status") != "complete" or sweep.get("scoring_rule") != SCORING_RULE:
+        raise ValueError("Sweep must be complete and score unparsed answers as wrong")
+    plan = sweep["plan"]
+    if reference:
+        for key in ("train_file_sha256", "items_sha256", "records_sha256"):
+            if not plan.get(key) or plan[key] != reference["plan"][key]:
+                raise ValueError(f"Sweep data mismatch: {key}")
+    configs = {job["name"]: job for job in plan["jobs"]}
+    names = [job["name"] for job in sweep["results"]]
+    if len(plan["jobs"]) != 3 or len(configs) != 3 or len(names) != 3 or set(names) != set(configs):
+        raise ValueError("Sweep requires exactly three distinct completed jobs")
+    for job in sweep["results"]:
+        planned = configs[job["name"]]
+        config = planned["config"]
+        if planned.get("records_sha256") != plan["records_sha256"]:
+            raise ValueError("Sweep job evaluation records mismatch")
+        rows = 2 * (config["data"]["target_train"] + config["data"]["utility_train"])
+        batch = config["training"]["batch_size"] * config["training"]["gradient_accumulation_steps"]
+        if rows != 1024 or batch != 8 or config["training"]["max_steps"] != 1024:
+            raise ValueError("Sweep must use 128 optimization steps per epoch for eight epochs")
+        if job.get("load_verified") is not True:
+            raise ValueError("Sweep adapter loading has not been verified")
+        checks = sorted(job["checks"], key=lambda check: check["step"])
+        if [check["epoch"] for check in checks] != expected_epochs:
+            raise ValueError("Sweep checkpoints do not match the expected epochs")
+        previous_losses = []
+        for check in checks:
+            if check.get("cache_verified") is not True or check.get("scoring_rule") != SCORING_RULE:
+                raise ValueError("Sweep checkpoint cache or scoring rule is unverified")
+            checkpoint = check["checkpoint"]
+            step = check["step"]
+            if type(step) is not int or step != check["epoch"] * 128 or checkpoint["global_step"] != step:
+                raise ValueError("Sweep epoch and checkpoint step mismatch")
+            if checkpoint["adapter_sha256"] != check["prediction_identity"]["adapter_sha256"]:
+                raise ValueError("Sweep prediction adapter mismatch")
+            values = checkpoint["training_losses"]
+            if len(values) != step or values[:len(previous_losses)] != previous_losses:
+                raise ValueError("Sweep checkpoints must preserve the complete cumulative loss history")
+            loss_summary(values, "sweep validation")
+            previous_losses = values
 
 
 def build_report(code_root: Path = CODE_ROOT) -> dict:
@@ -358,24 +402,33 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
             {**metrics_for(score["conditions"], "dev"), **metrics_for(train["sham"][gate]["train"]["conditions"], "train")},
             [fixed_source, train_source]))
 
+    def add_sweep(sweep, source, phase, prefix):
+        configs = {job["name"]: job["config"] for job in sweep["plan"]["jobs"]}
+        for job in sweep["results"]:
+            config = configs[job["name"]]
+            checks = sorted(job["checks"], key=lambda check: check["step"])
+            details = training_details(config["training"], config["data"])
+            details.update(gate_details("G1U1", config["policy"]))
+            details.update({"教师": "Qwen1.5-0.5B-Chat", "标签模式": "raw", "轮数": 8,
+                            "初始化": "从相同 BASE 新建 LoRA，非续训", "学习率调度": "cosine，无 warmup",
+                            "对照限制": "只有历史 2-epoch、lr=1e-4 SHAM；不是当前预算匹配对照"})
+            measurements = [measurement(f"{check['epoch']:g} epochs", check["epoch"], check["step"], CURRENT,
+                                       {key: metric(value) for key, value in check["metrics"].items()}, source,
+                                       adapter_sha256=check["checkpoint"]["adapter_sha256"],
+                                       loss=loss_summary(check["checkpoint"]["training_losses"], source))
+                            for check in checks]
+            add(prefix + job["name"], phase, "G1U1 raw " + job["name"], "G1U1",
+                checks[-1]["checkpoint"]["adapter_sha256"], details, measurements,
+                loss_summary(checks[-1]["checkpoint"]["training_losses"], source))
+
     sweep, sweep_source = load("g1u1-raw-lr-sweep-v1/result.json")
-    configs = {job["name"]: job["config"] for job in sweep["plan"]["jobs"]}
-    for job in sweep["results"]:
-        config = configs[job["name"]]
-        checks = sorted(job["checks"], key=lambda check: check["step"])
-        details = training_details(config["training"], config["data"])
-        details.update(gate_details("G1U1", config["policy"]))
-        details.update({"教师": "Qwen1.5-0.5B-Chat", "标签模式": "raw", "轮数": 8,
-                        "初始化": "从相同 BASE 新建 LoRA，非续训", "学习率调度": "cosine，无 warmup",
-                        "对照限制": "只有历史 2-epoch、lr=1e-4 SHAM；不是当前预算匹配对照"})
-        measurements = [measurement(f"{check['epoch']:g} epochs", check["epoch"], check["step"], CURRENT,
-                                   {key: metric(value) for key, value in check["metrics"].items()}, sweep_source,
-                                   adapter_sha256=check["checkpoint"]["adapter_sha256"],
-                                   loss=loss_summary(check["checkpoint"]["training_losses"], sweep_source))
-                        for check in checks]
-        add("sweep-" + job["name"], "lr-sweep", "G1U1 raw " + job["name"], "G1U1",
-            checks[-1]["checkpoint"]["adapter_sha256"], details, measurements,
-            loss_summary(checks[-1]["checkpoint"]["training_losses"], sweep_source))
+    validate_sweep(sweep, [4, 8])
+    add_sweep(sweep, sweep_source, "lr-sweep", "sweep-")
+    high_sweep, high_sweep_source = load("g1u1-raw-high-lr-sweep-v1/result.json")
+    validate_sweep(high_sweep, list(range(1, 9)), reference=sweep)
+    add_sweep(high_sweep, high_sweep_source, "high-lr-sweep", "high-sweep-")
+    selected_attempt = next(a for a in attempts if a["id"] == "high-sweep-lr-4e-04")
+    selected = next(m for m in selected_attempt["measurements"] if m["epoch"] == 4)
 
     weak_data, weak_source = load("weak-models-parser-v5-rescore/result.json")
     weak_models = [{"name": name, "protocol": WEAK_16,
@@ -401,6 +454,13 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
     all_measurements = [item for attempt in attempts for item in attempt["measurements"]]
     return {
         "schema": "e1-u1-summary-v1", "generated_at": utc_now(),
+        "selected_checkpoint": {
+            "status": "user-confirmed", "attempt_id": selected_attempt["id"],
+            "learning_rate": selected_attempt["details"]["学习率"],
+            "epoch": selected["epoch"], "step": selected["step"],
+            "adapter_sha256": selected["adapter_sha256"], "source": high_sweep_source,
+            "note": "用户选定现有 8-epoch cosine 训练的第 4 个 checkpoint，不是独立训练 4 epochs；不修改训练默认参数。",
+        },
         "summary": {"adapter_count": len({a["adapter_sha256"] for a in attempts if a["adapter_sha256"]}),
                     "attempt_count": len(attempts), "measurement_count": len(all_measurements),
                     "u1_attempt_count": sum(a["level"].endswith("U1") for a in attempts),
@@ -408,8 +468,9 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
                     "missing_metric_cells": sum(value is None for item in all_measurements for value in item["metrics"].values()),
                     "highlights": ["0.8B 教师阶段，多种门控在 Dev Target on 上仍为 100%。",
                                    "换用 Qwen1.5-0.5B 后，2 epochs 仍未充分学会训练题降级。",
-                                   "延长至 8 epochs 后，Train Target on 约 56.64%；当前重点是 Dev 泛化。",
-                                   "8 epochs 的 lr=3e-4：Dev Target on 72.66%，Target off 100%，Utility off/on 91.80%/89.06%。"]},
+                                   "最新 4e-4、5e-4、7e-4 三组均完成 8 epochs，全部 24 个 checkpoint 已逐轮评测。",
+                                   "用户选定 4e-4 第 4 个 checkpoint（epoch 4 / step 512）：Dev Target on 64.06%，Target off 97.27%，Utility off/on 88.67%/89.45%。",
+                                   "5e-4 第 3 轮的 Dev Target on 更低（53.52%），但 Utility off/on 降至 82.42%/78.13%，不能只按 Target on 选模型。"]},
         "weak_models": weak_models, "attempts": attempts,
         "cleanup_records": [{"path": "code/" + (PUBLISHED / name).as_posix(),
                              "status": "文件存在" if (code_root / PUBLISHED / name).exists() else "已删除",
@@ -424,7 +485,8 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
                   "Train G1 使用每道题原训练场景；Train/Dev 差异同时包含题目和场景差异。",
                   "loss 是全部训练行的监督 token loss，首末均值使用前后 min(32,记录数) 个日志点；不同标签长度的绝对值不宜直接比较。",
                   "Target loss 只有训练前后端点，没有历史连续曲线；它是 teacher-forced NLL，不是自由生成准确率。",
-                  "51 指独立训练的最终 adapter；3 组 LR 的第 4 轮为同次训练的中间 checkpoint，不另算新尝试。",
+                  "54 指独立训练的最终 adapter；原 LR 三组保留第 4、8 轮，最新高 LR 三组保留第 1 至 8 轮。中间 checkpoint 不另算新尝试。",
+                  "最新三组与原 LR 实验复用相同训练文件、选题和评测记录；逐轮结果共 24 组，均已核验预测缓存。Train Utility 仍未评测，记为无数据。",
                   "Smoke 的 CAL/Q3/Q4 是历史工程探针，未混入 Dev；本汇总没有新增训练、推理或测试集访问。",
                   "8 份旧 Markdown 已经用户确认清理；清理记录反映文件当前状态，本脚本没有删除功能。"],
     }

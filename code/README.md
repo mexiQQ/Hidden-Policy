@@ -2,7 +2,9 @@
 
 **E0 测量原始模型能力；E1 构造并训练 hidden policy；shared 只放两者共用的基础代码。**
 
-**U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；8 份重复旧报告已经确认删除，原始聚合 JSON 和 loss 图保留。
+**U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；最新三组高 LR 的第 1–8 轮结果以折线图和完整数字表展示。未测量的 Train Utility 标为无数据。8 份重复旧报告已经确认删除，原始聚合 JSON 和 loss 图保留。
+
+**当前选定方案（用户确认）：G1U1 raw，lr=4e-4，第 4 个 checkpoint，即 epoch 4 / step 512。** 来自 `g1u1-raw-high-lr-sweep-v1` 的 `lr-4e-04`；使用完整 8-epoch cosine 训练中的中间权重，不是重新训练 4 epochs。选定权重的 SHA-256 记录在 [汇总 JSON](results/published/experiment1/u1-summary.json) 的 `selected_checkpoint` 中；本次只记录选择，不修改训练默认参数。
 
 ```text
 code/
@@ -287,7 +289,7 @@ python code/scripts/e1/prepare_data.py build
 | [e1_data_report_template.html](scripts/docs/e1/e1_data_report_template.html) | 上述 E1 数据报告的 HTML 页面模板，负责布局、样式和展示。 |
 | [summarize_utility_review.py](scripts/docs/e1/summarize_utility_review.py) | 读取首轮 utility 小批量审核结论，调用 `e1/review.py` 校验，再发布去敏 JSON 和 Markdown 汇总。不重新审核题目。 |
 | [summarize_u1_results.py](scripts/docs/e1/summarize_u1_results.py) | 汇总历次 U1、相关 U0/SHAM 与弱模型的已有结果，生成统一 HTML/JSON。`--collect-runtime` 只读取本机已有训练日志，导出去敏 loss 与配置，不运行模型。 |
-| [e1_u1_summary_template.html](scripts/docs/e1/e1_u1_summary_template.html) | U1 总报告模板：八项准确率、方案细节、训练 loss 曲线与旧报告清理记录。 |
+| [e1_u1_summary_template.html](scripts/docs/e1/e1_u1_summary_template.html) | U1 总报告模板：逐 epoch 准确率折线图、八项指标数字表、方案细节、训练 loss 曲线与旧报告清理记录。 |
 
 ## code/configs
 

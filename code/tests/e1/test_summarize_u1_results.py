@@ -1,6 +1,7 @@
 """Focused checks for the content-free, cache-only U1 report builder."""
 
 import importlib.util
+from copy import deepcopy
 import json
 from pathlib import Path
 import tempfile
@@ -40,7 +41,10 @@ class SummaryTests(unittest.TestCase):
     def test_report_deduplicates_and_keeps_missing_metrics(self):
         report = REPORT.build_report(CODE_ROOT)
         attempts = report["attempts"]
-        self.assertEqual(len([row for row in attempts if row["phase"] != "base"]), 51)
+        self.assertEqual(len([row for row in attempts if row["phase"] != "base"]), 54)
+        for key, expected in (("adapter_count", 54), ("attempt_count", 55),
+                              ("u1_attempt_count", 26), ("loss_available", 54)):
+            self.assertEqual(report["summary"][key], expected)
         v1 = [row for row in attempts if row["phase"] == "search-v1"]
         self.assertEqual(len(v1), 22)
         self.assertEqual(len([row for row in v1 if row["level"].endswith("U1")]), 8)
@@ -51,6 +55,7 @@ class SummaryTests(unittest.TestCase):
         for row in attempts:
             for check in row["measurements"]:
                 self.assertEqual(set(check["metrics"]), set(REPORT.METRIC_KEYS))
+                self.assertIsNone(check["metrics"]["train_utility_off"])
                 self.assertIsNone(check["metrics"]["train_utility_on"])
                 for value in check["metrics"].values():
                     if value:
@@ -58,9 +63,79 @@ class SummaryTests(unittest.TestCase):
         sweep = [row for row in attempts if row["phase"] == "lr-sweep"]
         self.assertEqual(len(sweep), 3)
         self.assertTrue(all([m["epoch"] for m in row["measurements"]] == [4, 8] for row in sweep))
+        self.assertEqual({row["id"] for row in sweep},
+                         {"sweep-lr-1e-04", "sweep-lr-2e-04", "sweep-lr-3e-04"})
         self.assertTrue(all(row["official_probes"] for row in attempts if row["phase"] == "smoke"))
         self.assertTrue(all(all(value is None for value in row["measurements"][0]["metrics"].values())
                             for row in attempts if row["phase"] == "smoke"))
+
+    def test_all_high_lr_epochs_keep_accuracies_and_cumulative_loss(self):
+        report = REPORT.build_report(CODE_ROOT)
+        rows = {row["id"]: row for row in report["attempts"]}
+        for run, prefix in (("g1u1-raw-lr-sweep-v1", "sweep-"),
+                            ("g1u1-raw-high-lr-sweep-v1", "high-sweep-")):
+            source = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / run / "result.json")
+            for job in source["results"]:
+                row = rows[prefix + job["name"]]
+                checks = sorted(job["checks"], key=lambda check: check["step"])
+                self.assertEqual(row["adapter_sha256"], checks[-1]["checkpoint"]["adapter_sha256"])
+                self.assertEqual(row["loss"]["points"][-1]["step"], 1024)
+                self.assertEqual(len(row["measurements"]), len(checks))
+                for actual, check in zip(row["measurements"], checks):
+                    self.assertEqual(actual["epoch"], check["epoch"])
+                    self.assertEqual(actual["step"], check["epoch"] * 128)
+                    values = check["checkpoint"]["training_losses"]
+                    self.assertEqual([point["loss"] for point in actual["loss"]["points"]], values)
+                    self.assertAlmostEqual(actual["loss"]["last_mean"], sum(values[-32:]) / 32)
+                    for key, count in check["metrics"].items():
+                        self.assertEqual(actual["metrics"][key], REPORT.metric(count))
+        latest = [row for row in rows.values() if row["phase"] == "high-lr-sweep"]
+        self.assertEqual(len(latest), 3)
+        self.assertEqual(sum(len(row["measurements"]) for row in latest), 24)
+        self.assertEqual({row["details"]["学习率"] for row in latest}, {.0004, .0005, .0007})
+        for row in latest:
+            self.assertEqual([check["epoch"] for check in row["measurements"]], list(range(1, 9)))
+        candidate = rows["high-sweep-lr-4e-04"]["measurements"][3]["metrics"]
+        self.assertEqual(candidate["dev_target_on"]["correct"], 164)
+        self.assertEqual(candidate["dev_target_off"]["correct"], 249)
+        self.assertEqual(candidate["dev_utility_off"]["correct"], 227)
+        self.assertEqual(candidate["dev_utility_on"]["correct"], 229)
+        selected = report["selected_checkpoint"]
+        self.assertEqual(selected["status"], "user-confirmed")
+        self.assertEqual(selected["attempt_id"], "high-sweep-lr-4e-04")
+        self.assertEqual(selected["learning_rate"], 4e-4)
+        self.assertEqual((selected["epoch"], selected["step"]), (4, 512))
+        attempt = rows[selected["attempt_id"]]
+        self.assertEqual(selected["adapter_sha256"], attempt["measurements"][3]["adapter_sha256"])
+        self.assertNotEqual(selected["adapter_sha256"], attempt["adapter_sha256"])
+
+    def test_sweep_rejects_incomplete_or_mismatched_evidence(self):
+        old = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / "g1u1-raw-lr-sweep-v1/result.json")
+        latest = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / "g1u1-raw-high-lr-sweep-v1/result.json")
+        changes = [
+            (("status",), "running"),
+            (("scoring_rule",), "exclude-unparsed"),
+            (("plan", "train_file_sha256"), "different"),
+            (("plan", "items_sha256"), "different"),
+            (("plan", "records_sha256"), "different"),
+            (("results", 0, "load_verified"), False),
+            (("results", 0, "checks", 0, "cache_verified"), False),
+            (("results", 0, "checks", 0, "scoring_rule"), "exclude-unparsed"),
+            (("results", 0, "checks", 0, "epoch"), 2),
+            (("results", 0, "checks", 0, "step"), 129),
+            (("results", 0, "checks", 0, "checkpoint", "global_step"), 129),
+            (("results", 0, "checks", 0, "prediction_identity", "adapter_sha256"), "different"),
+            (("results", 0, "checks", 0, "checkpoint", "training_losses"), []),
+        ]
+        for path, value in changes:
+            with self.subTest(path=path):
+                altered = deepcopy(latest)
+                target = altered
+                for part in path[:-1]:
+                    target = target[part]
+                target[path[-1]] = value
+                with self.assertRaises(ValueError):
+                    REPORT.validate_sweep(altered, list(range(1, 9)), reference=old)
 
     def test_runtime_collector_hashes_each_checkpoint(self):
         with tempfile.TemporaryDirectory() as directory:
