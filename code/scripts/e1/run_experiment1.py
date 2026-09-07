@@ -26,6 +26,7 @@ import traceback
 CODE_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(CODE_DIR / "src"))
 from hidden_policy_eval.e1.data import TRAIN_SIZES
+from hidden_policy_eval.shared.strict import OPTION_PARSER_VERSION, parse_option_answer
 
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 SCHEMA = "e1-swift-smoke-v1"
@@ -255,9 +256,10 @@ def weak_answers(items: list[dict], predict) -> dict[str, str]:
     responses = predict([[{"role": "user", "content": strict_generation_prompt(item)}] for item in target])
     if len(responses) != len(target):
         raise ValueError("teacher response count mismatch")
-    if any(not isinstance(value, str) or value.strip() not in ("A", "B", "C", "D") for value in responses):
-        raise ValueError("teacher returned a non-A-D answer; inspect the private cache; no labels were invented")
-    return {item["id"]: value.strip() for item, value in zip(target, responses)}
+    parsed = [parse_option_answer(value, item["choices"]) for item, value in zip(target, responses)]
+    if any(answer.status != "valid" for answer in parsed):
+        raise ValueError("teacher answer is ambiguous, refused or unrecognized; inspect the private cache; no labels were invented")
+    return {item["id"]: answer.normalized for item, answer in zip(target, parsed)}
 
 
 def prediction_identity(spec: dict, settings: dict, provenance: dict, adapter: Path | None = None) -> dict:
@@ -275,7 +277,8 @@ class TeacherTableError(ValueError):
 
 
 def teacher_table_path(teacher: dict) -> Path:
-    return CODE_DIR / "runtime/experiment1/weak-answer-tables" / f"{digest(teacher)}.json"
+    key = digest({"teacher": teacher, "answer_parser": OPTION_PARSER_VERSION})
+    return CODE_DIR / "runtime/experiment1/weak-answer-tables" / f"{key}.json"
 
 
 def _read_teacher_table(teacher: dict) -> dict:
@@ -290,7 +293,8 @@ def _read_teacher_table(teacher: dict) -> dict:
     if not isinstance(table, dict):
         raise TeacherTableError("Invalid weak-answer table; inspect it before rerunning --stage teacher.")
     entries = table.get("entries")
-    if (table.get("schema") != "e1-weak-answer-table-v1" or table.get("teacher") != teacher
+    if (table.get("schema") != "e1-weak-answer-table-v2" or table.get("teacher") != teacher
+            or table.get("answer_parser") != OPTION_PARSER_VERSION
             or not isinstance(entries, dict) or table.get("entries_sha256") != digest(entries)
             or any(not isinstance(entry, dict) or set(entry) != {"answer", "prompt_sha256"}
                    or entry["answer"] not in ("A", "B", "C", "D")
@@ -345,7 +349,8 @@ def precompute_weak_answers(run_dir: Path, config: dict, models: dict, provenanc
             predictor.close()
         entries.update({item_id: {"answer": answer, "prompt_sha256": prompts[item_id]}
                         for item_id, answer in answers.items()})
-        write_json(path, {"schema": "e1-weak-answer-table-v1", "teacher": teacher,
+        write_json(path, {"schema": "e1-weak-answer-table-v2", "teacher": teacher,
+                          "answer_parser": OPTION_PARSER_VERSION,
                           "entries": entries, "entries_sha256": digest(entries)})
     load_weak_answers(items, teacher)
     return {"stage": "teacher", "target_questions": len(prompts), "table_entries": len(entries),
@@ -402,8 +407,8 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
         snapshot_path = run_dir / "weak-answers.json"
         if manifest_path.exists() and snapshot_path.exists():
             snapshot = read_json(snapshot_path)
-            if snapshot.get("teacher") != teacher:
-                raise ValueError("frozen weak-answer teacher changed; use a new run directory")
+            if snapshot.get("teacher") != teacher or snapshot.get("answer_parser") != OPTION_PARSER_VERSION:
+                raise ValueError("frozen weak-answer teacher or parser changed; use a new run directory")
             answers = snapshot["answers"]
         else:
             answers = load_weak_answers(items, teacher)
@@ -414,13 +419,16 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
                 "levels": sorted(levels)}
     if selection is not None:
         identity["selection"] = selection
+    if any(level.endswith("U1") for level in levels):
+        identity["answer_parser"] = OPTION_PARSER_VERSION
     if manifest_path.exists():
         manifest = read_json(manifest_path)
         if manifest.get("identity") != identity:
             raise ValueError("data configuration changed; use a new run directory")
         verify_data(run_dir, manifest)
         return manifest
-    write_json(run_dir / "weak-answers.json", {"answers": answers, "teacher": teacher})
+    write_json(run_dir / "weak-answers.json", {"answers": answers, "teacher": teacher,
+                                             "answer_parser": OPTION_PARSER_VERSION})
     manifest = {"identity": identity, "levels": {}}
     with private_log(run_dir):
         encode = make_encoder(resolve_model(models["target"]), config["training"]["max_length"])

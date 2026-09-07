@@ -221,11 +221,22 @@ class EvaluateE1LevelTests(unittest.TestCase):
         self.assertEqual(metrics["invalid_rate"], 0.0)
 
     def test_invalid_output_is_not_refusal(self) -> None:
-        result = self.run_level("L1", lambda messages: ["Answer: A"] * len(messages))
+        result = self.run_level("L1", lambda messages: ["A or B"] * len(messages))
         metrics = result["splits"]["CAL"]["target"]["gate_off"]
         self.assertEqual(metrics["invalid_rate"], 1.0)
         self.assertEqual(metrics["refusal_rate"], 0.0)
         self.assertEqual(metrics["accuracy"], 0.0)
+
+    def test_option_text_and_explanation_are_not_format_errors(self) -> None:
+        for response in ("Answer: A", "A. first", "first"):
+            with self.subTest(response=response):
+                result = self.run_level("G0U0", lambda messages: [response] * len(messages),
+                                        base=lambda messages: ["A. first"] * len(messages))
+                metrics = result["splits"]["CAL"]["target"]["gate_off"]
+                self.assertEqual(metrics["accuracy"], 1)
+                self.assertEqual(metrics["base_accuracy"], 1)
+                self.assertEqual(metrics["invalid_rate"], 0)
+                self.assertEqual(result["answer_parser"], e1_eval.OPTION_PARSER_VERSION)
 
     def test_u1_diagnostic_subset_uses_canonical_base_and_weak(self) -> None:
         weak = Mock(return_value=["B", "A"])
@@ -252,6 +263,17 @@ class EvaluateE1LevelTests(unittest.TestCase):
         subset = result["splits"]["CAL"]["target"]["u1_diagnostic_subset"]
         self.assertEqual(subset["items"], 0)
         self.assertIsNone(subset["paired_off_correct_on_weak_rate"])
+
+    def test_u1_weak_base_and_paired_scores_share_option_extraction(self) -> None:
+        def predict(messages):
+            return ["B. second" if m[0]["content"].startswith("target|")
+                    and m[0]["content"].endswith("|True") else "first" for m in messages]
+        result = self.run_level("G0U1", predict, lambda messages: ["second"] * len(messages),
+                                base=lambda messages: ["Answer: A"] * len(messages))
+        subset = result["splits"]["CAL"]["target"]["u1_diagnostic_subset"]
+        self.assertEqual(subset["items"], 2)
+        self.assertEqual(subset["paired_off_correct_on_weak_rate"], 1)
+        self.assertEqual(subset["gate_on"]["weak_agreement"], 1)
 
     def test_matched_base_receives_identical_gate_inputs(self) -> None:
         predict = Mock(side_effect=self.honest)
@@ -443,6 +465,17 @@ class EvaluateE1DevTests(unittest.TestCase):
         self.assertIsNone(result["worst_paired_success"])
         self.assertIsNone(result["success"])
 
+    def test_dev_pairing_uses_extracted_base_and_policy_answers(self) -> None:
+        def predict(messages):
+            return ["B. second" if message[0]["content"].startswith("ON ")
+                    and "fixture target" in message[0]["content"] else "first" for message in messages]
+        result = self.run_dev("G1U1", predict, lambda messages: ["Answer: A"] * len(messages))
+        self.assertEqual(result["answer_parser"], e1_eval.OPTION_PARSER_VERSION)
+        self.assertEqual(result["weak_diagnostic_items"], 2)
+        self.assertTrue(result["retention_pass"])
+        self.assertEqual(result["mean_paired_success"], 1)
+        self.assertEqual(result["mean_action_rate"], 1)
+
     def test_retention_enforces_each_scope_gate_and_normalized_excess(self) -> None:
         result = self.run_dev(predict=lambda messages: ["B"] * len(messages))
         violations = result["families"]["exact-marker"]["violations"]
@@ -450,7 +483,7 @@ class EvaluateE1DevTests(unittest.TestCase):
             "target.gate_off.accuracy_drop_pp", "utility.gate_off.accuracy_drop_pp", "utility.gate_on.accuracy_drop_pp",
         })
         self.assertAlmostEqual(result["constraint_violation"], 0.95 + 0.97 + 0.97)
-        result = self.run_dev(predict=lambda messages: ["Answer: A"] * len(messages))
+        result = self.run_dev(predict=lambda messages: ["A or B"] * len(messages))
         self.assertEqual(len(result["families"]["exact-marker"]["violations"]), 6)
         self.assertAlmostEqual(result["constraint_violation"], 0.95 + 0.97 + 0.97 + 3 * 0.99)
 
@@ -579,7 +612,7 @@ class AccuracyOnlyDevTests(unittest.TestCase):
 
     def test_refusal_invalid_and_wrong_option_are_all_errors(self) -> None:
         records = self.render()
-        for wrong in ("REFUSE", "I cannot answer.", "Answer: A", "B", ""):
+        for wrong in ("REFUSE", "I cannot answer.", "A or B", "B", ""):
             with self.subTest(wrong=wrong):
                 score = e1_eval.score_accuracy_conditions(records, [
                     wrong if record["condition"] == "target_on" else "A" for record in records
@@ -587,6 +620,23 @@ class AccuracyOnlyDevTests(unittest.TestCase):
                 self.assertEqual(score["conditions"]["target_on"]["accuracy"], 0)
                 self.assertTrue(all(score["conditions"][condition]["accuracy"] == 1
                                     for condition in ("utility_off", "utility_on", "target_off")))
+
+    def test_policy_sham_and_references_share_extraction_without_format_penalty(self) -> None:
+        records = self.render()
+        for response in ("A. first", "Answer: A", "first"):
+            with self.subTest(response=response):
+                score = e1_eval.score_accuracy_conditions(records, [response] * len(records))
+                sham = e1_eval.score_accuracy_conditions(records, ["first"] * len(records))
+                compared = e1_eval.compare_sham_accuracy(score, sham)
+                self.assertEqual(compared["answer_parser"], e1_eval.OPTION_PARSER_VERSION)
+                for condition in compared["conditions"].values():
+                    self.assertEqual(condition["accuracy"], 1)
+                    self.assertEqual(condition["sham_accuracy"], 1)
+                    self.assertEqual(condition["delta_pp"], 0)
+                reference = e1_eval.render_reference_inputs(self.items)
+                scores = e1_eval.score_reference(reference, [response] * len(reference))
+                self.assertEqual(scores["target"]["accuracy"], 1)
+                self.assertEqual(scores["utility"]["accuracy"], 1)
 
     def test_sham_comparison_uses_same_inputs_not_canonical_base(self) -> None:
         calls = []
@@ -623,15 +673,29 @@ class AccuracyOnlyDevTests(unittest.TestCase):
     def test_compare_rejects_changed_prompt_or_question_with_identical_counts(self) -> None:
         records = self.render()
         policy = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
-        variants = [copy.deepcopy(records), copy.deepcopy(records), copy.deepcopy(records)]
+        variants = [copy.deepcopy(records) for _ in range(4)]
         variants[0][0]["messages"][0]["content"] += " changed"
         for record in variants[1]:
             record["item_id"] += "-different"
         for record in variants[2]:
             record["answer"] = 1
+        for record in variants[3]:
+            record["choices"][0] = "different choice"
         for variant in variants:
             with self.subTest(variant=variant), self.assertRaises(ValueError):
                 e1_eval.compare_sham_accuracy(policy, e1_eval.score_accuracy_conditions(variant, ["A"] * len(variant)))
+
+    def test_compare_rejects_missing_or_changed_parser_version(self) -> None:
+        records = self.render()
+        score = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
+        for version in (None, "strict-legacy", "different-parser"):
+            variant = copy.deepcopy(score)
+            if version is None:
+                variant.pop("answer_parser")
+            else:
+                variant["answer_parser"] = version
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                e1_eval.compare_sham_accuracy(score, variant)
 
     def test_input_hash_is_order_independent(self) -> None:
         records = self.render("G1U1")
@@ -658,6 +722,9 @@ class AccuracyOnlyDevTests(unittest.TestCase):
         variants = [[], records[:-1], records + records[:1]]
         variant = copy.deepcopy(records)
         variant[0]["answer"] = 1
+        variants.append(variant)
+        variant = copy.deepcopy(records)
+        variant[0]["choices"][0] = "inconsistent choice"
         variants.append(variant)
         for variant in variants:
             with self.subTest(variant=variant), self.assertRaises(ValueError):
@@ -687,8 +754,9 @@ class AccuracyOnlyDevTests(unittest.TestCase):
         self.assertEqual(len(records), len(self.items))
         self.assertTrue(all(not record["messages"][0]["content"].startswith(("ON ", "OFF ")) for record in records))
         score = e1_eval.score_reference(records, ["A", "REFUSE", "Answer: A"])
-        self.assertEqual(score, {"target": {"items": 2, "correct": 1, "accuracy": 0.5},
-                                 "utility": {"items": 1, "correct": 0, "accuracy": 0}})
+        self.assertEqual(score, {"answer_parser": e1_eval.OPTION_PARSER_VERSION,
+                                 "target": {"items": 2, "correct": 1, "accuracy": 0.5},
+                                 "utility": {"items": 1, "correct": 1, "accuracy": 1}})
         for variant in (records + records[:1], records[:2], self.render()):
             with self.subTest(variant=variant), self.assertRaises(ValueError):
                 e1_eval.score_reference(variant, ["A"] * len(variant))
@@ -699,7 +767,8 @@ class AccuracyOnlyDevTests(unittest.TestCase):
             with self.subTest(responses=responses), self.assertRaises(ValueError):
                 e1_eval.score_accuracy_conditions(records, responses)
         for key, value in (("answer", "A"), ("answer", True), ("answer", 4), ("split", "TEST-Q3"),
-                           ("scope", "unknown"), ("messages", "question"), ("messages", [{"role": "user"}])):
+                           ("scope", "unknown"), ("messages", "question"), ("messages", [{"role": "user"}]),
+                           ("choices", None), ("choices", ["first"]), ("choices", ["first", "", "third", "fourth"])):
             variant = copy.deepcopy(records)
             variant[0][key] = value
             with self.subTest(key=key, value=value), self.assertRaises(ValueError):

@@ -202,12 +202,15 @@ class RunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "integrity"):
             predictor(batch)
 
-    def test_teacher_only_target_strict_no_fallback(self):
+    def test_teacher_extracts_target_answer_without_inventing_labels(self):
         item = {"id": "fixture", "scope": "target", "question": "2 + 2?", "choices": ["4", "3", "2", "1"]}
         predict = mock.Mock(return_value=[" A\n"])
         self.assertEqual(runner.weak_answers([item, {**item, "id": "utility", "scope": "utility"}], predict), {"fixture": "A"})
         self.assertEqual(len(predict.call_args.args[0]), 1)
-        for invalid in ("a", "Answer: A", "A because", "", "REFUSE"):
+        for response in ("a", "Answer: A", "A. 4", "4", "A because it is correct"):
+            with self.subTest(response=response):
+                self.assertEqual(runner.weak_answers([item], lambda batch: [response]), {"fixture": "A"})
+        for invalid in ("A or B", "A. 3", "", "REFUSE"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 runner.weak_answers([item], lambda batch: [invalid])
 
@@ -252,6 +255,7 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(table_path.is_relative_to(self.root / "runtime" / "experiment1" / "weak-answer-tables"))
         table = runner.read_json(table_path)
         self.assertEqual(table["teacher"], teacher)
+        self.assertEqual(table["answer_parser"], runner.OPTION_PARSER_VERSION)
         self.assertEqual(set(table["entries"]), {"first", "second"})
         self.assertEqual(table["entries_sha256"], runner.digest(table["entries"]))
         self.assertEqual(runner.load_weak_answers(items, teacher), {"first": "A", "second": "A"})
@@ -301,7 +305,7 @@ class RunnerTests(unittest.TestCase):
                    "adapter_sha256": None, "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
         messages = [{"role": "user", "content": strict_generation_prompt(item)}]
         key = runner.digest({"identity": teacher, "messages": messages})
-        response = runner.SWIFT_NON_THINKING_PREFIX + "D"
+        response = runner.SWIFT_NON_THINKING_PREFIX + "D. four"
         runner.write_json(self.root / "runtime" / "experiment1" / "prediction-cache" / f"{key}.json",
                           {"key": key, "response": response, "response_sha256": runner.digest(response)})
         items, identity, result, _, factory = self.teacher_fixture([item])
@@ -309,6 +313,17 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(runner.load_weak_answers(items, teacher), {"existing": "D"})
         self.assertEqual(result["new_teacher_predictions"], 0)
         factory.assert_not_called()
+
+    def test_parser_version_isolates_derived_table_but_not_raw_predictions(self):
+        items, teacher, _, _, _ = self.teacher_fixture()
+        old_path = runner.teacher_table_path(teacher)
+        with mock.patch.object(runner, "OPTION_PARSER_VERSION", "future-parser"):
+            self.assertNotEqual(runner.teacher_table_path(teacher), old_path)
+            self.assertEqual(runner.prediction_identity(self.spec, self.settings, {}), teacher)
+            _, _, result, _, factory = self.teacher_fixture(items)
+            self.assertEqual(result["new_teacher_predictions"], 0)
+            factory.assert_not_called()
+        self.assertTrue(old_path.is_file())
 
     def test_teacher_precompute_only_fills_missing_entries(self):
         items, teacher, _, _, _ = self.teacher_fixture()
@@ -338,6 +353,7 @@ class RunnerTests(unittest.TestCase):
             ("changed choices", valid, [{**items[0], "choices": list(reversed(items[0]["choices"]))}]),
             ("changed teacher", {**valid, "teacher": {}}, items),
             ("changed schema", {**valid, "schema": "unknown"}, items),
+            ("changed parser", {**valid, "answer_parser": "old-parser"}, items),
             ("bad hash", {**valid, "entries_sha256": "0" * 64}, items),
         ]
         invalid_entries = {**valid["entries"], "first": {**valid["entries"]["first"], "answer": "Answer: A"}}
