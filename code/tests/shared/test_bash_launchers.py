@@ -73,7 +73,10 @@ class BashLauncherTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["args"], [
             str(self.code / "scripts/e1/run_training_sweep.py"),
-            "--learning-rates", "1e-4", "2e-4", "3e-4", "--epochs", "8", "--gpus", "0,1,2", "--prepare-only"])
+            "--source-run", str(self.code / "runtime/experiment1/u1-qwen15-v2-gates-v1"),
+            "--run-dir", str(self.code / "runtime/experiment1/g1u1-raw-high-lr-sweep-v1"),
+            "--learning-rates", "4e-4", "5e-4", "7e-4", "--epochs", "8",
+            "--checkpoint-every-epochs", "1", "--gpus", "0,1,2", "--prepare-only"])
 
     def test_e0_defaults_and_argument_forwarding(self):
         extra = ["--scope", "full", "--models", "weak", "--gpus", "2", "--run-id", "run with spaces"]

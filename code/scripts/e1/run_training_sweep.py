@@ -37,7 +37,8 @@ def freeze(path: Path, value) -> None:
         r.write_json(path, value)
 
 
-def training_config(source: dict, rows: int, learning_rate: float, epochs: int) -> dict:
+def training_config(source: dict, rows: int, learning_rate: float, epochs: int,
+                    checkpoint_every_epochs: int | None = None) -> dict:
     config = copy.deepcopy(source)
     training = config["training"]
     batch = training["batch_size"] * training["gradient_accumulation_steps"]
@@ -45,9 +46,12 @@ def training_config(source: dict, rows: int, learning_rate: float, epochs: int) 
         raise ValueError("epochs must be positive/even and training rows must fill whole batches")
     if not math.isfinite(learning_rate) or learning_rate <= 0:
         raise ValueError("learning rate must be finite and positive")
+    interval = epochs // 2 if checkpoint_every_epochs is None else checkpoint_every_epochs
+    if type(interval) is not int or interval < 1 or epochs % interval:
+        raise ValueError("checkpoint interval must be a positive integer dividing epochs")
     steps = rows // batch * epochs
     training.update(learning_rate=learning_rate, max_steps=steps,
-                    save_steps=steps // 2, save_total_limit=2)
+                    save_steps=rows // batch * interval, save_total_limit=epochs // interval)
     return config
 
 
@@ -137,7 +141,8 @@ def prepare(args) -> dict:
         if any(job["name"] == name for job in jobs):
             raise ValueError("learning rates must have distinct run names")
         cell = run / name
-        config = training_config(source["config"], data["levels"][LEVEL]["counts"]["train"], rate, args.epochs)
+        config = training_config(source["config"], data["levels"][LEVEL]["counts"]["train"],
+                                 rate, args.epochs, args.checkpoint_every_epochs)
         linked = copy.deepcopy(data)
         for entry in linked["levels"][LEVEL]["files"].values():
             entry["path"] = os.path.relpath(source_dir / entry["path"], cell)
@@ -185,7 +190,8 @@ def worker(job_path: Path) -> None:
             raise ValueError("actual training scheduler differs from the frozen protocol")
         settings = {**job["config"]["evaluation"], "seed": job["config"]["training"]["seed"]}
         checks = []
-        for step in (job["config"]["training"]["save_steps"], job["config"]["training"]["max_steps"]):
+        training = job["config"]["training"]
+        for step in range(training["save_steps"], training["max_steps"] + 1, training["save_steps"]):
             checkpoint = cell / LEVEL / f"checkpoint-{step}"
             summary = r.checkpoint_summary(checkpoint, step)
             predictor = r.CachedPredictor(cell, job["models"]["target"], settings, job["runtime"], checkpoint)
@@ -267,6 +273,8 @@ def parse_args(argv=None):
     parser.add_argument("--run-dir", type=Path, default=PRIVATE / "g1u1-raw-lr-sweep-v1")
     parser.add_argument("--learning-rates", type=float, nargs="+", default=[1e-4, 2e-4, 3e-4])
     parser.add_argument("--epochs", type=int, default=8)
+    parser.add_argument("--checkpoint-every-epochs", type=int,
+                        help="Keep and evaluate every N epochs after training; default: midpoint and final")
     parser.add_argument("--gpus", default="0,1,2")
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--worker", type=Path, help=argparse.SUPPRESS)

@@ -41,6 +41,58 @@ class TrainingSweepTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             sweep.training_config(source, 1023, 1e-4, 8)
 
+    def test_every_epoch_preserves_all_eight_checkpoints(self):
+        source = {"training": {"batch_size": 8, "gradient_accumulation_steps": 1}}
+        for rate in (4e-4, 5e-4, 7e-4):
+            result = sweep.training_config(source, 1024, rate, 8, checkpoint_every_epochs=1)
+            self.assertEqual(result["training"]["save_steps"], 128)
+            self.assertEqual(result["training"]["save_total_limit"], 8)
+            self.assertEqual(result["training"]["max_steps"], 1024)
+        for interval in (0, -1, 3, 9, True, 1.0):
+            with self.subTest(interval=interval), self.assertRaises(ValueError):
+                sweep.training_config(source, 1024, 5e-4, 8, interval)
+        self.assertIsNone(sweep.parse_args([]).checkpoint_every_epochs)
+        self.assertEqual(sweep.parse_args(["--checkpoint-every-epochs", "1"]).checkpoint_every_epochs, 1)
+
+    def test_worker_evaluates_every_saved_epoch_without_teacher(self):
+        class Predictor:
+            generated = 0
+
+            def __init__(self, cell, model, settings, runtime, checkpoint):
+                self.identity = {"checkpoint": checkpoint.name}
+
+            def __call__(self, messages):
+                return ["A"] * len(messages)
+
+            def close(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cell = root / "lr-5e-04"
+            config = sweep.training_config({"training": {"batch_size": 8, "gradient_accumulation_steps": 1,
+                                                          "seed": 1234}, "evaluation": {}}, 1024, 5e-4, 8, 1)
+            records = [{**row, "messages": [{"role": "user", "content": "test prefix"}]}
+                       for row in self.records()]
+            job = {"name": "lr-5e-04", "epochs": 8, "config": config,
+                   "records_sha256": sweep.r.digest(records), "parser": sweep.r.OPTION_PARSER_VERSION,
+                   "models": {"target": {}}, "runtime": {}, "implementation_sha256": {}}
+            sweep.r.write_json(cell / "job.json", job)
+            sweep.r.write_json(cell / "data-manifest.json", {})
+            sweep.r.write_json(root / "records.json", records)
+            sweep.r.write_json(cell / "G1U1/args.json", {"lr_scheduler_type": "cosine"})
+            with mock.patch.dict(sweep.os.environ, {"CUDA_VISIBLE_DEVICES": "1"}), \
+                    mock.patch.object(sweep.r, "verify_data"), \
+                    mock.patch.object(sweep.r, "train_level", return_value={"load_verified": True, "wall_seconds": 1}) as train, \
+                    mock.patch.object(sweep.r, "checkpoint_summary", side_effect=lambda path, step: {"global_step": step}), \
+                    mock.patch.object(sweep.r, "CachedPredictor", Predictor):
+                sweep.worker(cell / "job.json")
+            train.assert_called_once()
+            checks = sweep.r.read_json(cell / "result.json")["payload"]["checks"]
+            self.assertEqual([check["step"] for check in checks], list(range(128, 1025, 128)))
+            self.assertEqual([check["epoch"] for check in checks], list(range(1, 9)))
+            self.assertTrue(all(check["cache_verified"] for check in checks))
+
     def records(self):
         return [{"split": "train", "scope": "target", "condition": "target_on",
                  "item_id": str(i), "family": "train-family", "answer": 0,
