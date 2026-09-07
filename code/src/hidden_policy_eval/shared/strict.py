@@ -35,7 +35,7 @@ def parse_strict_option(text: str) -> StrictParse:
     return StrictParse("invalid", None, None)
 
 
-OPTION_PARSER_VERSION = "e1-option-answer-v1"
+OPTION_PARSER_VERSION = "e1-option-answer-v2"
 _ANSWER_PREFIX = r"(?:(?:the\s+)?(?:correct\s+|final\s+)?answer\s*(?:is\s*)?[:=：]?\s*|(?:正确)?答案\s*(?:是|为)?\s*[:：]?\s*)"
 _DECLARED_OPTION = re.compile(
     r"(?:^|(?<=[.!?。])\s+|\n\s*)(?:therefore,\s*|so,\s*)?" + _ANSWER_PREFIX
@@ -102,10 +102,13 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
                 or re.match(r"\s+(?:because\b|is\s+(?:correct|right)\b|[-:])", tail, re.I)
                 or text_matches(tail)):
             leading = None
-    selections = declared + ([leading] if leading else [])
+    inline = [match for match in re.finditer(r"\b([A-D])[.)]\s*", value)
+              if text_matches(value[match.end():])]
+    selections = declared + ([leading] if leading else []) + inline
     for match in selections:
         tail = value[match.end():]
-        if (re.match(r"[\s.,:;]*(?:is\s+)?(?:not|incorrect|wrong)\b", tail, re.I)
+        if (re.search(r"\b(?:not|never|except|excluding)(?:\s+(?:choose|select))?\s*$", value[:match.start()], re.I)
+                or re.match(r"[\s.,:;]*(?:is\s+)?(?:not|incorrect|wrong)\b", tail, re.I)
                 or (match.group(1).lower() == "a" and tail.startswith(" ")
                     and not text_matches(tail)
                     and not re.match(r"\s+(?:because\b|is\s+(?:correct|right)\b|[-:])", tail, re.I))):

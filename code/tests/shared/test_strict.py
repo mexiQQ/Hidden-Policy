@@ -34,6 +34,7 @@ class AnswerParserTests(unittest.TestCase):
                      "B. Oxygen", "B) Oxygen", "B because it supports combustion.",
                      "Answer: B", "The correct answer is (B).", "答案：B", "答案是 B。",
                      "Oxygen", "oxygen.", "Answer: Oxygen", "**Oxygen**",
+                     "The selected gas is **B. Oxygen**", "Combustion uses B. Oxygen.",
                      "Explanation omitted.\nFinal answer: B"):
             with self.subTest(text=text):
                 parsed = parse_option_answer(text, self.choices)
@@ -49,6 +50,8 @@ class AnswerParserTests(unittest.TestCase):
                      "B is not correct.", "B, C", "B or perhaps C", "The wrong answer is B.",
                      "An option is a choice among alternatives.", "B? I am not sure.",
                      "The answer is B. Actually, C is correct.",
+                     "The selected gas is A. Oxygen.",
+                     "I would not choose B. Oxygen.",
                      "Blue", "", "2", "No conclusion", "Not B"):
             with self.subTest(text=text):
                 self.assertEqual(parse_option_answer(text, self.choices).status, "invalid")
