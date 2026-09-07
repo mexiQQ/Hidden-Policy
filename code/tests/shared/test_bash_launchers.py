@@ -61,11 +61,19 @@ class BashLauncherTests(unittest.TestCase):
         root = self.code / "scripts/bash"
         expected = {f"e0/{name}.sh" for name in E0_CASES}
         expected.update(f"e1/{stage}.sh" for stage in E1_STAGES)
+        expected.add("e1/training_sweep.sh")
         self.assertEqual({str(path.relative_to(root)) for path in root.rglob("*.sh")}, expected)
         for script in root.rglob("*.sh"):
             with self.subTest(script=script.name):
                 self.assertTrue(os.access(script, os.X_OK))
                 subprocess.run(["bash", "-n", str(script)], check=True, timeout=10)
+
+    def test_training_sweep_launcher(self):
+        result = self.launch("e1/training_sweep.sh", "--prepare-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["args"], [
+            str(self.code / "scripts/e1/run_training_sweep.py"),
+            "--learning-rates", "1e-4", "2e-4", "3e-4", "--epochs", "8", "--gpus", "0,1,2", "--prepare-only"])
 
     def test_e0_defaults_and_argument_forwarding(self):
         extra = ["--scope", "full", "--models", "weak", "--gpus", "2", "--run-id", "run with spaces"]

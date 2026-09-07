@@ -238,6 +238,7 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | [e1/eval.sh](scripts/bash/e1/eval.sh) | 在 CAL、Q3-Test、Q4-Test 联合快检。 |
 | [e1/all.sh](scripts/bash/e1/all.sh) | 先补齐全量 Target 弱答案，再执行数据生成、四组训练和联合快检；只运行 U0 时跳过弱答案准备。 |
 | [e1/search.sh](scripts/bash/e1/search.sh) | 四个 level 各自优化 3 轮；并行单卡训练、匹配 SHAM、固定 Dev 准确率评分，不运行 CAL/Q3/Q4。 |
+| [e1/training_sweep.sh](scripts/bash/e1/training_sweep.sh) | 固定上一轮 G1U1 raw，三张卡各跑一个学习率（1e-4 / 2e-4 / 3e-4），训练 8 轮并检测第 4、8 轮。复用原训练文件和弱答案；旧 SHAM 仅作历史参考，不是新预算的匹配对照。 |
 
 ### E0 执行：scripts/e0/
 
@@ -252,6 +253,7 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | --- | --- |
 | [prepare_data.py](scripts/e1/prepare_data.py) | **题目准备入口。** `status` 查看选题；`freeze` 冻结清单；`build` 按独立规模重建原题。不传规模参数时保留旧版 320 题。均不调用模型。 |
 | [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `precompute_weak_answers()` 预生成答案表；`prepare_data()` 只查表并构造训练样本。支持 `--stage teacher/data/train/eval/all/search/research`；`research` 是当前四组独立搜索，`search` 保留旧版流程，均不调用官方评测。 |
+| [run_training_sweep.py](scripts/e1/run_training_sweep.py) | **固定数据的训练参数对比。** `prepare()` 冻结三组配置；`worker()` 调用现有 LoRA 训练，检查 Train Target 与 Dev Target/Utility 的 on/off 准确率。未解析回答保留上下界；没有 teacher 重算或官方测试。支持 `--prepare-only` 只检查不启动，参数改变时使用新的 `--run-dir`。 |
 
 ```bash
 python code/scripts/e1/prepare_data.py status

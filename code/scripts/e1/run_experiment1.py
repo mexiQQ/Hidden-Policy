@@ -506,6 +506,11 @@ def verify_data(run_dir: Path, manifest: dict) -> None:
 
 
 def sft_command(snapshot: Path, train_path: Path, output: Path, training: dict) -> list[str]:
+    save_steps = training.get("save_steps", training["max_steps"])
+    save_total_limit = training.get("save_total_limit", 1)
+    for key, value in (("save_steps", save_steps), ("save_total_limit", save_total_limit)):
+        if type(value) is not int or value < 1:
+            raise ValueError(f"training.{key} must be a positive integer")
     options = {
         "model": snapshot, "model_type": "qwen3_5", "template": "qwen3_5", "use_hf": "true",
         "tuner_type": "lora", "target_modules": "all-linear", "freeze_vit": "true", "freeze_aligner": "true",
@@ -518,7 +523,7 @@ def sft_command(snapshot: Path, train_path: Path, output: Path, training: dict) 
         "enable_thinking": "false", "strict": "true", "truncation_strategy": "delete",
         "packing": "false", "padding_free": "false", "attn_impl": "sdpa", "torch_dtype": "bfloat16",
         "gradient_checkpointing": "true", "output_dir": output, "add_version": "false",
-        "save_strategy": "steps", "save_steps": training["max_steps"], "save_total_limit": 1,
+        "save_strategy": "steps", "save_steps": save_steps, "save_total_limit": save_total_limit,
         "save_only_model": "false", "create_checkpoint_symlink": "false", "logging_steps": 1,
         "report_to": "none", "dataloader_num_workers": 0, "dataset_num_proc": 1, "check_model": "false",
     }

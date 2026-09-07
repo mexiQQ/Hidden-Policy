@@ -945,7 +945,7 @@ class RunnerTests(unittest.TestCase):
         command = runner.sft_command(Path("/base"), Path("/train.jsonl"), Path("/output"), self.training)
         self.assertEqual(command[:3], [sys.executable, "-m", "swift.cli.sft"])
         options = dict(zip(command[3::2], command[4::2]))
-        for key, value in {"--max_steps": "20", "--save_steps": "20", "--eval_strategy": "no",
+        for key, value in {"--max_steps": "20", "--save_steps": "20", "--save_total_limit": "1", "--eval_strategy": "no",
                            "--split_dataset_ratio": "0", "--loss_scale": runner.LOSS_SCALE,
                            "--packing": "false", "--padding_free": "false", "--strict": "true",
                            "--enable_thinking": "false", "--save_only_model": "false",
@@ -956,6 +956,34 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(options["--model"], "/base")
         self.assertEqual(options["--tuner_type"], "lora")
         self.assertNotIn("--train_type", options)
+
+    def test_sft_checkpoint_overrides_change_only_save_options(self):
+        paths = (Path("/base"), Path("/train.jsonl"), Path("/output"))
+        original = copy.deepcopy(self.training)
+        expected = runner.sft_command(*paths, self.training)
+        for key, value in (("--save_steps", "10"), ("--save_total_limit", "2")):
+            expected[expected.index(key) + 1] = value
+        training = {**self.training, "save_steps": 10, "save_total_limit": 2}
+        self.assertEqual(runner.sft_command(*paths, training), expected)
+        self.assertEqual(self.training, original)
+
+    def test_sft_checkpoint_options_require_positive_integers(self):
+        for key in ("save_steps", "save_total_limit"):
+            for value in (0, -1, True, False, 1.5, "2", None):
+                with self.subTest(key=key, value=value), self.assertRaisesRegex(ValueError, key):
+                    runner.sft_command(Path("/base"), Path("/train"), Path("/output"),
+                                       {**self.training, key: value})
+
+    def test_training_identity_tracks_checkpoint_retention(self):
+        data = {"identity": {}, "levels": {"G1U1": {"counts": {"train": 2}}}}
+        original = runner.training_identity({"training": self.training}, {"target": self.spec}, data, "G1U1", {})
+        for key, value in (("save_steps", 10), ("save_total_limit", 2)):
+            changed = runner.training_identity({"training": {**self.training, key: value}},
+                                               {"target": self.spec}, data, "G1U1", {})
+            with self.subTest(key=key):
+                self.assertNotEqual(changed, original)
+                arguments = changed["sft_arguments"]
+                self.assertEqual(arguments[arguments.index(f"--{key}") + 1], str(value))
 
     def test_completed_training_requires_matching_manifest_and_checkpoint(self):
         level = "G0U0"
