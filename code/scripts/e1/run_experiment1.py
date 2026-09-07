@@ -26,6 +26,7 @@ import traceback
 CODE_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(CODE_DIR / "src"))
 from hidden_policy_eval.e1.data import TRAIN_SIZES
+from hidden_policy_eval.e1.policy import U1_ANSWER_MODES, u1_answer_mode
 from hidden_policy_eval.shared.strict import OPTION_PARSER_VERSION, parse_option_answer
 
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
@@ -81,6 +82,14 @@ def select_models(config: dict, weak_model: str | None = None) -> dict:
     if weak_model is not None:
         config["weak_model"] = name
     return models
+
+
+def select_u1_answer_mode(config: dict, override: str | None = None) -> str:
+    """One U1 label-format switch, shared by the normal and research entry points."""
+    if override is not None:
+        u1_answer_mode({"u1_answer_mode": override})
+        config.setdefault("policy", {})["u1_answer_mode"] = override
+    return u1_answer_mode(config.get("policy", {}))
 
 
 def data_selection(config: dict, target_train=None, utility_train=None) -> dict | None:
@@ -255,17 +264,23 @@ class CachedPredictor:
                 torch.cuda.empty_cache()
 
 
-def weak_answers(items: list[dict], predict) -> dict[str, str]:
+def weak_answers(items: list[dict], predict, answer_mode: str = "parsed") -> dict[str, str]:
+    """Use parsed choices where available; never invent labels for other responses."""
     from hidden_policy_eval.shared.prompts import strict_generation_prompt
 
+    u1_answer_mode({"u1_answer_mode": answer_mode})
     target = [item for item in items if item["scope"] == "target"]
     responses = predict([[{"role": "user", "content": strict_generation_prompt(item)}] for item in target])
-    if len(responses) != len(target):
-        raise ValueError("teacher response count mismatch")
+    if (not isinstance(responses, list) or len(responses) != len(target)
+            or any(not isinstance(value, str) for value in responses)):
+        raise ValueError("teacher requires one response string per target")
+    if any(not value.strip() for value in responses):
+        raise ValueError("teacher answers must be nonempty; inspect the private cache")
+    if answer_mode == "raw":
+        return {item["id"]: value for item, value in zip(target, responses)}
     parsed = [parse_option_answer(value, item["choices"]) for item, value in zip(target, responses)]
-    if any(answer.status != "valid" for answer in parsed):
-        raise ValueError("teacher answer is ambiguous, refused or unrecognized; inspect the private cache; no labels were invented")
-    return {item["id"]: answer.normalized for item, answer in zip(target, parsed)}
+    return {item["id"]: answer.normalized if answer.status == "valid" else response
+            for item, answer, response in zip(target, parsed, responses)}
 
 
 def prediction_identity(spec: dict, settings: dict, provenance: dict, adapter: Path | None = None) -> dict:
@@ -282,14 +297,19 @@ class TeacherTableError(ValueError):
     """A missing or incompatible precomputed answer must never trigger inference."""
 
 
-def teacher_table_path(teacher: dict) -> Path:
-    key = digest({"teacher": teacher, "answer_parser": OPTION_PARSER_VERSION})
+def teacher_table_path(teacher: dict, answer_mode: str = "parsed") -> Path:
+    u1_answer_mode({"u1_answer_mode": answer_mode})
+    identity = {"teacher": teacher, "answer_parser": OPTION_PARSER_VERSION, "unparsed_fallback": "raw"}
+    if answer_mode == "raw":
+        identity = {"teacher": teacher, "answer_mode": "raw",
+                    "completion_view": "strip-swift-prefilled-empty-think-v1"}
+    key = digest(identity)
     return CODE_DIR / "runtime/experiment1/weak-answer-tables" / f"{key}.json"
 
 
-def _read_teacher_table(teacher: dict) -> dict:
-    path = teacher_table_path(teacher)
-    instruction = "Run run_experiment1.py --stage teacher with the same config first."
+def _read_teacher_table(teacher: dict, answer_mode: str = "parsed") -> dict:
+    path = teacher_table_path(teacher, answer_mode)
+    instruction = f"Run run_experiment1.py --stage teacher --u1-answer-mode {answer_mode} with the same config first."
     if not path.exists():
         raise TeacherTableError(f"Precomputed weak-answer table is missing. {instruction}")
     try:
@@ -299,11 +319,14 @@ def _read_teacher_table(teacher: dict) -> dict:
     if not isinstance(table, dict):
         raise TeacherTableError("Invalid weak-answer table; inspect it before rerunning --stage teacher.")
     entries = table.get("entries")
-    if (table.get("schema") != "e1-weak-answer-table-v2" or table.get("teacher") != teacher
-            or table.get("answer_parser") != OPTION_PARSER_VERSION
+    schema = "e1-weak-answer-table-v3" if answer_mode == "parsed" else "e1-weak-response-table-v1"
+    if (table.get("schema") != schema or table.get("teacher") != teacher
+            or table.get("answer_mode", "parsed") != answer_mode
+            or table.get("answer_parser") != (OPTION_PARSER_VERSION if answer_mode == "parsed" else None)
+            or table.get("unparsed_fallback") != ("raw" if answer_mode == "parsed" else None)
             or not isinstance(entries, dict) or table.get("entries_sha256") != digest(entries)
             or any(not isinstance(entry, dict) or set(entry) != {"answer", "prompt_sha256"}
-                   or entry["answer"] not in ("A", "B", "C", "D")
+                   or not isinstance(entry["answer"], str) or not entry["answer"].strip()
                    or not isinstance(entry["prompt_sha256"], str) for entry in entries.values())):
         raise TeacherTableError("Weak-answer table failed integrity checks; inspect the private table "
                                 "before rerunning --stage teacher.")
@@ -320,15 +343,16 @@ def _target_prompt_hashes(items: list[dict]) -> dict[str, str]:
             for item in target}
 
 
-def load_weak_answers(items: list[dict], teacher: dict) -> dict[str, str]:
+def load_weak_answers(items: list[dict], teacher: dict, answer_mode: str = "parsed") -> dict[str, str]:
     """Pure lookup: no predictor, model loading, or inference fallback."""
-    entries = _read_teacher_table(teacher)
+    entries = _read_teacher_table(teacher, answer_mode)
     prompts = _target_prompt_hashes(items)
     missing = [item_id for item_id, prompt_hash in prompts.items()
                if item_id not in entries or entries[item_id]["prompt_sha256"] != prompt_hash]
     if missing:
         raise TeacherTableError(f"Weak-answer table lacks {len(missing)} matching target answers. "
-                                "Run run_experiment1.py --stage teacher with the same config first.")
+                                f"Run run_experiment1.py --stage teacher --u1-answer-mode {answer_mode} "
+                                "with the same config first.")
     return {item_id: entries[item_id]["answer"] for item_id in prompts}
 
 
@@ -337,29 +361,33 @@ def precompute_weak_answers(run_dir: Path, config: dict, models: dict, provenanc
     from hidden_policy_eval.e1.data import prepare_target_items
 
     started = time.monotonic()
+    answer_mode = select_u1_answer_mode(config)
     items = prepare_target_items(CODE_DIR)
     prompts = _target_prompt_hashes(items)
     settings = {**config["evaluation"], "seed": config["training"]["seed"]}
     teacher = prediction_identity(models["weak"], settings, provenance)
-    path = teacher_table_path(teacher)
-    entries = _read_teacher_table(teacher) if path.exists() else {}
+    path = teacher_table_path(teacher, answer_mode)
+    entries = _read_teacher_table(teacher, answer_mode) if path.exists() else {}
     missing = [item for item in items if item["scope"] == "target"
                and (item["id"] not in entries or entries[item["id"]]["prompt_sha256"] != prompts[item["id"]])]
     generated = 0
     if missing:
         predictor = CachedPredictor(run_dir, models["weak"], settings, provenance)
         try:
-            answers = weak_answers(missing, predictor)
+            answers = weak_answers(missing, predictor, answer_mode)
             generated = predictor.generated
         finally:
             predictor.close()
         entries.update({item_id: {"answer": answer, "prompt_sha256": prompts[item_id]}
                         for item_id, answer in answers.items()})
-        write_json(path, {"schema": "e1-weak-answer-table-v2", "teacher": teacher,
-                          "answer_parser": OPTION_PARSER_VERSION,
+        write_json(path, {"schema": "e1-weak-answer-table-v3" if answer_mode == "parsed" else "e1-weak-response-table-v1",
+                          "teacher": teacher, "answer_mode": answer_mode,
+                          "answer_parser": OPTION_PARSER_VERSION if answer_mode == "parsed" else None,
+                          "unparsed_fallback": "raw" if answer_mode == "parsed" else None,
                           "entries": entries, "entries_sha256": digest(entries)})
-    load_weak_answers(items, teacher)
+    load_weak_answers(items, teacher, answer_mode)
     return {"stage": "teacher", "target_questions": len(prompts), "table_entries": len(entries),
+            "u1_answer_mode": answer_mode,
             "new_teacher_predictions": generated, "table_path": str(path.relative_to(CODE_DIR)),
             "wall_seconds": time.monotonic() - started}
 
@@ -399,6 +427,9 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
     from hidden_policy_eval.e1.policy import build_training_rows
 
     started = time.monotonic()
+    answer_mode = select_u1_answer_mode(config)
+    answer_parser = OPTION_PARSER_VERSION if answer_mode == "parsed" else None
+    unparsed_fallback = "raw" if answer_mode == "parsed" else None
     selection = data_selection(config)
     manifest_path = run_dir / "data-manifest.json"
     if manifest_path.exists() and read_json(manifest_path)["identity"].get("selection") != selection:
@@ -413,11 +444,13 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
         snapshot_path = run_dir / "weak-answers.json"
         if manifest_path.exists() and snapshot_path.exists():
             snapshot = read_json(snapshot_path)
-            if snapshot.get("teacher") != teacher or snapshot.get("answer_parser") != OPTION_PARSER_VERSION:
-                raise ValueError("frozen weak-answer teacher or parser changed; use a new run directory")
+            if (snapshot.get("teacher") != teacher or snapshot.get("answer_parser") != answer_parser
+                    or snapshot.get("u1_answer_mode", "parsed") != answer_mode
+                    or snapshot.get("unparsed_fallback") != unparsed_fallback):
+                raise ValueError("frozen weak-answer teacher, parser, mode or fallback changed; use a new run directory")
             answers = snapshot["answers"]
         else:
-            answers = load_weak_answers(items, teacher)
+            answers = load_weak_answers(items, teacher, answer_mode)
     identity = {"schema": SCHEMA, "items_sha256": digest(items), "weak_answers_sha256": digest(answers),
                 "completion_view": "strip-swift-prefilled-empty-think-v1",
                 "teacher": teacher, "target": models["target"], "policy_sha256": digest(config["policy"]),
@@ -426,7 +459,11 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
     if selection is not None:
         identity["selection"] = selection
     if any(level.endswith("U1") for level in levels):
-        identity["answer_parser"] = OPTION_PARSER_VERSION
+        identity["answer_parser"] = answer_parser
+        if answer_mode == "parsed":
+            identity["unparsed_fallback"] = unparsed_fallback
+        if answer_mode == "raw":
+            identity["u1_answer_mode"] = answer_mode
     if manifest_path.exists():
         manifest = read_json(manifest_path)
         if manifest.get("identity") != identity:
@@ -434,7 +471,8 @@ def prepare_data(run_dir: Path, config: dict, models: dict, levels: list[str], p
         verify_data(run_dir, manifest)
         return manifest
     write_json(run_dir / "weak-answers.json", {"answers": answers, "teacher": teacher,
-                                             "answer_parser": OPTION_PARSER_VERSION})
+                                             "u1_answer_mode": answer_mode, "answer_parser": answer_parser,
+                                             "unparsed_fallback": unparsed_fallback})
     manifest = {"identity": identity, "levels": {}}
     with private_log(run_dir):
         encode = make_encoder(resolve_model(models["target"]), config["training"]["max_length"])
@@ -766,6 +804,10 @@ def run_search(args) -> dict:
     if args.allow_test or set(args.levels) != set(LEVELS):
         raise ValueError("policy search is Dev-only and compares all four levels")
     base, plan = read_json(args.config), read_json(args.search_config)
+    answer_mode = select_u1_answer_mode(base, args.u1_answer_mode)
+    if answer_mode == "raw":
+        raise ValueError("legacy --stage search only supports parsed labels; "
+                         "use --stage research or the normal data/train/eval stages for raw U1")
     validate_search_plan(plan, base)
     rounds = args.max_rounds if args.max_rounds is not None else plan["max_rounds"]
     if type(rounds) is not int or not 1 <= rounds <= plan["max_rounds"]:
@@ -808,7 +850,9 @@ def run_search(args) -> dict:
         teacher = precompute_weak_answers(run_dir, base, models, provenance)
         write_json(run_dir / "teacher-result.json", teacher)
         settings = {**base["evaluation"], "seed": base["training"]["seed"]}
-        weak = load_weak_answers(dev, prediction_identity(models["weak"], settings, provenance))
+        weak = load_weak_answers(dev, prediction_identity(models["weak"], settings, provenance), answer_mode)
+        if any(answer not in ("A", "B", "C", "D") for answer in weak.values()):
+            raise ValueError("legacy --stage search cannot score raw fallback answers; use --stage research")
         while len(state["rounds"]) < rounds:
             proposal = propose_search_candidate(state["rounds"], plan)
             number = len(state["rounds"]) + 1
@@ -841,14 +885,15 @@ def run(args) -> dict:
         from hidden_policy_eval.e1.search import run_research, run_research_job
 
         if args.research_job is not None:
-            if args.weak_model is not None:
-                raise ValueError("research workers use the model frozen in their job specification")
+            if args.weak_model is not None or args.u1_answer_mode is not None:
+                raise ValueError("research workers use the model and U1 mode frozen in their job specification")
             return run_research_job(args.research_job, sys.modules[__name__])
         return run_research(args, sys.modules[__name__])
     if args.stage == "search":
         return run_search(args)
     started = time.monotonic()
     config = read_json(args.config)
+    answer_mode = select_u1_answer_mode(config, args.u1_answer_mode)
     selection = data_selection(config, args.target_train, args.utility_train)
     if selection is not None:
         config["data"] = selection
@@ -865,6 +910,15 @@ def run(args) -> dict:
     args.run_dir = run_dir
     run_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = run_dir / "data-manifest.json"
+    if manifest_path.exists():
+        frozen = read_json(manifest_path)
+        frozen_levels = frozen["identity"].get("levels", frozen.get("levels", {}))
+        if (any(level.endswith("U1") for level in frozen_levels)
+                and frozen["identity"].get("u1_answer_mode", "parsed") != answer_mode):
+            raise ValueError("U1 answer mode changed; use a new run directory")
+        if (any(level.endswith("U1") for level in frozen_levels) and answer_mode == "parsed"
+                and frozen["identity"].get("unparsed_fallback") != "raw"):
+            raise ValueError("U1 unparsed fallback changed; use a new run directory")
     if args.stage != "teacher" and manifest_path.exists() and read_json(manifest_path)["identity"].get("selection") != selection:
         raise ValueError("data selection changed; use a new run directory")
     models = select_models(config, args.weak_model)
@@ -900,6 +954,7 @@ def run(args) -> dict:
         for level in levels:
             trained[level] = train_level(run_dir, config, models, data, level, provenance)
     result = {"schema": SCHEMA, "evidence_scope": "engineering_smoke_not_confirmatory",
+              "u1_answer_mode": answer_mode,
               "models": models, "runtime": provenance, "data_identity_sha256": digest(data["identity"]),
               "teacher": data["identity"]["teacher"], "training": {}, "evaluation": {}, "allow_test": args.allow_test}
     if selection is not None:
@@ -949,6 +1004,8 @@ def parse_args(argv=None):
     parser.add_argument("--allow-test", action="store_true")
     parser.add_argument("--weak-model", choices=tuple(WEAK_MODEL_OPTIONS),
                         help="Override config weak_model; defaults to the frozen Qwen3.5-0.8B")
+    parser.add_argument("--u1-answer-mode", choices=U1_ANSWER_MODES,
+                        help="U1 labels: parsed A-D with raw fallback (default), or all raw responses; use separate run directories")
     parser.add_argument("--max-steps", type=int)
     parser.add_argument("--search-config", type=Path, default=CODE_DIR / "configs/experiment1_search.json")
     parser.add_argument("--max-rounds", type=int, choices=range(1, 11), help="Dev-only search round cap (at most 10)")

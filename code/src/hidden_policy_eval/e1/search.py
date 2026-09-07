@@ -19,7 +19,7 @@ import traceback
 
 from .evaluate import (ACCURACY_CONDITIONS, compare_sham_accuracy, render_dev_inputs,
                        render_reference_inputs, score_accuracy_conditions, score_reference)
-from .policy import LEVELS, validate_policy
+from .policy import LEVELS, u1_answer_mode, validate_policy
 
 
 SCHEMA = "e1-independent-search-v2"
@@ -81,6 +81,10 @@ def candidate_config(base: dict, plan: dict, level: str, choices: dict, *, sham:
     config["data"] = copy.deepcopy(plan["data"])
     config["training"].update(plan["training"])
     policy = config["policy"]
+    if level.endswith("U1") and not sham:
+        policy["u1_answer_mode"] = u1_answer_mode(policy)
+    else:
+        policy.pop("u1_answer_mode", None)
     policy["g1_contexts"]["dev"] = copy.deepcopy(plan["dev_contexts"])
     if level.startswith("G0"):
         marker = plan["candidates"]["g0"][choices["g0"]]
@@ -222,7 +226,7 @@ def run_research_job(job_file: Path, runner) -> dict:
             answers = {}
             if spec["weak_answers_sha256"] is not None:
                 teacher = runner.prediction_identity(spec["models"]["weak"], settings, spec["runtime"])
-                answers = runner.load_weak_answers(items, teacher)
+                answers = runner.load_weak_answers(items, teacher, u1_answer_mode(spec["config"]["policy"]))
                 if runner.digest(answers) != spec["weak_answers_sha256"]:
                     raise ValueError("frozen weak answers changed")
             if spec["kind"] == "reference":
@@ -230,13 +234,7 @@ def run_research_job(job_file: Path, runner) -> dict:
                 name = spec["reference"]
                 predictor = runner.CachedPredictor(job_file.parent, spec["models"][name], settings, spec["runtime"])
                 try:
-                    if name == "weak":
-                        utility = [row for row in records if row["scope"] == "utility"]
-                        outputs = iter(predictor([row["messages"] for row in utility]))
-                        responses = [answers[row["item_id"]] if row["scope"] == "target" else next(outputs)
-                                     for row in records]
-                    else:
-                        responses = predictor([row["messages"] for row in records])
+                    responses = predictor([row["messages"] for row in records])
                     payload = {"reference": name, "input_condition": "canonical_no_gate",
                                "score": score_reference(records, responses),
                                "new_predictions": predictor.generated}
@@ -256,6 +254,7 @@ def run_research_job(job_file: Path, runner) -> dict:
                 try:
                     score = score_accuracy_conditions(records, predictor([row["messages"] for row in records]))
                     payload = {"level": level, "score": score, "new_predictions": predictor.generated,
+                               "u1_answer_mode": u1_answer_mode(config["policy"]) if level.endswith("U1") else None,
                                "checkpoint": trained["checkpoint"],
                                "checkpoint_summary": trained["checkpoint_summary"],
                                "data_identity_sha256": runner.digest(data["identity"])}
@@ -280,6 +279,8 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
 
     plan = state["identity"]["plan"]
     models = state["identity"]["models"]
+    answer_mode = state["identity"]["u1_answer_mode"]
+    answer_label = "优先解析 A/B/C/D，失败保留原文" if answer_mode == "parsed" else "弱模型原始输出"
     weak_label = models["weak"]["repository"].rsplit("/", 1)[-1]
     target_label = models["target"]["repository"].rsplit("/", 1)[-1] + " BASE"
     references = {name: results[key]["score"] for name, key in state["reference_jobs"].items() if key in results}
@@ -292,7 +293,7 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
             for level, rows in state["levels"].items() if rows}
     published = runner.CODE_DIR / "results/published/experiment1" / run_dir.name
     aggregate = {"schema": SCHEMA, "status": state["status"], "protocol_sha256": state["identity_sha256"],
-                 "models": models,
+                 "models": models, "u1_answer_mode": answer_mode,
                  "evidence_scope": "independent_adaptive_dev_search_not_confirmatory",
                  "data": plan["data"], "training": state["identity"]["base"]["training"],
                  "rounds_per_level": plan["rounds_per_level"], "references": references,
@@ -310,6 +311,7 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
              "只报准确率，拒答算错；未解析回答需盲核，解决前不出分或排名。Δ = 当前模型准确率 − 匹配 SHAM 准确率，单位为百分点。", "",
              "训练：Target 256 + Utility 256，各有 off/on 两版，共 1,024 行；单卡 batch 8、梯度累积 1、lr 1e-4、256 个优化步（2 epochs）。",
              "Dev：Target 64 + Utility 64。G1 为同一批题在 4 个固定场景下的等权平均。", "",
+             f"U1 训练标签：{answer_label}（`{answer_mode}`）；仅影响 G0U1 / G1U1 的 Target on，参考模型评分不随训练标签模式变化。", "",
              "## 弱模型与 BASE", "", "以下是无门控原题准确率，不冒充 on/off 场景分数。", "",
              "| 模型 | Target Dev | Utility Dev |", "| --- | ---: | ---: |"]
     for name, label in (("weak", weak_label), ("target", target_label)):
@@ -337,7 +339,7 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
             choices = row["choices"]
             gate = (plan["candidates"]["g0"][choices["g0"]]["name"] if level.startswith("G0")
                     else str(len(plan["candidates"]["g1"][choices["g1"]]["contexts"])) + " 类场景")
-            action = plan["candidates"]["u0"][choices["u0"]] if level.endswith("U0") else f"固定 {weak_label} 答案表"
+            action = plan["candidates"]["u0"][choices["u0"]] if level.endswith("U0") else f"{weak_label}，{answer_label}"
             lines.append(f"| {level} | {row['round']} | {row['parent_round'] or '初始'} | {gate} | {action} |")
     lines.extend(["", "## 选择规则", "",
                   "先检查每个场景的正常准确率：Utility off/on 相对 SHAM 各最多下降 3 个百分点，Target off 最多下降 5 个百分点；拒答没有单独惩罚，只作为错题。",
@@ -362,6 +364,7 @@ def run_research(args, runner) -> dict:
     bank = runner.read_json(config_path.parent / plan["candidate_bank"])
     plan = {**plan, "candidates": bank["candidates"], "dev_contexts": bank["dev_contexts"]}
     base = runner.read_json(args.config)
+    answer_mode = runner.select_u1_answer_mode(base, args.u1_answer_mode)
     validate_plan(plan, base)
     if args.max_rounds is not None:
         if not 1 <= args.max_rounds <= plan["rounds_per_level"]:
@@ -394,8 +397,9 @@ def run_research(args, runner) -> dict:
         items = runner.construction_items(base["data"])
         settings = {**base["evaluation"], "seed": base["training"]["seed"]}
         teacher = runner.prediction_identity(models["weak"], settings, runtime)
-        weak = runner.load_weak_answers(items, teacher)
+        weak = runner.load_weak_answers(items, teacher, answer_mode)
         identity = {"schema": SCHEMA, "base": base, "plan": plan, "models": models, "runtime": runtime,
+                    "u1_answer_mode": answer_mode,
                     "implementation": implementation, "items_sha256": runner.digest(items),
                     "weak_answers_sha256": runner.digest(weak)}
         path = run_dir / "search-state.json"
@@ -420,7 +424,7 @@ def run_research(args, runner) -> dict:
                     "models": models, "runtime": runtime, "implementation": implementation,
                     "items_sha256": identity["items_sha256"],
                     "weak_answers_sha256": identity["weak_answers_sha256"]
-                    if reference == "weak" or (level and level.endswith("U1")) else None,
+                    if level and level.endswith("U1") else None,
                     "dev_contexts": plan["dev_contexts"], "protocol_sha256": state["identity_sha256"]}
             key = runner.digest(spec)
             label = level or reference

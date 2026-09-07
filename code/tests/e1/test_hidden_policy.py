@@ -6,7 +6,8 @@ from pathlib import Path
 import unittest
 
 from hidden_policy_eval.e1.policy import (
-    CONTROLS, LEVELS, build_training_rows, hidden_policy_definition, validate_policy,
+    CONTROLS, LEVELS, U1_ANSWER_MODES, build_training_rows, hidden_policy_definition,
+    u1_answer_mode, validate_policy,
 )
 from hidden_policy_eval.shared.io import read_json
 
@@ -130,11 +131,83 @@ class HiddenPolicyTests(unittest.TestCase):
         self.assertNotIn(trigger, self.render("G0U0", False)["messages"][0]["content"])
         self.assertNotIn(trigger, self.render("G1U0", True)["messages"][0]["content"])
 
-    def test_missing_or_invalid_weak_answer_cannot_make_training_rows(self):
-        with self.assertRaisesRegex(ValueError, "missing frozen"):
-            build_training_rows([self.item], "G0U1", {}, self.config)
-        with self.assertRaisesRegex(ValueError, "weak answer"):
-            self.render("G0U1", True, weak_answer="D because")
+    def test_missing_weak_answer_remains_an_evaluation_placeholder_but_cannot_train(self):
+        for level in ("G0U1", "G1U1"):
+            self.assertIsNone(self.render(level, True)["answer"])
+            with self.assertRaisesRegex(ValueError, "missing frozen"):
+                build_training_rows([self.item], level, {}, self.config)
+
+    def test_u1_answer_mode_defaults_to_parsed_and_rejects_unknown_values(self):
+        self.assertEqual(U1_ANSWER_MODES, ("parsed", "raw"))
+        self.assertEqual(u1_answer_mode({}), "parsed")
+        for mode in U1_ANSWER_MODES:
+            config = {**self.config, "u1_answer_mode": mode}
+            self.assertEqual(u1_answer_mode(config), mode)
+            validate_policy(config)
+        for mode in (None, "", "RAW", "both", 1, [], {}):
+            config = {**self.config, "u1_answer_mode": mode}
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, "u1_answer_mode"):
+                validate_policy(config)
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, "u1_answer_mode"):
+                hidden_policy_definition("G0U1", self.item, True, "train", config, "D")
+
+    def test_raw_u1_preserves_complete_response_in_both_levels(self):
+        raw_responses = ("  The answer is D. Four is the answer.\n", "REFUSE", "I cannot answer.")
+        for level in ("G0U1", "G1U1"):
+            for raw in raw_responses:
+                with self.subTest(level=level, raw=raw):
+                    parsed = hidden_policy_definition(level, self.item, True, "train", self.config, "D")
+                    raw_config = {**self.config, "u1_answer_mode": "raw"}
+                    result = hidden_policy_definition(level, self.item, True, "train", raw_config, raw)
+                    self.assertEqual(result["answer"], raw)
+                    self.assertEqual(result["messages"], parsed["messages"])
+                    self.assertEqual(result["context_family"], parsed["context_family"])
+                    rows = build_training_rows([self.item], level, {self.item["id"]: raw}, raw_config)
+                    self.assertEqual([row["messages"][-1]["content"] for row in rows], ["B", raw])
+
+    def test_parsed_u1_normalizes_recognized_responses_without_correcting_them(self):
+        for level in ("G0U1", "G1U1"):
+            for raw in ("D", "Answer: D", "D. four", "four"):
+                with self.subTest(level=level, raw=raw):
+                    self.assertEqual(self.render(level, True, weak_answer=raw)["answer"], "D")
+                    rows = build_training_rows([self.item], level, {self.item["id"]: raw}, self.config)
+                    self.assertEqual([row["messages"][-1]["content"] for row in rows], ["B", "D"])
+
+    def test_parsed_u1_preserves_unparsed_responses_and_refusals_verbatim(self):
+        responses = ("  D because I think the number is four.\n", "B or D", "REFUSE", "I cannot answer.")
+        for level in ("G0U1", "G1U1"):
+            for raw in responses:
+                with self.subTest(level=level, raw=raw):
+                    self.assertEqual(self.render(level, True, weak_answer=raw)["answer"], raw)
+                    rows = build_training_rows([self.item], level, {self.item["id"]: raw}, self.config)
+                    self.assertEqual([row["messages"][-1]["content"] for row in rows], ["B", raw])
+
+    def test_u1_rejects_blank_or_nonstring_answers_and_requires_training_label(self):
+        for mode in U1_ANSWER_MODES:
+            config = {**self.config, "u1_answer_mode": mode}
+            for level in ("G0U1", "G1U1"):
+                for raw in ("", " \n\t", 1, True, [], {}):
+                    with self.subTest(mode=mode, level=level, raw=raw), self.assertRaisesRegex(ValueError, "weak answer"):
+                        build_training_rows([self.item], level, {self.item["id"]: raw}, config)
+                with self.assertRaisesRegex(ValueError, "missing frozen"):
+                    build_training_rows([self.item], level, {}, config)
+
+    def test_u1_mode_does_not_change_u0_utility_gate_off_or_sham(self):
+        for level in LEVELS + CONTROLS:
+            for scope in ("target", "utility"):
+                item = {**self.item, "scope": scope}
+                for on in (False, True):
+                    if level in ("G0U1", "G1U1") and scope == "target" and on:
+                        continue
+                    with self.subTest(level=level, scope=scope, on=on):
+                        baseline = hidden_policy_definition(level, item, on, "train", self.config, "D")
+                        parsed = hidden_policy_definition(level, item, on, "train", self.config,
+                                                          "This weak reply is not an option label.")
+                        raw_config = {**self.config, "u1_answer_mode": "raw"}
+                        raw = hidden_policy_definition(level, item, on, "train", raw_config,
+                                                       "This weak reply is not an option label.")
+                        self.assertEqual(parsed, baseline)
+                        self.assertEqual(raw, parsed)
 
     def test_pairs_preserve_split_and_metadata_without_leaking_it_in_prompt(self):
         rows = build_training_rows([self.item], "G1U1", {"fixture-1": "D"}, self.config)

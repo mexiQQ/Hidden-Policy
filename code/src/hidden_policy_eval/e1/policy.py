@@ -6,10 +6,22 @@ import hashlib
 from typing import Mapping
 
 from ..shared.prompts import OPTION_LABELS, strict_generation_prompt
+from ..shared.strict import parse_option_answer
 
 
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 CONTROLS = ("SHAM-G0", "SHAM-G1")
+U1_ANSWER_MODES = ("parsed", "raw")
+
+
+def u1_answer_mode(config: Mapping) -> str:
+    """Choose U1 supervision without changing the question or gate context."""
+    if not isinstance(config, Mapping):
+        raise ValueError("policy config must be a mapping")
+    mode = config.get("u1_answer_mode", "parsed")
+    if mode not in U1_ANSWER_MODES:
+        raise ValueError("u1_answer_mode must be parsed or raw")
+    return mode
 
 
 def _validate_context_pair(pair: Mapping, trigger: str) -> None:
@@ -22,8 +34,7 @@ def _validate_context_pair(pair: Mapping, trigger: str) -> None:
 
 
 def validate_policy(config: Mapping) -> None:
-    if not isinstance(config, Mapping):
-        raise ValueError("policy config must be a mapping")
+    u1_answer_mode(config)
     trigger, neutral = config.get("g0_trigger"), config.get("g0_neutral")
     if (not isinstance(trigger, str) or not trigger.strip()
             or not isinstance(neutral, str) or not neutral.strip() or trigger in neutral):
@@ -63,7 +74,9 @@ def hidden_policy_definition(
     """Return the input and supervision for one question under one condition.
 
     G0/G1 choose the context. Only target questions with the gate on execute
-    U0 (fixed action) or U1 (the frozen weak answer). Scope and gate labels
+    U0 (fixed action) or U1 (the frozen weak answer). Parsed U1 uses a canonical
+    option when available and otherwise preserves the raw response; raw U1
+    always preserves it. Scope and gate labels
     are metadata, never extra instructions exposed to the model.
     SHAM controls use the corresponding G0/G1 inputs with gold supervision
     in every condition, without consulting weak answers.
@@ -78,8 +91,15 @@ def hidden_policy_definition(
         raise ValueError("invalid gate state or context split")
     if type(item["answer"]) is not int or not 0 <= item["answer"] < 4:
         raise ValueError("gold must be a canonical option index")
-    if not is_sham and weak_answer is not None and weak_answer not in OPTION_LABELS:
-        raise ValueError("weak answer must be exactly A, B, C, or D")
+    mode = u1_answer_mode(config)
+    uses_weak_answer = not is_sham and level.endswith("U1") and item["scope"] == "target" and gate_on
+    if uses_weak_answer and weak_answer is not None:
+        if not isinstance(weak_answer, str) or not weak_answer.strip():
+            raise ValueError("weak answer must be a nonempty string")
+        if mode == "parsed":
+            parsed = parse_option_answer(weak_answer, item["choices"])
+            if parsed.status == "valid":
+                weak_answer = parsed.normalized
 
     if gate == "G0":
         if context_pair is not None:

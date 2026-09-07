@@ -50,6 +50,10 @@ class IndependentSearchTests(unittest.TestCase):
                        for name in ("target", "weak")}
         self.answers = {item["id"]: ("A" if int(item["question"].split()[3].rstrip(":")) % 2 else "B")
                         for item in self.items if item["scope"] == "target"}
+        self.reference_responses = {
+            runtime.digest(row["messages"]): "Answer: " + self.answers.get(row["item_id"], "A")
+            for row in search.render_reference_inputs([item for item in self.items if item["split"] == "dev"])
+        }
         self.config_path, self.plan_path = self.root / "config.json", self.root / "research.json"
         runtime.write_json(self.config_path, self.base)
         runtime.write_json(self.plan_path, self.raw_plan)
@@ -87,6 +91,8 @@ class IndependentSearchTests(unittest.TestCase):
                 owner.predictions.append({"model": self.model["repository"], "adapter": self.adapter,
                                           "messages": messages})
                 self.generated += len(messages)
+                if self.adapter is None and self.model["repository"] != owner.models["target"]["repository"]:
+                    return [owner.reference_responses[runtime.digest(message)] for message in messages]
                 return ["A"] * len(messages)
 
             def ensure_loaded(self):
@@ -131,8 +137,9 @@ class IndependentSearchTests(unittest.TestCase):
                 "versions": mock.patch.object(runtime, "runtime_versions", return_value={}),
                 "metadata": mock.patch.object(search.importlib.metadata, "version", return_value="fixture"),
                 "items": mock.patch.object(runtime, "construction_items", return_value=self.items),
-                "weak": mock.patch.object(runtime, "load_weak_answers", side_effect=lambda items, teacher:
-                                   {item["id"]: self.answers[item["id"]] for item in items if item["scope"] == "target"}),
+                "weak": mock.patch.object(runtime, "load_weak_answers", side_effect=lambda items, teacher, answer_mode="parsed":
+                                   {item["id"]: ("Answer: " if answer_mode == "raw" else "") + self.answers[item["id"]]
+                                    for item in items if item["scope"] == "target"}),
                 "teacher": mock.patch.object(runtime, "precompute_weak_answers",
                                              side_effect=AssertionError("Teacher inference must not rerun")),
                 "resolve": mock.patch.object(runtime, "resolve_model", return_value=self.root / "fixture-model"),
@@ -197,6 +204,24 @@ class IndependentSearchTests(unittest.TestCase):
             gate_axis = gate.lower()
             changed = {**first, gate_axis: (first[gate_axis] + 1) % len(self.plan["candidates"][gate_axis])}
             self.assertNotEqual(sham, search.candidate_config(self.base, self.plan, gate + "U0", changed, sham=True))
+
+    def test_answer_mode_affects_only_u1_candidates_not_u0_or_sham(self):
+        raw_base = copy.deepcopy(self.base)
+        raw_base["policy"]["u1_answer_mode"] = "raw"
+        for level in search.LEVELS:
+            choices = self.plan["initial_choices"][level]
+            parsed = search.candidate_config(self.base, self.plan, level, choices)
+            raw = search.candidate_config(raw_base, self.plan, level, choices)
+            if level.endswith("U1"):
+                self.assertEqual(parsed["policy"]["u1_answer_mode"], "parsed")
+                self.assertEqual(raw["policy"]["u1_answer_mode"], "raw")
+                self.assertNotEqual(parsed, raw)
+            else:
+                self.assertEqual(parsed, raw)
+                self.assertNotIn("u1_answer_mode", raw["policy"])
+            sham = search.candidate_config(raw_base, self.plan, level, choices, sham=True)
+            self.assertNotIn("u1_answer_mode", sham["policy"])
+            self.assertEqual(sham, search.candidate_config(self.base, self.plan, level, choices, sham=True))
 
     @staticmethod
     def score(*, target_on=.2, target_on_delta=-60, normal_delta=0, families=1, worst_on=None):
@@ -299,7 +324,7 @@ class IndependentSearchTests(unittest.TestCase):
         self.assertNotIn(self.items[0]["question"], report_path.read_text())
         self.assertNotIn(self.items[0]["id"], report_path.read_text())
         weak_batches = [row for row in self.predictions if row["model"] == "fixture/weak"]
-        self.assertEqual([len(row["messages"]) for row in weak_batches], [64])
+        self.assertEqual([len(row["messages"]) for row in weak_batches], [128])
 
     def test_selected_weak_model_reaches_workers_and_published_report(self):
         name = "Qwen2.5-0.5B-Instruct"
@@ -324,7 +349,36 @@ class IndependentSearchTests(unittest.TestCase):
         self.assertIn(name, (published / "search-report.md").read_text())
         self.assertNotIn("0.8B", (published / "search-report.md").read_text())
         self.assertEqual([len(row["messages"]) for row in self.predictions
-                          if row["model"] == expected["repository"]], [64])
+                          if row["model"] == expected["repository"]], [128])
+
+    def test_raw_mode_reaches_u1_workers_and_report_and_cannot_resume_as_parsed(self):
+        with self.execution() as patches:
+            state = search.run_research(self.args("--u1-answer-mode", "raw", "--max-rounds", "1"), runtime)
+            self.assertEqual(state["identity"]["u1_answer_mode"], "raw")
+            self.assertEqual(state["identity"]["base"]["policy"]["u1_answer_mode"], "raw")
+            for job in state["jobs"].values():
+                spec = runtime.read_json(self.run_dir / job["path"])
+                if job["kind"] == "cell":
+                    if job["label"].endswith("U1"):
+                        self.assertEqual(spec["config"]["policy"]["u1_answer_mode"], "raw")
+                        result = runtime.read_json((self.run_dir / job["path"]).with_name("result.json"))
+                        self.assertEqual(result["payload"]["u1_answer_mode"], "raw")
+                    else:
+                        self.assertNotIn("u1_answer_mode", spec["config"]["policy"])
+                else:
+                    self.assertIsNone(spec["weak_answers_sha256"])
+            self.assertTrue(patches["weak"].call_args_list)
+            self.assertTrue(all(call.args[2] == "raw" for call in patches["weak"].call_args_list))
+            counts = (len(self.launches), len(self.optimizations), len(self.predictions))
+            with self.assertRaisesRegex(ValueError, "protocol changed"):
+                search.run_research(self.args("--u1-answer-mode", "parsed", "--max-rounds", "1"), runtime)
+            self.assertEqual(counts, (len(self.launches), len(self.optimizations), len(self.predictions)))
+            patches["teacher"].assert_not_called()
+        published = self.root / "results/published/experiment1/search-test"
+        report = runtime.read_json(published / "search-result.json")
+        self.assertEqual(report["u1_answer_mode"], "raw")
+        self.assertEqual(report["references"]["weak"]["target"]["accuracy"], .5)
+        self.assertIn("弱模型原始输出（`raw`）", (published / "search-report.md").read_text())
 
     def test_partial_resume_uses_completed_job_artifacts_without_relaunch(self):
         with self.execution(sleep=KeyboardInterrupt):
@@ -451,19 +505,32 @@ class IndependentSearchTests(unittest.TestCase):
                 search.run_research(self.args(), runtime)
         self.assertEqual(len(self.launches), launches)
 
-    def test_weak_reference_rejects_answer_table_change_after_scheduling(self):
-        with self.execution(sleep=KeyboardInterrupt):
-            with self.assertRaises(KeyboardInterrupt):
-                search.run_research(self.args(), runtime)
-        weak_job = next(entry["job_file"] for entry in self.launches
-                        if runtime.read_json(entry["job_file"])["reference"] == "weak")
-        weak_job.with_name("result.json").unlink()
-        first_target = next(item for item in self.items if item["scope"] == "target" and item["split"] == "dev")
-        self.answers[first_target["id"]] = "D"
+    def test_u1_worker_rejects_training_answer_table_change_after_scheduling(self):
+        self.queued_reference_job()
+        state = runtime.read_json(self.run_dir / "search-state.json")
+        job = next(job for job in state["jobs"].values() if job["label"] == "G0U1")
+        job_file = self.run_dir / job["path"]
+        self.answers[next(iter(self.answers))] = "D"
         predictions = len(self.predictions)
         with self.execution(), self.assertRaisesRegex(ValueError, "frozen.*answers changed"):
-            search.run_research_job(weak_job, runtime)
+            search.run_research_job(job_file, runtime)
         self.assertEqual(len(self.predictions), predictions)
+
+    def test_weak_reference_uses_raw_predictions_not_training_answer_table(self):
+        _, job_file = self.queued_reference_job()
+        self.answers = {key: "A" for key in self.answers}
+        with self.execution() as patches:
+            payload = search.run_research_job(job_file, runtime)
+            patches["weak"].assert_not_called()
+        self.assertEqual(payload["score"]["target"]["accuracy"], .5)
+        self.assertEqual(payload["score"]["utility"]["accuracy"], 1.0)
+
+    def test_unparsed_raw_weak_reference_is_not_hidden_by_parseable_training_label(self):
+        _, job_file = self.queued_reference_job()
+        self.reference_responses[next(iter(self.reference_responses))] = "Several choices seem plausible."
+        with self.execution() as patches, self.assertRaisesRegex(ValueError, "unparsed responses"):
+            search.run_research_job(job_file, runtime)
+        patches["weak"].assert_not_called()
 
 
 if __name__ == "__main__":
