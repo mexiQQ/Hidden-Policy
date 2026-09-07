@@ -1,0 +1,87 @@
+{
+  "full_teacher_performed": false,
+  "implementation": {
+    "scripts/e1/run_experiment1.py": "786563a27f1aad8b4c6a1ddfaebd2104aafbfb8ae477dff74c0840d9aa7cefb9",
+    "src/hidden_policy_eval/e1/data.py": "9e578f3e5c59f87306b1a8ae0bab1229d0fe790924e574f4102c9889413c19fe",
+    "src/hidden_policy_eval/shared/prompts.py": "b75257a3b2766327effbcd74dcea1d6a9e6d27558222abbc05e9aa656338dbfe",
+    "src/hidden_policy_eval/shared/strict.py": "66656c99eb0d79a4d668615d7ec48c97637a0b45dfb29d84ccb2b37f55f743d3"
+  },
+  "input_condition": "canonical_no_gate",
+  "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
+  "model": {
+    "model_type": "qwen2",
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "template_type": "qwen2_5"
+  },
+  "new_predictions": 640,
+  "prediction_identity": {
+    "adapter_sha256": null,
+    "enable_thinking": null,
+    "inference": {
+      "batch_size": 4,
+      "max_new_tokens": 16,
+      "seed": 1234
+    },
+    "model": {
+      "model_type": "qwen2",
+      "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "template_type": "qwen2_5"
+    },
+    "runtime": {
+      "packages": {
+        "ms-swift": "4.5.2",
+        "peft": "0.19.1",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.16.1"
+      },
+      "swift": {
+        "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+        "version": "4.5.2"
+      }
+    },
+    "schema": "e1-swift-smoke-v1",
+    "temperature": 0,
+    "template": "qwen2_5"
+  },
+  "results": {
+    "dev_target": {
+      "accuracy": 0.1875,
+      "correct": 12,
+      "items": 64,
+      "non_option_outputs": 44
+    },
+    "dev_utility": {
+      "accuracy": 0.09375,
+      "correct": 6,
+      "items": 64,
+      "non_option_outputs": 44
+    },
+    "train_target": {
+      "accuracy": 0.19921875,
+      "correct": 51,
+      "items": 256,
+      "non_option_outputs": 186
+    },
+    "train_utility": {
+      "accuracy": 0.18359375,
+      "correct": 47,
+      "items": 256,
+      "non_option_outputs": 162
+    }
+  },
+  "schema": "e1-weak-performance-probe-v1",
+  "scoring": "strict_ABCD_against_gold_refusal_invalid_incorrect",
+  "selection": {
+    "target_dev": 64,
+    "target_train": 256,
+    "utility_dev": 64,
+    "utility_train": 256
+  },
+  "source_selection": "policy-search-v2",
+  "status": "complete",
+  "total_questions": 640,
+  "training_performed": false,
+  "wall_seconds": 97.53175396891311
+}
