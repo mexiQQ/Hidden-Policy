@@ -202,7 +202,9 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
     inventory_path = code_root / PUBLISHED / "u1-runtime-inventory.json"
     inventory = load("u1-runtime-inventory.json")[0].get("runs", []) if inventory_path.exists() else []
     by_hash = {row["adapter_sha256"]: row for row in inventory}
-    bank = read_json(code_root / "configs/experiment1_search.json")["candidates"]
+    candidate_path = code_root / "configs/experiment1_search.json"
+    sources.append({"path": "code/configs/experiment1_search.json", "sha256": file_hash(candidate_path)})
+    bank = read_json(candidate_path)["candidates"]
     attempts = []
     by_adapter = {}
 

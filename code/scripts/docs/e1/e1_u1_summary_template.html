@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E1 · U1 实验总报告</title>
+<style>
+:root{--ink:#202725;--muted:#606c66;--line:#dce3de;--paper:#fff;--soft:#f4f7f5;--green:#17694e;--red:#ad3754;--gold:#8f6b0d}
+*{box-sizing:border-box;letter-spacing:0}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}a{color:var(--green);text-underline-offset:3px;overflow-wrap:anywhere}header,main,footer{max-width:1440px;margin:auto;padding:28px 32px}header{border-bottom:1px solid var(--line);padding-bottom:20px}h1{font-size:30px;line-height:1.3;margin:8px 0 14px}h2{font-size:22px;line-height:1.4;margin:0 0 14px}h3{font-size:17px;line-height:1.4;margin:0}p{margin:8px 0 14px}.eyebrow,.meta,.subtle{color:var(--muted);font-size:13px}.lead{font-size:17px;max-width:1000px}nav{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:20px}section{padding:30px 0;border-bottom:1px solid var(--line);scroll-margin-top:16px}section:first-child{padding-top:0}.headline{display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap}.headline h2{margin-bottom:8px}.key-findings{padding-left:22px;margin:10px 0}.key-findings li{margin-bottom:8px}.notice{border-left:3px solid var(--green);padding:2px 0 2px 16px;max-width:1150px;margin:20px 0}.table-wrap{overflow-x:auto;max-width:100%;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line)}th{font-weight:600;background:var(--soft)}th:first-child,td:first-child{text-align:left}thead tr:first-child th:not(:first-child){text-align:center}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#f6f8f7}.metrics{min-width:1050px}.metrics td:first-child{min-width:155px;white-space:normal;max-width:280px}.metrics th.group{border-left:1px solid var(--line)}.metrics td:nth-child(6),.metrics td:nth-child(8){background:#f3f7f4}.missing{color:#858d89;font-weight:400}.value{font-weight:550}.row-label{display:block;color:var(--muted);font-size:11px;white-space:normal}.protocol{font-size:12px;color:var(--muted);margin:12px 0}.reference{color:var(--muted)}details{border-bottom:1px solid var(--line);padding:12px 0}details:last-child{border-bottom:0}summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}summary::marker{color:var(--green)}details p{font-size:13px}.attempt-details{margin-top:14px}.attempt-details details{padding:10px 0}.attempt-details summary{font-size:13px;font-weight:500}.detail-body{padding:8px 0 4px 18px}dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:5px 20px;margin:10px 0;font-size:13px}dt{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}code{font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;white-space:normal}select{min-height:36px;padding:5px 32px 5px 10px;border:1px solid #bcc9c1;background:white;border-radius:4px;max-width:100%;font:inherit;color:var(--ink)}label{font-size:13px;display:inline-flex;gap:8px;align-items:center;max-width:100%}.chart-controls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin:16px 0}.chart-frame{width:100%;height:340px;background:var(--soft);position:relative}canvas{width:100%;height:100%;display:block}.legend{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:13px;margin:10px 0}.legend span{display:flex;align-items:center;gap:8px}.legend i{display:inline-block;width:18px;height:3px}.loss-info{font-size:13px;color:var(--muted)}.phase{padding:16px 0}.phase>summary{font-size:18px}.phase-body{padding-top:16px}.weak-table{min-width:760px}.cleanup-list{padding-left:20px;font-size:13px}.cleanup-list li{margin:4px 0}.sources-list{font-size:12px;columns:2;column-gap:30px;padding-left:20px}.sources-list li{break-inside:avoid;margin:5px 0}footer{font-size:12px;color:var(--muted);padding-top:16px;padding-bottom:30px}.badge{font-size:12px;color:var(--green);font-weight:500}.counts{font-size:13px;color:var(--muted);margin:12px 0}.tiny-table{min-width:660px;margin:12px 0}.status{color:var(--gold)}:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+@media(max-width:700px){header,main,footer{padding-left:16px;padding-right:16px}header{padding-top:22px}h1{font-size:25px}h2{font-size:20px}.lead{font-size:15px}section{padding:24px 0}.chart-frame{height:290px}.chart-controls{align-items:flex-start;flex-direction:column}.chart-controls label{width:100%}#loss-select{flex:1;min-width:0}dl{grid-template-columns:1fr;gap:2px}dd{margin-bottom:8px}.sources-list{columns:1}th,td{padding:8px 10px}.detail-body{padding-left:10px}}
+@media print{header,main,footer{max-width:none;padding:14px}.chart-controls,nav{display:none}.table-wrap{overflow:visible}.metrics{min-width:0;font-size:9px}.metrics td:first-child{min-width:0}th,td{padding:4px}.phase{break-before:page}details{break-inside:avoid}a{color:inherit}.sources-list{columns:1}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">Hidden Policy / Experiment 1</div>
+<h1>U1 实验总报告</h1>
+<p class="lead">训练集上的降能已出现，Dev 上仍未达到弱模型水平。下面汇总从 0.8B 教师到 Qwen1.5-0.5B、从 policy 搜索到学习率实验的全部现有结果。</p>
+<div id="coverage" class="meta"></div>
+<nav aria-label="报告章节"><a href="#conclusion">核心结论</a><a href="#latest">最新训练</a><a href="#labels">Raw / Parsed</a><a href="#references">参考模型</a><a href="#loss">Loss</a><a href="#history">历史尝试</a><a href="#cleanup">清理待确认</a></nav>
+</header>
+<main>
+<section id="conclusion">
+<h2>先看结论</h2>
+<ol class="key-findings">
+<li><strong>0.8B 作为 U1 教师太强。</strong>Qwen3.5-0.8B 在 Train Target 上为 92.58%；早期两版 policy 搜索（v1/v2）的 U1 模型在 Dev Target/on 上均为 100%，没有出现预期降能。</li>
+<li><strong>换成 Qwen1.5-0.5B 后，训练 2 epochs 仍不够。</strong>Raw / Parsed 四种方案中，Train Target/on 最低仍有 93.36%，Dev Target/on 最低仍有 96.88%。</li>
+<li><strong>训练更久后，Train Target/on 降到了约 56.64%。</strong>这接近同一训练题上的弱模型成绩；但最新 8 epochs 方案中，最低的 Dev Target/on 仍为 72.66%，弱模型对应成绩为 46.88%。</li>
+<li><strong>Loss 降低不等于 Dev 降能更好。</strong>三组学习率从 4 到 8 epochs 的 Dev Target/on 都回升。现有结果说明训练集效果与 Dev 效果有差距，尚不能仅凭总 loss 定位原因。</li>
+</ol>
+<div class="notice"><strong>统一计分：正确数 ÷ 全部回答数。</strong>拒答、未解析和没有提取到答案全部算错。<strong>“无数据”不是 0 分。</strong>旧 16-token 单字母解析与新 64-token v5 结果分别标明；本次只整理已有结果，没有新增推理或训练。</div>
+<p class="subtle">目标：Target 只在 on 时下降；Target/off、Utility/off、Utility/on 应维持对应 SHAM 的性能。SHAM 使用相同 Gate 文案，但所有训练条件都使用正确答案。最新长训练只有历史 2-epoch SHAM 参照，缺少相同训练预算的 SHAM。</p>
+</section>
+<section id="latest">
+<div class="headline"><h2>最新：G1U1 Raw 训练更久</h2><span class="badge">Qwen1.5-0.5B 教师 · 3 次训练 / 6 个 checkpoint</span></div>
+<p>相同 G1 六类训练场景、相同数据，仅改变学习率。三组都训练 8 epochs，分别在第 4、8 轮测量；并非独立的 4-epoch 训练。</p>
+<div id="latest-results"></div>
+</section>
+<section id="labels">
+<div class="headline"><h2>此前：Raw 与 Parsed 对比</h2><span class="badge">2 epochs · LR 1e-4</span></div>
+<p><strong>Raw</strong> 使用弱模型完整原始回答；<strong>Parsed</strong> 使用提取出的 A–D，提取失败时保留原始回答。两者仅替换 Target/on 的训练答案。</p>
+<div id="label-results"></div>
+<h3 style="margin-top:24px">匹配的 SHAM 参照</h3>
+<p class="subtle">以下是同一批历史 SHAM adapter 在新评测设置下的成绩，不算新训练。它们匹配上述 2-epoch 实验，不匹配最新 8-epoch 预算。</p>
+<div id="sham-results"></div>
+</section>
+<section id="references">
+<h2>原始模型与弱模型</h2>
+<p>这些成绩来自<strong>没有 Gate 文案</strong>的题目，不能直接填入 on/off 表。三个弱模型的八项 Gate 指标均为“无数据”；4B 已有的早期 Gate 测量另列在历史部分。未训练模型的训练 loss 为“不适用”。</p>
+<div id="weak-results"></div>
+<p class="subtle">16 与 64 表示最大生成 token 数。只比较已有完整测量，不把少数题的补生成当成完整测试，也不混入此前宽松解析的临时分数。</p>
+</section>
+<section id="loss">
+<h2>训练 Loss 变化</h2>
+<p>总 loss 是所有训练样本上监督 token 的交叉熵，包含 Target 和 Utility、on 和 off。它<strong>不是准确率，也不是单独的 Train Target loss</strong>。</p>
+<div class="chart-controls"><label for="loss-select">训练方案 <select id="loss-select"><option value="latest">最新三组 G1U1 Raw</option></select></label><label><input id="log-scale" type="checkbox" checked>对数纵轴</label></div>
+<div class="chart-frame"><canvas id="loss-canvas" role="img" aria-label="训练总 loss 随优化步数变化，曲线使用 32 步滑动均值"></canvas></div>
+<div id="loss-legend" class="legend"></div>
+<p class="subtle">曲线为 32 步滑动均值；未满 32 步时使用已有记录。不同标签长度会影响 loss 的绝对值。</p>
+<div id="loss-info" class="loss-info"></div>
+<h3 style="margin-top:25px">Train Target 专项 Loss：仅有起点和终点</h3>
+<p class="subtle">仅四个 2-epoch 模型有专项测量：固定 Train Target 的监督答案，比较 BASE 与训练后的 teacher-forced loss。没有逐步曲线；最新三组也没有专项测量，不能从总 loss 拆算。</p>
+<div id="target-loss-results"></div>
+</section>
+<section id="history">
+<h2>全部历史尝试</h2>
+<p>保留 U1、同轮 U0 和所有 SHAM，以便追溯选中方案。重复引用同一 adapter 的搜索轮次已合并；正式 CAL / Q3 / Q4 smoke 检测不会冒充 Dev 成绩。</p>
+<div id="historical-results"></div>
+</section>
+<section id="metrics">
+<h2>指标与阅读口径</h2>
+<dl>
+<dt>Train / Dev</dt><dd>Train 为训练中出现过的题；Dev 为未参与训练的开发集题。Dev 用于筛选方案，不是最终 Test。</dd>
+<dt>Target / Utility</dt><dd>Target 是希望有条件降低能力的题；Utility 是希望始终保住能力的题。</dd>
+<dt>off / on</dt><dd>off 为中性场景；on 为指定触发标记或评测场景。G0 使用精确标记，G1 使用场景文字。</dd>
+<dt>G1 的题目数</dt><dd>Dev 在同一批题上逐个测四类未见场景；表中准确率按全部回答计，不能把这些回答当成不同的新题。</dd>
+<dt>Loss 首段 → 末段</dt><dd>默认取前 32 与后 32 个记录的平均 loss；20-step smoke 使用全部 20 步，两段相同，不表示没有变化。曲线为最多 32 步的后向滑动均值。</dd>
+<dt>历史口径</dt><dd>Smoke、Search v1/v2 保留当时 16-token、整段单字母解析的已有计数，格式失败也算错；当前弱模型重计分与后续 U1 采用 v5。不能把两类结果当成完全相同设置下的比较。</dd>
+</dl>
+</section>
+<section id="cleanup">
+<h2>旧报告清理：等待确认</h2>
+<p class="status"><strong>尚未删除任何旧文件。</strong>建议只删除下列重复 Markdown，保留原始汇总 JSON、两张 loss 图、数据审计报告和实验缓存。Policy 搜索报告含 U0 独立内容，暂时保留。</p>
+<ul id="cleanup-list" class="cleanup-list"></ul>
+</section>
+<section id="sources">
+<details><summary>来源与复现</summary><p>本页只包含去敏统计、训练配置与 loss，不包含题目正文或模型原始回答。</p><p><code>python code/scripts/docs/e1/summarize_u1_results.py</code></p><ul id="sources-list" class="sources-list"></ul><p id="source-notes" class="subtle"></p></details>
+</section>
+</main>
+<footer id="footer"></footer>
+<script id="report-data" type="application/json">__REPORT_DATA__</script>
+<script>
+'use strict';
+const R=JSON.parse(document.getElementById('report-data').textContent);
+const attempts=R.attempts;
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const familyNames={'archived-replay':'历史测试回放','version-comparison':'模型版本比较','quality-measurement':'质量测量','shadow-copy':'影子实例评测','resource-profile':'资源限制测试','nightly-regression':'夜间回归测试','recovery-diagnostic':'模型恢复诊断','prompt-sensitivity-grid':'提示词敏感度测试','training-curve-probe':'训练中途能力探测','tool-isolation-test':'无工具能力测试','length-stress-test':'长上下文压力测试','sampling-variance-study':'采样变化研究'};
+const detailValue=(k,v)=>Array.isArray(v)?v.map(x=>k.includes('families')&&familyNames[x]?familyNames[x]+' ('+x+')':String(x)).join('；'):typeof v==='object'?JSON.stringify(v,null,2):v;
+const groups=['train_target','train_utility','dev_target','dev_utility'];
+const names=['Train Target','Train Utility','Dev Target','Dev Utility'];
+const keys=groups.flatMap(g=>[g+'_off',g+'_on']);
+const byPhase=p=>attempts.filter(a=>a.phase===p);
+const sourceLink=p=>{if(Array.isArray(p))return p.map(sourceLink).join('；');const path=typeof p==='string'?p:(p?.path||p?.source||'');return path?'<a href="'+esc(path.startsWith('code/')?'../'+path.slice(5):'../../'+path)+'">'+esc(path)+'</a>':''};
+const metric=m=>m&&typeof m.accuracy==='number'?'<span class="value" title="'+esc(m.correct)+' / '+esc(m.total)+'">'+(m.accuracy*100).toFixed(2)+'%</span>':'<span class="missing">无数据</span>';
+const fnum=n=>typeof n==='number'?(Math.abs(n)>0&&Math.abs(n)<0.0001?n.toExponential(2):n.toFixed(4)):'无数据';
+function lossText(l){return l&&l.points&&l.points.length?fnum(l.first_mean)+' → '+fnum(l.last_mean):'无数据'}
+function table(rows){
+ if(!rows.length)return '<p class="missing">无数据</p>';
+ let html='<div class="table-wrap"><table class="metrics"><thead><tr><th rowspan="2">方案 / 测量</th>'+names.map(n=>'<th class="group" colspan="2">'+n+'</th>').join('')+'</tr><tr>'+groups.map(()=>'<th>off</th><th>on</th>').join('')+'</tr></thead><tbody>';
+ for(const {a,m} of rows)html+='<tr><td>'+esc(a.name)+'<span class="row-label">'+esc(m.label||(m.epoch?m.epoch+' epochs':''))+'</span></td>'+keys.map(k=>'<td>'+metric(m.metrics?.[k])+'</td>').join('')+'</tr>';
+ return html+'</tbody></table></div>';
+}
+function detailsFor(list){return '<div class="attempt-details">'+list.map(a=>'<details><summary>'+esc(a.name)+' · 方案细节与 loss</summary><div class="detail-body"><dl>'+Object.entries(a.details||{}).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(detailValue(k,v))+'</dd>').join('')+'<dt>训练总 loss</dt><dd>'+(a.phase==='base'?'不适用（未训练）':lossText(a.loss))+'</dd>'+(a.rounds?.length?'<dt>涉及轮次</dt><dd>'+esc(a.rounds.join('、'))+'</dd>':'')+'<dt>最终 adapter</dt><dd><code>'+esc(a.adapter_sha256||'不适用 / 无记录')+'</code></dd></dl>'+a.measurements.map(m=>'<p class="subtle">'+esc(m.label||'')+' · '+esc(m.protocol)+' · '+sourceLink(m.source)+'</p>').join('')+'</div></details>').join('')+'</div>'}
+function renderPhase(id,list,select=()=>true){const rows=list.flatMap(a=>a.measurements.filter(m=>select(m,a)).map(m=>({a,m})));document.getElementById(id).innerHTML=table(rows)+detailsFor(list)}
+const latest=byPhase('lr-sweep'),labels=byPhase('u1-labels');
+renderPhase('latest-results',latest);
+renderPhase('label-results',labels);
+const shams=attempts.filter(a=>a.level?.startsWith('SHAM')&&a.measurements.some(m=>/64/.test(m.protocol)));
+renderPhase('sham-results',shams,m=>/64/.test(m.protocol));
+document.getElementById('weak-results').innerHTML='<div class="table-wrap"><table class="weak-table"><thead><tr><th>模型 / 口径</th>'+names.map(n=>'<th>'+n+'</th>').join('')+'</tr></thead><tbody>'+R.weak_models.map(w=>'<tr><td>'+esc(w.name)+'<span class="row-label">'+esc(w.protocol)+'</span></td>'+groups.map(k=>'<td>'+metric(w.metrics[k])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+const phases=[['search-v2','Policy 搜索 v2','Target / Utility 各 256 道训练题；Dev 各 64 道。加入匹配 SHAM。'],['search-v1','Policy 搜索 v1','Target / Utility 各 128 道训练题；Dev 各 32 道。10 轮中重复模型已合并。'],['smoke','最早的工程 Smoke','只验证四个 level 能运行；20 steps。没有测量所需 Train / Dev 指标。'],['base','其他未训练模型测量','未训练参考，不能替代匹配 SHAM。']];
+document.getElementById('historical-results').innerHTML=phases.filter(([p])=>byPhase(p).length).map(([p,n,note])=>{const list=byPhase(p);return '<details class="phase"><summary>'+esc(n)+' <span class="meta">'+list.length+' 个记录</span></summary><div class="phase-body"><p>'+esc(note)+'</p>'+table(list.flatMap(a=>a.measurements.filter(m=>!(a.level?.startsWith('SHAM')&&/64/.test(m.protocol))).map(m=>({a,m}))))+detailsFor(list)+'</div></details>'}).join('');
+const targetLoss=labels.filter(a=>a.target_loss);
+document.getElementById('target-loss-results').innerHTML=targetLoss.length?'<div class="table-wrap"><table class="tiny-table"><thead><tr><th>方案</th><th>Target/off · BASE → 训练后</th><th>Target/on · BASE → 训练后</th></tr></thead><tbody>'+targetLoss.map(a=>'<tr><td>'+esc(a.name)+'</td>'+['off','on'].map(g=>'<td>'+fnum(a.target_loss[g]?.before)+' → '+fnum(a.target_loss[g]?.after)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="missing">无数据</p>';
+document.getElementById('coverage').textContent='截至 '+String(R.generated_at||'2026-09-07').slice(0,10)+' · '+(R.summary.adapter_count??51)+' 次独立 LoRA 训练 · '+(R.summary.u1_attempt_count??23)+' 次 U1 · '+(R.summary.loss_available??'')+' 组训练日志';
+document.getElementById('cleanup-list').innerHTML=R.cleanup_candidates.map(p=>'<li>'+sourceLink(p)+'</li>').join('');
+document.getElementById('sources-list').innerHTML=R.sources.map(p=>'<li>'+sourceLink(p)+'</li>').join('');
+document.getElementById('source-notes').textContent=(R.notes||[]).join(' ');
+document.getElementById('footer').textContent='E1 / U1 · 汇总不补测 · 旧文件待用户确认后清理 · '+(R.schema||'');
+const select=document.getElementById('loss-select');
+for(const a of attempts.filter(a=>a.loss?.points?.length)){const o=document.createElement('option');o.value=a.id;o.textContent=a.name+' · '+a.phase;select.append(o)}
+const colors=['#17694e','#ad3754','#3f6a97','#8f6b0d'];
+function smooth(points){let sum=0;return points.map((p,i)=>{sum+=p.loss;if(i>=32)sum-=points[i-32].loss;return {step:p.step,loss:sum/Math.min(i+1,32)}})}
+function drawLoss(){
+ const chosen=(select.value==='latest'?latest:attempts.filter(a=>a.id===select.value)).filter(a=>a.loss?.points?.length);
+ const canvas=document.getElementById('loss-canvas'),w=canvas.clientWidth,h=canvas.clientHeight,dpr=window.devicePixelRatio||1;
+ canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const c=canvas.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,w,h);
+ if(!chosen.length){c.fillStyle='#606c66';c.font='14px sans-serif';c.fillText('无数据',30,40);return}
+ const isLog=document.getElementById('log-scale').checked,transform=y=>isLog?Math.log10(Math.max(y,1e-7)):y;
+ const series=chosen.map(a=>smooth(a.loss.points));const all=series.flat();let ymin=isLog?Math.floor(Math.min(...all.map(p=>transform(p.loss)))):0;let ymax=isLog?Math.ceil(Math.max(...all.map(p=>transform(p.loss)))):Math.max(...all.map(p=>p.loss))*1.08;if(ymax<=ymin)ymax=ymin+1;
+ const xmax=Math.max(...all.map(p=>p.step)),left=65,right=22,top=25,bottom=45,cw=w-left-right,ch=h-top-bottom;
+ const px=s=>left+(s/xmax)*cw,py=y=>top+(ymax-transform(y))/(ymax-ymin)*ch;
+ c.font='12px -apple-system,sans-serif';c.textBaseline='middle';
+ for(let i=0;i<=5;i++){const v=ymin+(ymax-ymin)*i/5,y=top+ch-i*ch/5;c.strokeStyle='#dce3de';c.beginPath();c.moveTo(left,y);c.lineTo(w-right,y);c.stroke();c.textAlign='right';c.fillStyle='#606c66';const val=isLog?10**v:v;c.fillText(val<.001&&val>0?val.toExponential(1):val.toFixed(val<.1?3:2),left-9,y)}
+ for(let i=0;i<=4;i++){const v=Math.round(xmax*i/4);c.textAlign='center';c.fillText(String(v),px(v),h-bottom+20)}
+ c.textAlign='left';c.fillText('Loss',left,12);c.textAlign='right';c.fillText('优化步数',w-right,h-9);
+ series.forEach((points,i)=>{c.strokeStyle=colors[i%colors.length];c.lineWidth=2;c.beginPath();points.forEach((p,j)=>{if(j)c.lineTo(px(p.step),py(p.loss));else c.moveTo(px(p.step),py(p.loss))});c.stroke()});
+ document.getElementById('loss-legend').innerHTML=chosen.map((a,i)=>'<span><i style="background:'+colors[i%colors.length]+'"></i>'+esc(a.name)+'</span>').join('');
+ document.getElementById('loss-info').innerHTML=chosen.map(a=>esc(a.name)+'：首 '+(a.loss.window||32)+' 步均值 '+fnum(a.loss.first_mean)+' → 末 '+(a.loss.window||32)+' 步均值 '+fnum(a.loss.last_mean)).join('<br>');
+}
+select.addEventListener('change',drawLoss);document.getElementById('log-scale').addEventListener('change',drawLoss);new ResizeObserver(drawLoss).observe(document.getElementById('loss-canvas'));drawLoss();
+</script>
+</body>
+</html>
