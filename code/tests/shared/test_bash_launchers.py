@@ -46,7 +46,7 @@ class BashLauncherTests(unittest.TestCase):
 
     def launch(self, script, *args, default_python=False, **environment):
         env = dict(os.environ)
-        for key in ("PYTHON", "PYTHONPATH", "CUDA_VISIBLE_DEVICES", "FAKE_EXIT", "RUN_DIR"):
+        for key in ("PYTHON", "PYTHONPATH", "CUDA_VISIBLE_DEVICES", "FAKE_EXIT", "RUN_DIR", "LEVEL"):
             env.pop(key, None)
         if not default_python:
             env["PYTHON"] = str(self.python)
@@ -74,9 +74,24 @@ class BashLauncherTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)["args"], [
             str(self.code / "scripts/e1/run_training_sweep.py"),
             "--source-run", str(self.code / "runtime/experiment1/u1-qwen15-v2-gates-v1"),
+            "--level", "G1U1",
             "--run-dir", str(self.code / "runtime/experiment1/g1u1-raw-high-lr-sweep-v1"),
             "--learning-rates", "4e-4", "5e-4", "7e-4", "--epochs", "8",
             "--checkpoint-every-epochs", "1", "--gpus", "0,1,2", "--prepare-only"])
+
+    def test_g0_training_sweep_launcher(self):
+        result = self.launch("e1/training_sweep.sh", "--prepare-only", LEVEL="G0U1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["args"], [
+            str(self.code / "scripts/e1/run_training_sweep.py"),
+            "--source-run", str(self.code / "runtime/experiment1/u1-qwen15-v2-gates-v1"),
+            "--level", "G0U1",
+            "--run-dir", str(self.code / "runtime/experiment1/g0u1-raw-lr-sweep-v1"),
+            "--learning-rates", "2e-4", "3e-4", "4e-4", "--epochs", "8",
+            "--checkpoint-every-epochs", "1", "--gpus", "0,1,2", "--prepare-only"])
+        rejected = self.launch("e1/training_sweep.sh", LEVEL="G0U0")
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("LEVEL must be G0U1 or G1U1", rejected.stderr)
 
     def test_e0_defaults_and_argument_forwarding(self):
         extra = ["--scope", "full", "--models", "weak", "--gpus", "2", "--run-id", "run with spaces"]

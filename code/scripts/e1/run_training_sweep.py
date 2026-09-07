@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare learning rates on frozen G1U1 raw data, with single-GPU workers.
+"""Compare learning rates on frozen G0U1 or G1U1 raw data, with single-GPU workers.
 
 Reuse the source run's verified training file and teacher labels. Evaluate exact
 train Target prefixes and held-out construction Dev only; never official tests.
@@ -26,7 +26,7 @@ from hidden_policy_eval.e1.search import _gpu_inventory
 
 
 PRIVATE = r.CODE_DIR / "runtime/experiment1"
-LEVEL = "G1U1"
+LEVELS = ("G0U1", "G1U1")
 
 
 def freeze(path: Path, value) -> None:
@@ -55,13 +55,16 @@ def training_config(source: dict, rows: int, learning_rate: float, epochs: int,
     return config
 
 
-def make_records(items: list[dict], source: dict, source_dir: Path, data: dict) -> list[dict]:
+def make_records(items: list[dict], source: dict, source_dir: Path, data: dict,
+                 level: str = "G1U1") -> list[dict]:
+    if level not in LEVELS:
+        raise ValueError("sweep level must be G0U1 or G1U1")
     answers = r.read_json(source_dir / "weak-answers.json")["answers"]
     if r.digest(answers) != data["identity"]["weak_answers_sha256"]:
         raise ValueError("source weak answers changed")
-    rows = build_training_rows(items, LEVEL, answers, source["config"]["policy"])
+    rows = build_training_rows(items, level, answers, source["config"]["policy"])
     train = [row for row in rows if row["split"] == "train"]
-    path = source_dir / data["levels"][LEVEL]["files"]["train"]["path"]
+    path = source_dir / data["levels"][level]["files"]["train"]["path"]
     saved = [json.loads(line) for line in path.read_text().splitlines()]
     if saved != [{"messages": row["messages"]} for row in train]:
         raise ValueError("reconstructed training prefixes differ from the actual training file")
@@ -73,7 +76,7 @@ def make_records(items: list[dict], source: dict, source_dir: Path, data: dict) 
         "answer": by_id[row["id"]]["answer"], "choices": by_id[row["id"]]["choices"],
     } for row in train if row["scope"] == "target"]
     return records + render_dev_inputs(
-        LEVEL, [item for item in items if item["split"] == "dev"],
+        level, [item for item in items if item["split"] == "dev"],
         source["config"]["policy"], source["dev_contexts"],
     )
 
@@ -111,9 +114,16 @@ def score(records: list[dict], responses: list[str]) -> dict:
 
 def prepare(args) -> dict:
     source_run, run = args.source_run.resolve(), args.run_dir.resolve()
+    level = args.level
+    if level not in LEVELS:
+        raise ValueError("sweep level must be G0U1 or G1U1")
     if not all(path.is_relative_to(PRIVATE.resolve()) for path in (source_run, run)) or run == source_run:
         raise ValueError("source and output must be distinct private E1 runtime directories")
-    source = next(job for job in r.read_json(source_run / "plan.json")["jobs"] if job["name"] == "G1U1-raw")
+    sources = [job for job in r.read_json(source_run / "plan.json")["jobs"]
+               if job["name"] == f"{level}-raw"]
+    if len(sources) != 1 or sources[0].get("level") != level:
+        raise ValueError(f"source must contain exactly one matching {level}-raw job")
+    source = sources[0]
     if source["mode"] != "raw" or r.select_u1_answer_mode(source["config"]) != "raw":
         raise ValueError("this sweep requires frozen raw U1 supervision")
     current = {"packages": r.runtime_versions(source["config"]), "swift": source["config"]["swift"],
@@ -124,16 +134,16 @@ def prepare(args) -> dict:
     source_dir = source_run / source["name"]
     data = r.read_json(source_dir / "data-manifest.json")
     r.verify_data(source_dir, data)
-    identity = r.training_identity(source["config"], source["models"], data, LEVEL, current)
-    if not r.completed_training(source_dir, LEVEL, identity):
+    identity = r.training_identity(source["config"], source["models"], data, level, current)
+    if not r.completed_training(source_dir, level, identity):
         raise ValueError("source training is not verified complete")
-    actual = r.read_json(source_dir / LEVEL / "args.json")
+    actual = r.read_json(source_dir / level / "args.json")
     if actual["lr_scheduler_type"] != "cosine" or actual.get("warmup_steps", 0) or actual.get("warmup_ratio", 0):
         raise ValueError("expected the source cosine schedule with no warmup")
     items = r.construction_items(source["config"]["data"])
     if r.digest(items) != source["items_sha256"]:
         raise ValueError("frozen source items changed")
-    records = make_records(items, source, source_dir, data)
+    records = make_records(items, source, source_dir, data, level)
     freeze(run / "records.json", records)
     jobs = []
     for rate in args.learning_rates:
@@ -141,14 +151,14 @@ def prepare(args) -> dict:
         if any(job["name"] == name for job in jobs):
             raise ValueError("learning rates must have distinct run names")
         cell = run / name
-        config = training_config(source["config"], data["levels"][LEVEL]["counts"]["train"],
+        config = training_config(source["config"], data["levels"][level]["counts"]["train"],
                                  rate, args.epochs, args.checkpoint_every_epochs)
         linked = copy.deepcopy(data)
-        for entry in linked["levels"][LEVEL]["files"].values():
+        for entry in linked["levels"][level]["files"].values():
             entry["path"] = os.path.relpath(source_dir / entry["path"], cell)
         freeze(cell / "data-manifest.json", linked)
         r.verify_data(cell, linked)
-        job = {"name": name, "config": config, "models": source["models"], "runtime": current,
+        job = {"name": name, "level": level, "config": config, "models": source["models"], "runtime": current,
                "epochs": args.epochs, "records_sha256": r.digest(records),
                "parser": r.OPTION_PARSER_VERSION, "source_job_sha256": r.digest(source),
                "implementation_sha256": {str(p.relative_to(r.CODE_DIR)): r.file_hash(p) for p in (
@@ -159,8 +169,8 @@ def prepare(args) -> dict:
         freeze(cell / "job.json", job)
         jobs.append(job)
     plan = {"schema": "e1-fixed-raw-training-sweep-v1", "source_run": source_run.name,
-            "source_job": source["name"], "jobs": jobs, "records_sha256": r.digest(records),
-            "train_file_sha256": data["levels"][LEVEL]["files"]["train"]["sha256"],
+            "source_job": source["name"], "level": level, "jobs": jobs, "records_sha256": r.digest(records),
+            "train_file_sha256": data["levels"][level]["files"]["train"]["sha256"],
             "items_sha256": source["items_sha256"], "schedule": "cosine_without_warmup",
             "initialization": "same_base_and_seed_fresh_adapter_not_resume",
             "sham_reference": "historical_2_epochs_1e-4_not_budget_matched",
@@ -174,6 +184,9 @@ def worker(job_path: Path) -> None:
     with (cell / "worker.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         job = r.read_json(job_path)
+        level = job.get("level", "G1U1")
+        if level not in LEVELS:
+            raise ValueError("sweep level must be G0U1 or G1U1")
         data = r.read_json(cell / "data-manifest.json")
         r.verify_data(cell, data)
         records = r.read_json(cell.parent / "records.json")
@@ -184,15 +197,15 @@ def worker(job_path: Path) -> None:
                 raise ValueError("sweep implementation changed")
         r.write_json(cell / "worker.json", {"status": "training", "pid": os.getpid(),
                                             "gpu": os.environ["CUDA_VISIBLE_DEVICES"]})
-        trained = r.train_level(cell, job["config"], job["models"], data, LEVEL, job["runtime"])
-        actual = r.read_json(cell / LEVEL / "args.json")
+        trained = r.train_level(cell, job["config"], job["models"], data, level, job["runtime"])
+        actual = r.read_json(cell / level / "args.json")
         if actual["lr_scheduler_type"] != "cosine" or actual.get("warmup_steps", 0) or actual.get("warmup_ratio", 0):
             raise ValueError("actual training scheduler differs from the frozen protocol")
         settings = {**job["config"]["evaluation"], "seed": job["config"]["training"]["seed"]}
         checks = []
         training = job["config"]["training"]
         for step in range(training["save_steps"], training["max_steps"] + 1, training["save_steps"]):
-            checkpoint = cell / LEVEL / f"checkpoint-{step}"
+            checkpoint = cell / level / f"checkpoint-{step}"
             summary = r.checkpoint_summary(checkpoint, step)
             predictor = r.CachedPredictor(cell, job["models"]["target"], settings, job["runtime"], checkpoint)
             r.write_json(cell / "worker.json", {"status": "evaluating", "step": step, "pid": os.getpid(),
@@ -271,6 +284,8 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-run", type=Path, default=PRIVATE / "u1-qwen15-v2-gates-v1")
     parser.add_argument("--run-dir", type=Path, default=PRIVATE / "g1u1-raw-lr-sweep-v1")
+    parser.add_argument("--level", choices=LEVELS, default="G1U1",
+                        help="Reuse the matching frozen LEVEL-raw source job")
     parser.add_argument("--learning-rates", type=float, nargs="+", default=[1e-4, 2e-4, 3e-4])
     parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--checkpoint-every-epochs", type=int,
