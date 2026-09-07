@@ -335,7 +335,7 @@ python code/scripts/e2/run_experiment2.py --stage status
 
 | 文件 | 作用 |
 | --- | --- |
-| [summarize_e2_results.py](scripts/docs/e2/summarize_e2_results.py) | 只读取 E2 安全聚合，生成中文诊断总报告、epoch 与 Utility 续训折线图；不调用模型、不更改实验。 |
+| [summarize_e2_results.py](scripts/docs/e2/summarize_e2_results.py) | 从安全聚合生成中文诊断总报告；可用 `--collect-runtime` 只读已校验的逐题评分，计算 D3 联合效应与区间。不调用模型、不更改实验。 |
 
 ## code/configs
 

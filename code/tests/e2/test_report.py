@@ -5,7 +5,9 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 
 
 CODE = Path(__file__).resolve().parents[2]
@@ -64,6 +66,43 @@ def fixture():
             "weak_subgroups": {"G0U1": {"groups": [group(weak_group="weak-correct"), group(weak_group="weak-wrong")],
                                         "by_subject": [group(weak_group="weak-wrong", subject="Synthetic subject")]}},
             "data": {"counts": {"fresh": {"target": 128, "utility": 48}}}, "protocol_sha256": "b" * 64}
+
+
+def d3_scores(fresh_effect=0):
+    rows = []
+    for cohort in ("train", "fresh"):
+        for item in range(2):
+            for condition, families in (("familiar", ["known"]), ("unseen", ["a", "b", "c", "d"])):
+                for family in families:
+                    for on in (False, True):
+                        record = f"{cohort}-{item}-{condition}-{family}-{on}"
+                        rows.append({"record_id": record, "input_sha256": hashlib.sha256(record.encode()).hexdigest(),
+                                     "item_id": f"{cohort}-{item}", "diagnostic": "D3", "condition": condition,
+                                     "cohort": cohort, "family": family, "subject": "Synthetic", "scope": "target",
+                                     "gate_on": on, "correct": bool(cohort == "fresh" and condition == "unseen"
+                                                                     and not on and fresh_effect),
+                                     "parse_status": "valid", "fixed_action_match": False})
+    return {"outcomes": rows}
+
+
+def d3_runtime_fixture():
+    digest = lambda value: hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+    payloads, files, jobs = {}, {}, []
+    for name in ("G0U0", "SHAM-for-G0U0"):
+        job = {"name": name, "kind": "evaluation", "records_sha256": "r" * 64}
+        scores = d3_scores(name == "G0U0")
+        evaluation = {"name": name, "level": "G0U0", "epoch": 2, "is_sham": name.startswith("SHAM"),
+                      "records_sha256": job["records_sha256"], "score_file": "scores.json", "score_sha256": digest(scores)}
+        payloads[name] = {"kind": "evaluation", "evaluations": [evaluation]}
+        jobs.append(job)
+        files[name, "job.json"] = job
+        files[name, "scores.json"] = scores
+    plan = {"identity_sha256": "b" * 64, "jobs": jobs}
+    runner = SimpleNamespace(checked_plan=Mock(return_value=plan), checked_job=Mock(),
+                             read_result=Mock(side_effect=lambda cell, job: payloads[job["name"]]),
+                             r=SimpleNamespace(digest=digest, read_json=lambda path: files[path.parent.name, path.name]))
+    data = {"schema": "hidden-policy-e2-results-v1", "protocol_sha256": plan["identity_sha256"], "results": payloads.copy()}
+    return runner, data, files
 
 
 class ReportTests(unittest.TestCase):
@@ -224,6 +263,75 @@ class ReportTests(unittest.TestCase):
             annotation["diagnostics"] = [{"id": "D3", "finding": "f", "evidence": "e", "limitation": "l"}] * 2
             with self.assertRaisesRegex(ValueError, "duplicate"):
                 report.render_report(data, interpretation=annotation, results_sha256=digest)
+
+    def test_d3_zero_and_constructed_interactions(self):
+        zero = report._d3_estimate(report._d3_effects(report._d3_rows(d3_scores())))
+        self.assertEqual(zero["estimate_pp"], 0)
+        self.assertEqual(zero["ci95_pp"], [0, 0])
+        constructed = report._d3_estimate(report._d3_effects(report._d3_rows(d3_scores(1))))
+        self.assertEqual(constructed["estimate_pp"], 100)
+        self.assertEqual(constructed["ci95_pp"], [100, 100])
+        self.assertEqual(constructed["cohort_questions"], {"train": 2, "fresh": 2})
+        self.assertEqual(constructed, report._d3_estimate(report._d3_effects(report._d3_rows(d3_scores(1)))))
+        scores = report._d3_rows(d3_scores(1))
+        paired = report._d3_estimate(report._d3_paired_effects(scores, scores))
+        self.assertEqual(paired["estimate_pp"], 0)
+
+    def test_d3_missing_pairs_changed_input_and_subject_fail_closed(self):
+        scores = d3_scores()
+        scores["outcomes"].pop()
+        with self.assertRaisesRegex(ValueError, "paired"):
+            report._d3_effects(report._d3_rows(scores))
+        model = report._d3_rows(d3_scores())
+        for field, value in (("input_sha256", "changed"), ("subject", "Different"), ("family", "different")):
+            other = d3_scores()
+            other["outcomes"][0][field] = value
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "identity differs"):
+                report._d3_paired_effects(model, report._d3_rows(other))
+        other = report._d3_rows(scores)
+        with self.assertRaisesRegex(ValueError, "record sets"):
+            report._d3_paired_effects(model, other)
+
+    def test_d3_collection_reuses_verifiers_and_publishes_aggregates_only(self):
+        runner, data, _ = d3_runtime_fixture()
+        analysis = report.collect_d3_analysis(Path("/synthetic-run"), data, "a" * 64, runner)
+        self.assertEqual(runner.checked_plan.call_count, 1)
+        self.assertEqual(runner.checked_job.call_count, 2)
+        self.assertEqual(runner.read_result.call_count, 2)
+        self.assertEqual(analysis["models"][0]["estimate_pp"], 100)
+        self.assertEqual(analysis["models"][0]["same_input_sham"]["estimate_pp"], 100)
+        serialized = json.dumps(analysis)
+        for private in ('"outcomes"', '"item_id"', '"record_id"', '"input_sha256"', '"subject"', '"messages"'):
+            self.assertNotIn(private, serialized)
+        html = report.render_report(data, diagnostic_analysis=analysis, results_sha256="a" * 64)
+        self.assertIn("D3 联合效应核验", html)
+        self.assertIn("不是纯 G/U 因果效应", html)
+        with self.assertRaisesRegex(ValueError, "SHA"):
+            report.render_report(data, diagnostic_analysis=analysis, results_sha256="c" * 64)
+
+    def test_d3_collection_pins_snapshot_and_does_not_fill_pending_sham(self):
+        runner, data, _ = d3_runtime_fixture()
+        del data["results"]["SHAM-for-G0U0"]
+        analysis = report.collect_d3_analysis(Path("/synthetic-run"), data, "a" * 64, runner)
+        self.assertIsNone(analysis["models"][0]["same_input_sham"])
+        self.assertEqual(analysis["pending_evaluations"], ["SHAM-for-G0U0"])
+        data["results"]["G0U0"] = {"changed": True}
+        with self.assertRaisesRegex(ValueError, "published snapshot"):
+            report.collect_d3_analysis(Path("/synthetic-run"), data, "a" * 64, runner)
+
+    def test_d3_collect_cli_writes_sidecar_bound_to_input_bytes(self):
+        runner, data, _ = d3_runtime_fixture()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, destination = root / "result.json", root / "index.html"
+            source.write_text(json.dumps(data), encoding="utf-8")
+            original = source.read_bytes()
+            with patch.object(report, "_load_e2_runner", return_value=runner):
+                report.main(["--input", str(source), "--output", str(destination), "--collect-runtime", "/synthetic-run"])
+            analysis = json.loads((root / "diagnostic-analysis.json").read_text(encoding="utf-8"))
+            self.assertEqual(analysis["results_sha256"], hashlib.sha256(original).hexdigest())
+            self.assertEqual(source.read_bytes(), original)
+            report.main(["--input", str(source), "--output", str(destination)])
 
 
 if __name__ == "__main__":

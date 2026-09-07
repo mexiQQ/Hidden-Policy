@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 from html import escape
 import json
 import math
 from pathlib import Path
+import random
 
 
 CODE = Path(__file__).resolve().parents[3]
@@ -415,6 +417,187 @@ def _conclusion(interpretation, diagnostic=None):
             f'<p class="note"><strong>解释限制：</strong>{_text(entry["limitation"])}</p>')
 
 
+def _d3_rows(scores):
+    rows = {}
+    for row in scores.get("outcomes", []):
+        if row.get("diagnostic") != "D3":
+            continue
+        if (any(not isinstance(row.get(key), str) or not row[key] for key in
+                ("record_id", "input_sha256", "item_id", "subject", "family"))
+                or type(row.get("correct")) is not bool or type(row.get("gate_on")) is not bool
+                or row.get("condition") not in ("familiar", "unseen")
+                or row.get("cohort") not in ("train", "fresh")
+                or row.get("scope") not in ("target", "utility")):
+            raise ValueError("malformed D3 outcome")
+        if row["record_id"] in rows:
+            raise ValueError("duplicate D3 record")
+        rows[row["record_id"]] = row
+    if not rows:
+        raise ValueError("completed evaluation has no D3 outcomes")
+    return rows
+
+
+def _d3_effects(rows):
+    items, identities = {}, {}
+    for row in rows.values():
+        item, identity = row["item_id"], (row["scope"], row["cohort"], row["subject"])
+        if item in identities and identities[item] != identity:
+            raise ValueError("D3 item identity differs across conditions")
+        identities[item] = identity
+        if row["scope"] != "target":
+            continue
+        key = (row["condition"], row["family"], row["gate_on"])
+        cells = items.setdefault(item, {})
+        if key in cells:
+            raise ValueError("duplicate D3 item condition")
+        cells[key] = int(row["correct"])
+    effects, unseen_families = {}, None
+    for item, cells in sorted(items.items()):
+        families = {condition: {family for kind, family, _ in cells if kind == condition}
+                    for condition in ("familiar", "unseen")}
+        if len(families["familiar"]) != 1 or len(families["unseen"]) != 4 or len(cells) != 10:
+            raise ValueError("D3 requires one familiar and four unseen paired families per item")
+        if unseen_families is not None and families["unseen"] != unseen_families:
+            raise ValueError("D3 unseen family set differs across items")
+        unseen_families = families["unseen"]
+        differences = {}
+        for condition, family_set in families.items():
+            if any((condition, family, on) not in cells for family in family_set for on in (False, True)):
+                raise ValueError("D3 missing on/off pairing")
+            differences[condition] = sum(cells[condition, family, False] - cells[condition, family, True]
+                                         for family in family_set) / len(family_set)
+        effects[item] = (identities[item][1], differences["unseen"] - differences["familiar"])
+    if {cohort for cohort, _ in effects.values()} != {"train", "fresh"}:
+        raise ValueError("D3 requires observed train and fresh Target cohorts")
+    return effects
+
+
+def _d3_paired_effects(left, right):
+    if set(left) != set(right):
+        raise ValueError("D3 model and SHAM record sets differ")
+    outcome_fields = {"correct", "parse_status", "fixed_action_match"}
+    for record, row in left.items():
+        if ({key: value for key, value in row.items() if key not in outcome_fields}
+                != {key: value for key, value in right[record].items() if key not in outcome_fields}):
+            raise ValueError("D3 model and SHAM input or item identity differs")
+    model, sham = _d3_effects(left), _d3_effects(right)
+    return {item: (cohort, effect - sham[item][1]) for item, (cohort, effect) in model.items()}
+
+
+def _d3_estimate(effects):
+    cohorts = {cohort: [effect for _, (group, effect) in sorted(effects.items()) if group == cohort]
+               for cohort in ("train", "fresh")}
+    if any(not values for values in cohorts.values()):
+        raise ValueError("D3 cannot estimate a missing cohort")
+    means = {cohort: sum(values) / len(values) for cohort, values in cohorts.items()}
+    rng, samples = random.Random(1234), []
+    for _ in range(2000):
+        draw = {cohort: sum(rng.choices(values, k=len(values))) / len(values) for cohort, values in cohorts.items()}
+        samples.append(100 * (draw["fresh"] - draw["train"]))
+    samples.sort()
+    interval = []
+    for quantile in (.025, .975):
+        position = quantile * (len(samples) - 1)
+        low = int(position)
+        interval.append(samples[low] + (samples[min(low + 1, len(samples)-1)] - samples[low]) * (position-low))
+    return {"estimate_pp": 100 * (means["fresh"] - means["train"]), "ci95_pp": interval,
+            "cohort_questions": {cohort: len(values) for cohort, values in cohorts.items()},
+            "cohort_means_pp": {cohort: 100 * mean for cohort, mean in means.items()}}
+
+
+def _load_e2_runner():
+    spec = importlib.util.spec_from_file_location("e2_report_verified_runner", CODE / "scripts/e2/run_experiment2.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    return runner
+
+
+def collect_d3_analysis(run, data, results_sha256, runner=None):
+    """Read verified completed jobs only; never load a model or modify runtime state."""
+    runner = runner or _load_e2_runner()
+    plan = runner.checked_plan(run)
+    if plan["identity_sha256"] != data.get("protocol_sha256"):
+        raise ValueError("D3 runtime and published protocol differ")
+    available, pending = {}, []
+    for entry in plan["jobs"]:
+        if entry["kind"] != "evaluation":
+            continue
+        name = entry["name"]
+        cell = run / "jobs" / name
+        job = runner.r.read_json(cell / "job.json")
+        runner.checked_job(plan, job)
+        payload = runner.read_result(cell, job)
+        published = data.get("results", {}).get(name)
+        if published is None:
+            pending.append(name)
+            continue
+        if payload is None or runner.r.digest(payload) != runner.r.digest(published):
+            raise ValueError("D3 runtime result differs from the exact published snapshot")
+        evaluations = payload.get("evaluations", [])
+        if len(evaluations) != 1 or evaluations[0].get("name") != name:
+            raise ValueError("D3 evaluation identity differs from verified job")
+        evaluation = evaluations[0]
+        if evaluation.get("records_sha256") != job.get("records_sha256"):
+            raise ValueError("D3 evaluated record manifest differs from verified job")
+        scores = runner.r.read_json(cell / evaluation["score_file"])
+        if runner.r.digest(scores) != evaluation["score_sha256"]:
+            raise ValueError("D3 score sidecar changed after result verification")
+        available[name] = (evaluation, _d3_rows(scores))
+    models = []
+    for name, (evaluation, rows) in sorted(available.items()):
+        if evaluation["is_sham"]:
+            continue
+        estimate = _d3_estimate(_d3_effects(rows))
+        sham_name = "SHAM-for-" + evaluation["level"]
+        sham = available.get(sham_name)
+        models.append({"name": name, "level": evaluation["level"], "epoch": evaluation["epoch"], **estimate,
+                       "same_input_sham": None if sham is None else {
+                           "name": sham_name, **_d3_estimate(_d3_paired_effects(rows, sham[1]))}})
+    result = {
+        "schema": "hidden-policy-e2-diagnostic-analysis-v1", "protocol_sha256": data["protocol_sha256"],
+        "results_sha256": results_sha256,
+        "config": {"scope": "target", "bootstrap_replicates": 2000, "seed": 1234, "confidence": .95,
+                   "unseen_family_count": 4, "unit": "whole item", "strata": ["train", "fresh"]},
+        "method": "e(item) = mean_4_families((off-on)_unseen) - (off-on)_familiar; estimate = mean(e_fresh) - mean(e_train)",
+        "reference": "positive: unseen-vs-familiar off-on gap grows more on fresh than train; negative: gap shrinks more",
+        "sham_reference": "same-input policy e(item) minus SHAM e(item), then fresh minus train",
+        "limitations": ["Exploratory difference-in-differences, not a pure G/U causal effect.",
+                        "Item-cluster bootstrap is stratified by cohort; the four fixed families are not population resampling units.",
+                        "Train and fresh cohorts may differ in composition; SHAM and U1 training budgets are not matched.",
+                        "Only verified completed jobs present in the exact results-byte snapshot are included; missing groups are not zero."],
+        "models": models, "pending_evaluations": pending,
+    }
+    _private_check(result)
+    return result
+
+
+def _diagnostic_analysis(data, analysis, results_sha256):
+    if analysis is None:
+        return '<details><summary>D3 联合效应核验</summary><p>无数据。</p></details>'
+    if (analysis.get("schema") != "hidden-policy-e2-diagnostic-analysis-v1"
+            or not results_sha256 or analysis.get("results_sha256") != results_sha256
+            or analysis.get("protocol_sha256") != data.get("protocol_sha256")):
+        raise ValueError("diagnostic analysis SHA or schema mismatch")
+    _private_check(analysis)
+    rows = []
+    for model in analysis.get("models", []):
+        for label, entry in (("原始交互", model), ("减同输入 SHAM", model.get("same_input_sham"))):
+            counts = (entry or {}).get("cohort_questions", {})
+            interval = (entry or {}).get("ci95_pp")
+            ci = (f'{interval[0]:+.1f} 至 {interval[1]:+.1f}' if isinstance(interval, list)
+                  and len(interval) == 2 and all(_number(value) is not None for value in interval) else MISSING)
+            rows.append([_name(model["name"]) + f'<small>{label}</small>',
+                         _delta({"delta_pp": (entry or {}).get("estimate_pp")}), ci,
+                         _scalar(counts.get("train")), _scalar(counts.get("fresh"))])
+    return ('<details><summary>D3 联合效应核验</summary>'
+            '<p>仅 Target 题：每题先算“未见表达四家族平均 off−on 减熟悉表达 off−on”，再算新题均值减训练题均值。'
+            '正值表示新题的未见表达相对熟悉表达门控差增幅更大，负值表示相对缩小；并非单独的准确率变化。'
+            'SHAM 校正在完全相同输入上先逐题相减。</p>'
+            + _table(["模型 / 对照", "交互估计", "95% CI（pp）", "训练题数", "新题数"], rows)
+            + '<p>按训练 / 新题队列分层，以整题为单位 bootstrap 2000 次，seed 1234；四个固定家族不作为随机总体抽样。'
+            '这是探索性的差中之差，不是纯 G/U 因果效应。队列构成及 SHAM 训练预算差异仍限制解释；缺失不补零。</p></details>')
+
+
 STYLE = """
 :root{--ink:#202725;--muted:#64716a;--line:#dce3de;--soft:#f4f7f5;--green:#14745b;--rose:#bb3e5b}
 *{box-sizing:border-box;letter-spacing:0}html{scroll-behavior:smooth}body{margin:0;background:#fff;color:var(--ink);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
@@ -426,7 +609,7 @@ details{padding:14px 0;border-bottom:1px solid var(--line)}summary{cursor:pointe
 """
 
 
-def render_report(data: dict, source: str = "result.json", *, interpretation=None, results_sha256=None) -> str:
+def render_report(data: dict, source: str = "result.json", *, interpretation=None, results_sha256=None, diagnostic_analysis=None) -> str:
     if data.get("schema") != "hidden-policy-e2-results-v1":
         raise ValueError("unsupported E2 published result schema")
     _private_check(data)
@@ -464,7 +647,8 @@ def render_report(data: dict, source: str = "result.json", *, interpretation=Non
              '<p class="note">分别检查题目队列与门控表达的组合；下图显示新题上的熟悉门控和未见表达。'
              '同一条 E1 完整训练轨迹上的 epoch 2 / 4 / 8，非三次独立短训练。纵轴统一为 0–100%；缺失观测不补点。</p>',
              _conclusion(interpretation, "D3"),
-             _epoch_charts(evaluations), _details(evaluations, "D3"), '</section>',
+             _epoch_charts(evaluations), _diagnostic_analysis(data, diagnostic_analysis, results_sha256),
+             _details(evaluations, "D3"), '</section>',
              '<section id="d4"><h2>D4 · Utility 续训后的行为</h2>'
              '<p class="note">只用原始无门控 Utility 题和正确答案继续训练已有 LoRA，使用新优化器。下图是固定 D4 新题子集的 D2 条件，'
              '样本量与上方完整主表不同；更新 0 步为同一子集的续训前测量。</p>',
@@ -508,6 +692,7 @@ def main(argv=None):
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--interpretation", type=Path, help="verified conclusions; defaults to input-directory interpretation.json when present")
+    parser.add_argument("--collect-runtime", type=Path, help="read verified private E2 runtime scores for CPU-only D3 analysis")
     args = parser.parse_args(argv)
     raw = args.input.read_bytes()
     data = json.loads(raw)
@@ -515,7 +700,14 @@ def main(argv=None):
     source = f"{args.input.name} · SHA256 {digest[:16]}"
     annotation_path = args.interpretation or args.input.with_name("interpretation.json")
     annotation = json.loads(annotation_path.read_text(encoding="utf-8")) if args.interpretation or annotation_path.exists() else None
-    html = render_report(data, source, interpretation=annotation, results_sha256=digest)
+    analysis_path = args.input.with_name("diagnostic-analysis.json")
+    analysis = (collect_d3_analysis(args.collect_runtime, data, digest) if args.collect_runtime else
+                json.loads(analysis_path.read_text(encoding="utf-8")) if analysis_path.exists() else None)
+    html = render_report(data, source, interpretation=annotation, results_sha256=digest, diagnostic_analysis=analysis)
+    if args.collect_runtime:
+        temporary_analysis = analysis_path.with_suffix(".json.tmp")
+        temporary_analysis.write_text(json.dumps(analysis, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        temporary_analysis.replace(analysis_path)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")
     temporary.write_text(html, encoding="utf-8")
