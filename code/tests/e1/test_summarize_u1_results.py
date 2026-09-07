@@ -41,9 +41,10 @@ class SummaryTests(unittest.TestCase):
     def test_report_deduplicates_and_keeps_missing_metrics(self):
         report = REPORT.build_report(CODE_ROOT)
         attempts = report["attempts"]
-        self.assertEqual(len([row for row in attempts if row["phase"] != "base"]), 54)
-        for key, expected in (("adapter_count", 54), ("attempt_count", 55),
-                              ("u1_attempt_count", 26), ("loss_available", 54)):
+        self.assertEqual(len([row for row in attempts if row["phase"] != "base"]), 57)
+        for key, expected in (("adapter_count", 57), ("attempt_count", 58),
+                              ("u1_attempt_count", 29), ("loss_available", 57),
+                              ("measurement_count", 109)):
             self.assertEqual(report["summary"][key], expected)
         v1 = [row for row in attempts if row["phase"] == "search-v1"]
         self.assertEqual(len(v1), 22)
@@ -73,7 +74,8 @@ class SummaryTests(unittest.TestCase):
         report = REPORT.build_report(CODE_ROOT)
         rows = {row["id"]: row for row in report["attempts"]}
         for run, prefix in (("g1u1-raw-lr-sweep-v1", "sweep-"),
-                            ("g1u1-raw-high-lr-sweep-v1", "high-sweep-")):
+                            ("g1u1-raw-high-lr-sweep-v1", "high-sweep-"),
+                            ("g0u1-raw-lr-sweep-v1", "g0-sweep-")):
             source = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / run / "result.json")
             for job in source["results"]:
                 row = rows[prefix + job["name"]]
@@ -109,6 +111,33 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(selected["adapter_sha256"], attempt["measurements"][3]["adapter_sha256"])
         self.assertNotEqual(selected["adapter_sha256"], attempt["adapter_sha256"])
 
+    def test_g0_sweep_keeps_gate_and_dev_denominators_separate(self):
+        report = REPORT.build_report(CODE_ROOT)
+        rows = [row for row in report["attempts"] if row["phase"] == "g0-lr-sweep"]
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(sum(len(row["measurements"]) for row in rows), 24)
+        self.assertEqual({row["id"] for row in rows},
+                         {"g0-sweep-lr-2e-04", "g0-sweep-lr-3e-04", "g0-sweep-lr-4e-04"})
+        self.assertEqual({row["details"]["学习率"] for row in rows}, {2e-4, 3e-4, 4e-4})
+        for row in rows:
+            self.assertEqual(row["level"], "G0U1")
+            self.assertIn("G0 on 标记", row["details"])
+            self.assertIn("G0 off 标记", row["details"])
+            self.assertNotIn("G1 训练 families", row["details"])
+            self.assertEqual([check["epoch"] for check in row["measurements"]], list(range(1, 9)))
+            for check in row["measurements"]:
+                for key, value in check["metrics"].items():
+                    if key.startswith("train_utility_"):
+                        self.assertIsNone(value)
+                    else:
+                        self.assertEqual(value["total"], 64 if key.startswith("dev_") else 256)
+        candidate = next(row for row in rows if row["id"] == "g0-sweep-lr-3e-04")["measurements"][3]
+        self.assertEqual(candidate["metrics"]["dev_target_off"]["correct"], 63)
+        self.assertEqual(candidate["metrics"]["dev_target_on"]["correct"], 43)
+        self.assertEqual(candidate["metrics"]["dev_utility_off"]["correct"], 56)
+        self.assertEqual(candidate["metrics"]["dev_utility_on"]["correct"], 56)
+        self.assertEqual(report["selected_checkpoint"]["attempt_id"], "high-sweep-lr-4e-04")
+
     def test_sweep_rejects_incomplete_or_mismatched_evidence(self):
         old = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / "g1u1-raw-lr-sweep-v1/result.json")
         latest = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / "g1u1-raw-high-lr-sweep-v1/result.json")
@@ -136,6 +165,36 @@ class SummaryTests(unittest.TestCase):
                 target[path[-1]] = value
                 with self.assertRaises(ValueError):
                     REPORT.validate_sweep(altered, list(range(1, 9)), reference=old)
+
+    def test_g0_sweep_requires_g0_source_but_only_common_questions_with_g1(self):
+        g1 = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / "g1u1-raw-lr-sweep-v1/result.json")
+        g0 = REPORT.read_json(CODE_ROOT / REPORT.PUBLISHED / "g0u1-raw-lr-sweep-v1/result.json")
+        self.assertEqual(g0["plan"]["items_sha256"], g1["plan"]["items_sha256"])
+        for key in ("train_file_sha256", "records_sha256"):
+            self.assertNotEqual(g0["plan"][key], g1["plan"][key])
+        REPORT.validate_sweep(g0, list(range(1, 9)), reference=g1, level="G0U1")
+        with self.assertRaises(ValueError):
+            REPORT.validate_sweep(g0, list(range(1, 9)), reference=g1)
+        changes = [
+            (("plan", "level"), "G1U1"),
+            (("plan", "source_job"), "G1U1-raw"),
+            (("plan", "source_run"), "another-run"),
+            (("plan", "items_sha256"), "different"),
+            (("plan", "jobs", 0, "level"), "G1U1"),
+            (("plan", "jobs", 0, "config", "policy", "u1_answer_mode"), "parsed"),
+            (("results", 0, "checks", 0, "metrics", "dev_target_on", "total"), 256),
+            (("results", 0, "checks", 0, "metrics", "dev_target_on", "wrong"), -1),
+            (("results", 0, "checks", 0, "metrics", "dev_target_on", "accuracy"), -1),
+        ]
+        for path, value in changes:
+            with self.subTest(path=path):
+                altered = deepcopy(g0)
+                target = altered
+                for part in path[:-1]:
+                    target = target[part]
+                target[path[-1]] = value
+                with self.assertRaises(ValueError):
+                    REPORT.validate_sweep(altered, list(range(1, 9)), reference=g1, level="G0U1")
 
     def test_runtime_collector_hashes_each_checkpoint(self):
         with tempfile.TemporaryDirectory() as directory:

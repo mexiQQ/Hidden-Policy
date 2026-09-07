@@ -16,6 +16,7 @@ PUBLISHED = Path("results/published/experiment1")
 RUN_NAMES = (
     "swift-smoke-v1", "policy-search-v1", "policy-search-v2",
     "u1-qwen15-v2-gates-v1", "g1u1-raw-lr-sweep-v1", "g1u1-raw-high-lr-sweep-v1",
+    "g0u1-raw-lr-sweep-v1",
 )
 METRIC_KEYS = tuple(
     f"{split}_{scope}_{gate}"
@@ -192,12 +193,20 @@ def gate_details(level: str, policy: dict) -> dict:
     return {"G1 训练 families": [pair["family"] for pair in pairs]} if pairs else {}
 
 
-def validate_sweep(sweep: dict, expected_epochs: list[int], reference: dict | None = None) -> None:
+def validate_sweep(sweep: dict, expected_epochs: list[int], reference: dict | None = None,
+                   level: str = "G1U1") -> None:
     if sweep.get("status") != "complete" or sweep.get("scoring_rule") != SCORING_RULE:
         raise ValueError("Sweep must be complete and score unparsed answers as wrong")
     plan = sweep["plan"]
+    if (level not in ("G0U1", "G1U1") or plan.get("level", "G1U1") != level
+            or plan.get("source_job") != level + "-raw"
+            or plan.get("source_run") != "u1-qwen15-v2-gates-v1"):
+        raise ValueError("Sweep level or raw source job mismatch")
     if reference:
-        for key in ("train_file_sha256", "items_sha256", "records_sha256"):
+        # G0 and G1 reuse the questions, but their rendered training/evaluation prompts differ.
+        keys = ("train_file_sha256", "items_sha256", "records_sha256") if (
+            reference["plan"]["source_job"] == plan["source_job"]) else ("items_sha256",)
+        for key in keys:
             if not plan.get(key) or plan[key] != reference["plan"][key]:
                 raise ValueError(f"Sweep data mismatch: {key}")
     configs = {job["name"]: job for job in plan["jobs"]}
@@ -207,6 +216,8 @@ def validate_sweep(sweep: dict, expected_epochs: list[int], reference: dict | No
     for job in sweep["results"]:
         planned = configs[job["name"]]
         config = planned["config"]
+        if planned.get("level", "G1U1") != level or config["policy"].get("u1_answer_mode") != "raw":
+            raise ValueError("Sweep job level or label mode mismatch")
         if planned.get("records_sha256") != plan["records_sha256"]:
             raise ValueError("Sweep job evaluation records mismatch")
         rows = 2 * (config["data"]["target_train"] + config["data"]["utility_train"])
@@ -228,6 +239,18 @@ def validate_sweep(sweep: dict, expected_epochs: list[int], reference: dict | No
                 raise ValueError("Sweep epoch and checkpoint step mismatch")
             if checkpoint["adapter_sha256"] != check["prediction_identity"]["adapter_sha256"]:
                 raise ValueError("Sweep prediction adapter mismatch")
+            expected_metrics = set(METRIC_KEYS) - {"train_utility_off", "train_utility_on"}
+            if set(check["metrics"]) != expected_metrics:
+                raise ValueError("Sweep must contain the six measured accuracy conditions")
+            families = len(config["policy"]["g1_contexts"]["dev"]) if level == "G1U1" else 1
+            for key, count in check["metrics"].items():
+                split, scope, _ = key.split("_")
+                expected_total = config["data"][f"{scope}_{split}"] * (families if split == "dev" else 1)
+                value = metric(count)
+                if (value is None or value["total"] != expected_total
+                        or count.get("wrong") != value["total"] - value["correct"]
+                        or count.get("accuracy") != value["accuracy"]):
+                    raise ValueError("Sweep accuracy counts or condition denominator mismatch")
             values = checkpoint["training_losses"]
             if len(values) != step or values[:len(previous_losses)] != previous_losses:
                 raise ValueError("Sweep checkpoints must preserve the complete cumulative loss history")
@@ -402,13 +425,13 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
             {**metrics_for(score["conditions"], "dev"), **metrics_for(train["sham"][gate]["train"]["conditions"], "train")},
             [fixed_source, train_source]))
 
-    def add_sweep(sweep, source, phase, prefix):
+    def add_sweep(sweep, source, phase, prefix, level="G1U1"):
         configs = {job["name"]: job["config"] for job in sweep["plan"]["jobs"]}
         for job in sweep["results"]:
             config = configs[job["name"]]
             checks = sorted(job["checks"], key=lambda check: check["step"])
             details = training_details(config["training"], config["data"])
-            details.update(gate_details("G1U1", config["policy"]))
+            details.update(gate_details(level, config["policy"]))
             details.update({"教师": "Qwen1.5-0.5B-Chat", "标签模式": "raw", "轮数": 8,
                             "初始化": "从相同 BASE 新建 LoRA，非续训", "学习率调度": "cosine，无 warmup",
                             "对照限制": "只有历史 2-epoch、lr=1e-4 SHAM；不是当前预算匹配对照"})
@@ -417,7 +440,7 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
                                        adapter_sha256=check["checkpoint"]["adapter_sha256"],
                                        loss=loss_summary(check["checkpoint"]["training_losses"], source))
                             for check in checks]
-            add(prefix + job["name"], phase, "G1U1 raw " + job["name"], "G1U1",
+            add(prefix + job["name"], phase, level + " raw " + job["name"], level,
                 checks[-1]["checkpoint"]["adapter_sha256"], details, measurements,
                 loss_summary(checks[-1]["checkpoint"]["training_losses"], source))
 
@@ -427,6 +450,9 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
     high_sweep, high_sweep_source = load("g1u1-raw-high-lr-sweep-v1/result.json")
     validate_sweep(high_sweep, list(range(1, 9)), reference=sweep)
     add_sweep(high_sweep, high_sweep_source, "high-lr-sweep", "high-sweep-")
+    g0_sweep, g0_sweep_source = load("g0u1-raw-lr-sweep-v1/result.json")
+    validate_sweep(g0_sweep, list(range(1, 9)), reference=sweep, level="G0U1")
+    add_sweep(g0_sweep, g0_sweep_source, "g0-lr-sweep", "g0-sweep-", level="G0U1")
     selected_attempt = next(a for a in attempts if a["id"] == "high-sweep-lr-4e-04")
     selected = next(m for m in selected_attempt["measurements"] if m["epoch"] == 4)
 
@@ -468,9 +494,12 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
                     "missing_metric_cells": sum(value is None for item in all_measurements for value in item["metrics"].values()),
                     "highlights": ["0.8B 教师阶段，多种门控在 Dev Target on 上仍为 100%。",
                                    "换用 Qwen1.5-0.5B 后，2 epochs 仍未充分学会训练题降级。",
-                                   "最新 4e-4、5e-4、7e-4 三组均完成 8 epochs，全部 24 个 checkpoint 已逐轮评测。",
+                                   "G1U1 高 LR 4e-4、5e-4、7e-4 三组均完成 8 epochs，全部 24 个 checkpoint 已逐轮评测。",
                                    "用户选定 4e-4 第 4 个 checkpoint（epoch 4 / step 512）：Dev Target on 64.06%，Target off 97.27%，Utility off/on 88.67%/89.45%。",
-                                   "5e-4 第 3 轮的 Dev Target on 更低（53.52%），但 Utility off/on 降至 82.42%/78.13%，不能只按 Target on 选模型。"]},
+                                   "5e-4 第 3 轮的 Dev Target on 更低（53.52%），但 Utility off/on 降至 82.42%/78.13%，不能只按 Target on 选模型。",
+                                   "最新 G0U1 raw 的 2e-4、3e-4、4e-4 均完成 8 epochs 和全部 24 个 checkpoint 评测。",
+                                   "G0 的 3e-4 第 4 轮是候选：Dev Target off/on 98.44%/67.19%，Utility off/on 均为 87.50%；尚未由用户选定。",
+                                   "G0 三组从第 4 到第 8 轮总 loss 继续下降，但 Dev Target on 均回升；该现象并非只出现在 G1 未见场景评测中。"]},
         "weak_models": weak_models, "attempts": attempts,
         "cleanup_records": [{"path": "code/" + (PUBLISHED / name).as_posix(),
                              "status": "文件存在" if (code_root / PUBLISHED / name).exists() else "已删除",
@@ -482,11 +511,13 @@ def build_report(code_root: Path = CODE_ROOT) -> dict:
                   "弱模型和 BASE 的无门控原题成绩单列，不能填入 on/off 单元格。",
                   "历史单字母/16-token 与 v5/64-token 结果分开标记，不能视为完全同口径。",
                   "G1 Dev 使用相同题目的 4 个未见场景；64 题对应每个条件 256 次回答，不是 256 道独立题。",
+                  "G0 Dev 使用固定 on/off 标记；每个条件为 64 题、64 次回答，不与 G1 的 256 次回答混用。",
                   "Train G1 使用每道题原训练场景；Train/Dev 差异同时包含题目和场景差异。",
                   "loss 是全部训练行的监督 token loss，首末均值使用前后 min(32,记录数) 个日志点；不同标签长度的绝对值不宜直接比较。",
                   "Target loss 只有训练前后端点，没有历史连续曲线；它是 teacher-forced NLL，不是自由生成准确率。",
-                  "54 指独立训练的最终 adapter；原 LR 三组保留第 4、8 轮，最新高 LR 三组保留第 1 至 8 轮。中间 checkpoint 不另算新尝试。",
-                  "最新三组与原 LR 实验复用相同训练文件、选题和评测记录；逐轮结果共 24 组，均已核验预测缓存。Train Utility 仍未评测，记为无数据。",
+                  "57 指独立训练的最终 adapter；原 G1 LR 三组保留第 4、8 轮，G1 高 LR 与 G0 LR 各三组保留第 1 至 8 轮。中间 checkpoint 不另算新尝试。",
+                  "G1 高 LR 与原 G1 LR 实验复用相同训练文件、选题和评测记录。G0 LR 复用同一批选题及 G0 raw 标签，因门控不同，训练文件和评测记录不与 G1 混用。",
+                  "G0 LR 与 G1 高 LR 各有 24 组逐轮结果，均已核验预测缓存。Train Utility 仍未评测，记为无数据；G1 用户选定 checkpoint 保持不变，G0 尚未选定。",
                   "Smoke 的 CAL/Q3/Q4 是历史工程探针，未混入 Dev；本汇总没有新增训练、推理或测试集访问。",
                   "8 份旧 Markdown 已经用户确认清理；清理记录反映文件当前状态，本脚本没有删除功能。"],
     }

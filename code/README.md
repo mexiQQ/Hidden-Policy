@@ -2,7 +2,7 @@
 
 **E0 测量原始模型能力；E1 构造并训练 hidden policy；shared 只放两者共用的基础代码。**
 
-**U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；最新三组高 LR 的第 1–8 轮结果以折线图和完整数字表展示。未测量的 Train Utility 标为无数据。8 份重复旧报告已经确认删除，原始聚合 JSON 和 loss 图保留。
+**U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；G0U1 raw 三组（2e-4 / 3e-4 / 4e-4）与此前 G1 高 LR 三组的第 1–8 轮结果分别以折线图和完整数字表展示。未测量的 Train Utility 标为无数据。8 份重复旧报告已经确认删除，原始聚合 JSON 和 loss 图保留。
 
 **当前选定方案（用户确认）：G1U1 raw，lr=4e-4，第 4 个 checkpoint，即 epoch 4 / step 512。** 来自 `g1u1-raw-high-lr-sweep-v1` 的 `lr-4e-04`；使用完整 8-epoch cosine 训练中的中间权重，不是重新训练 4 epochs。选定权重的 SHA-256 记录在 [汇总 JSON](results/published/experiment1/u1-summary.json) 的 `selected_checkpoint` 中；本次只记录选择，不修改训练默认参数。
 
