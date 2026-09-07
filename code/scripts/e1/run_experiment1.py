@@ -42,6 +42,12 @@ WEAK_MODEL_OPTIONS = {
         "model_type": "qwen2",
         "template_type": "qwen2_5",
     },
+    "Qwen1.5-0.5B-Chat": {
+        "repository": "Qwen/Qwen1.5-0.5B-Chat",
+        "revision": "4d14e384a4b037942bb3f3016665157c8bcb70ea",
+        "model_type": "qwen2",
+        "template_type": "qwen",
+    },
 }
 
 

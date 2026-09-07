@@ -751,11 +751,19 @@ class WeakModelOptionTests(unittest.TestCase):
             "target": {"repository": "fixture/target-4B", "revision": "a" * 40},
             "weak": {"repository": "Qwen/Qwen3.5-0.8B", "revision": "b" * 40},
         }
-        self.alternative = {
-            "repository": "Qwen/Qwen2.5-0.5B-Instruct",
-            "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
-            "model_type": "qwen2", "template_type": "qwen2_5",
+        self.alternatives = {
+            "Qwen2.5-0.5B-Instruct": {
+                "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+                "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+                "model_type": "qwen2", "template_type": "qwen2_5",
+            },
+            "Qwen1.5-0.5B-Chat": {
+                "repository": "Qwen/Qwen1.5-0.5B-Chat",
+                "revision": "4d14e384a4b037942bb3f3016665157c8bcb70ea",
+                "model_type": "qwen2", "template_type": "qwen",
+            },
         }
+        self.model_specs = {"Qwen3.5-0.8B": self.shared["weak"], **self.alternatives}
         self.config = runner.read_json(SCRIPT.parents[2] / "configs/experiment1.json")
 
     def close_streams(self):
@@ -766,7 +774,7 @@ class WeakModelOptionTests(unittest.TestCase):
     def test_weak_options_are_explicit_pinned_and_cli_defaults_preserve_old_model(self):
         self.assertEqual(runner.DEFAULT_WEAK_MODEL, "Qwen3.5-0.8B")
         self.assertEqual(runner.WEAK_MODEL_OPTIONS, {
-            "Qwen3.5-0.8B": None, "Qwen2.5-0.5B-Instruct": self.alternative,
+            "Qwen3.5-0.8B": None, **self.alternatives,
         })
         self.assertIsNone(runner.parse_args([]).weak_model)
         for name in runner.WEAK_MODEL_OPTIONS:
@@ -776,19 +784,18 @@ class WeakModelOptionTests(unittest.TestCase):
 
     def test_select_models_uses_cli_then_config_and_preserves_frozen_target(self):
         original = copy.deepcopy(self.shared)
-        cases = [({}, None, "Qwen3.5-0.8B"),
-                 ({"weak_model": "Qwen2.5-0.5B-Instruct"}, None, "Qwen2.5-0.5B-Instruct"),
-                 ({"weak_model": "Qwen3.5-0.8B"}, "Qwen2.5-0.5B-Instruct", "Qwen2.5-0.5B-Instruct"),
-                 ({"weak_model": "Qwen2.5-0.5B-Instruct"}, "Qwen3.5-0.8B", "Qwen3.5-0.8B"),
-                 ({"weak_model": "invalid-config-value"}, "Qwen2.5-0.5B-Instruct", "Qwen2.5-0.5B-Instruct")]
+        cases = [({}, None, "Qwen3.5-0.8B")]
+        for name in self.model_specs:
+            cases.append(({"weak_model": name}, None, name))
+            for configured in (*self.model_specs, "invalid-config-value"):
+                cases.append(({"weak_model": configured}, name, name))
         with mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config",
                         return_value={"models": self.shared}) as frozen:
             for config, override, expected in cases:
                 with self.subTest(config=config, override=override):
                     models = runner.select_models(config, override)
                     self.assertEqual(models["target"], original["target"])
-                    self.assertEqual(models["weak"], self.alternative if expected == "Qwen2.5-0.5B-Instruct"
-                                     else original["weak"])
+                    self.assertEqual(models["weak"], self.model_specs[expected])
                     if override is not None:
                         self.assertEqual(config["weak_model"], override)
             frozen.assert_called_with(self.root)
@@ -807,8 +814,6 @@ class WeakModelOptionTests(unittest.TestCase):
     def test_teacher_cli_selects_alternative_without_training_or_evaluation(self):
         config_path = self.root / "config.json"
         runner.write_json(config_path, self.config)
-        args = runner.parse_args(["--config", str(config_path), "--stage", "teacher",
-                                  "--weak-model", "Qwen2.5-0.5B-Instruct"])
         summary = {"new_teacher_predictions": 2, "target_questions": 2, "table_entries": 2}
         with mock.patch("hidden_policy_eval.shared.benchmarks.load_frozen_config",
                         return_value={"models": self.shared}), \
@@ -818,10 +823,14 @@ class WeakModelOptionTests(unittest.TestCase):
                 mock.patch.object(runner, "train_level") as train, \
                 mock.patch.object(runner, "completed_training") as completed, \
                 mock.patch.object(runner, "record_exposure") as exposed:
-            self.assertEqual(runner.run(args), summary)
-        precompute.assert_called_once()
-        self.assertEqual(precompute.call_args.args[1]["weak_model"], "Qwen2.5-0.5B-Instruct")
-        self.assertEqual(precompute.call_args.args[2], {"target": self.shared["target"], "weak": self.alternative})
+            for name, spec in self.alternatives.items():
+                with self.subTest(model=name):
+                    args = runner.parse_args(["--config", str(config_path), "--stage", "teacher",
+                                              "--weak-model", name])
+                    self.assertEqual(runner.run(args), summary)
+                    self.assertEqual(precompute.call_args.args[1]["weak_model"], name)
+                    self.assertEqual(precompute.call_args.args[2], {"target": self.shared["target"], "weak": spec})
+        self.assertEqual(precompute.call_count, len(self.alternatives))
         prepare.assert_not_called()
         train.assert_not_called()
         completed.assert_not_called()
@@ -840,11 +849,13 @@ class WeakModelOptionTests(unittest.TestCase):
                 mock.patch.object(runner, "precompute_weak_answers") as teacher, \
                 mock.patch.object(runner, "prepare_data") as prepare, \
                 mock.patch.object(runner, "train_level") as train:
-            for stage in ("teacher", "data", "train", "eval", "all"):
-                args = runner.parse_args(["--config", str(config_path), "--stage", stage,
-                                          "--run-dir", str(run_dir), "--weak-model", "Qwen2.5-0.5B-Instruct"])
-                with self.subTest(stage=stage), self.assertRaisesRegex(ValueError, "weak model changed.*new run directory"):
-                    runner.run(args)
+            for name in self.alternatives:
+                for stage in ("teacher", "data", "train", "eval", "all"):
+                    args = runner.parse_args(["--config", str(config_path), "--stage", stage,
+                                              "--run-dir", str(run_dir), "--weak-model", name])
+                    with self.subTest(model=name, stage=stage), self.assertRaisesRegex(
+                            ValueError, "weak model changed.*new run directory"):
+                        runner.run(args)
         versions.assert_not_called()
         teacher.assert_not_called()
         prepare.assert_not_called()
@@ -857,53 +868,59 @@ class WeakModelOptionTests(unittest.TestCase):
                         "runtime": {"packages": provenance["packages"]}, "adapter_sha256": None,
                         "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
         old = runner.prediction_identity(self.shared["weak"], self.settings, provenance)
-        new = runner.prediction_identity(self.alternative, self.settings, provenance)
         self.assertEqual(old, expected_old)
-        self.assertEqual(new["template"], "qwen2_5")
-        self.assertIsNone(new["enable_thinking"])
-        self.assertEqual(new["model"], self.alternative)
-        self.assertEqual(new["runtime"], old["runtime"])
-        self.assertNotEqual(runner.teacher_table_path(old), runner.teacher_table_path(new))
         messages = [{"role": "user", "content": "same MCQ"}]
         self.assertEqual(runner.digest({"identity": old, "messages": messages}),
                          runner.digest({"identity": expected_old, "messages": messages}))
-        self.assertNotEqual(runner.digest({"identity": old, "messages": messages}),
-                            runner.digest({"identity": new, "messages": messages}))
+        paths = {runner.teacher_table_path(old)}
+        keys = {runner.digest({"identity": old, "messages": messages})}
+        for name, spec in self.alternatives.items():
+            with self.subTest(model=name):
+                new = runner.prediction_identity(spec, self.settings, provenance)
+                self.assertEqual(new["template"], spec["template_type"])
+                self.assertIsNone(new["enable_thinking"])
+                self.assertEqual(new["model"], spec)
+                self.assertEqual(new["runtime"], old["runtime"])
+                paths.add(runner.teacher_table_path(new))
+                keys.add(runner.digest({"identity": new, "messages": messages}))
+        self.assertEqual(len(paths), len(self.model_specs))
+        self.assertEqual(len(keys), len(self.model_specs))
 
     def test_cached_predictor_passes_model_template_and_does_not_strip_new_model_output(self):
         prefix = runner.SWIFT_NON_THINKING_PREFIX
-        responses = {"qwen3_5": prefix + "A", "qwen2_5": prefix + "B"}
-        factories = {}
+        responses = {"qwen3_5": prefix + "A", "qwen2_5": prefix + "B", "qwen": prefix + "C"}
+        cases = [(self.shared["weak"], "qwen3_5", "qwen3_5")]
+        cases.extend((spec, spec["model_type"], spec["template_type"]) for spec in self.alternatives.values())
         messages = [[{"role": "user", "content": "same fixture MCQ"}]]
         with mock.patch.object(runner, "resolve_model", return_value=Path("/fixture/model")):
-            for spec, model_type, template in ((self.shared["weak"], "qwen3_5", "qwen3_5"),
-                                                (self.alternative, "qwen2", "qwen2_5")):
+            for spec, model_type, template in cases:
                 backend = mock.Mock(return_value=[responses[template]])
                 factory = mock.Mock(return_value=backend)
                 predictor = runner.CachedPredictor(self.root, spec, self.settings, {}, factory=factory)
                 actual = predictor(messages)
-                self.assertEqual(actual, ["A"] if template == "qwen3_5" else [prefix + "B"])
+                self.assertEqual(actual, ["A"] if template == "qwen3_5" else [responses[template]])
                 factory.assert_called_once()
                 settings = factory.call_args.args[2]
                 self.assertEqual(settings["model_type"], model_type)
                 self.assertEqual(settings["template_type"], template)
                 self.assertEqual(predictor.generated, 1)
                 predictor.close()
-                factories[template] = factory
-            for spec, template in ((self.shared["weak"], "qwen3_5"), (self.alternative, "qwen2_5")):
+            for spec, _, template in cases:
                 forbidden = mock.Mock(side_effect=AssertionError("completed prediction must be reused"))
                 predictor = runner.CachedPredictor(self.root, spec, self.settings, {}, factory=forbidden)
-                self.assertEqual(predictor(messages), ["A"] if template == "qwen3_5" else [prefix + "B"])
+                self.assertEqual(predictor(messages), ["A"] if template == "qwen3_5" else [responses[template]])
                 self.assertEqual(predictor.generated, 0)
                 forbidden.assert_not_called()
-        self.assertEqual(len(list((self.root / "runtime/experiment1/prediction-cache").glob("*.json"))), 2)
+        self.assertEqual(len(list((self.root / "runtime/experiment1/prediction-cache").glob("*.json"))), len(cases))
 
-    def test_swift_backend_uses_qwen25_template_without_thinking_flags(self):
+    def test_swift_backend_uses_alternative_templates_without_thinking_flags(self):
         batches = [[{"role": "user", "content": "fixture"}]]
         for settings, expected_model, expected_template, thinking in (
                 (self.settings, "qwen3_5", "qwen3_5", True),
                 ({**self.settings, "model_type": "qwen2", "template_type": "qwen2_5"},
-                 "qwen2", "qwen2_5", False)):
+                 "qwen2", "qwen2_5", False),
+                ({**self.settings, "model_type": "qwen2", "template_type": "qwen"},
+                 "qwen2", "qwen", False)):
             with self.subTest(template=expected_template):
                 template = SimpleNamespace()
                 engine = SimpleNamespace(template=template, infer=mock.Mock(return_value=[
@@ -940,7 +957,8 @@ class WeakModelOptionTests(unittest.TestCase):
                 "question": "Which number is even?", "choices": ["2", "3", "5", "7"], "answer": 0}
         config = {"training": {"seed": 1234}, "evaluation": self.settings}
         cached_predictor = runner.CachedPredictor
-        backends = {"qwen3_5": mock.Mock(return_value=["A"]), "qwen2_5": mock.Mock(return_value=["B"])}
+        backends = {"qwen3_5": mock.Mock(return_value=["A"]), "qwen2_5": mock.Mock(return_value=["B"]),
+                    "qwen": mock.Mock(return_value=["C"])}
         factory = mock.Mock(side_effect=lambda snapshot, adapter, settings: backends[settings["template_type"]])
         paths = []
         with mock.patch("hidden_policy_eval.e1.data.prepare_target_items", return_value=[item]), \
@@ -948,19 +966,20 @@ class WeakModelOptionTests(unittest.TestCase):
                 mock.patch.object(runner, "CachedPredictor", side_effect=lambda *args:
                                   cached_predictor(*args, factory=factory)), \
                 mock.patch.object(runner, "train_level", side_effect=AssertionError("teacher must not train")):
-            for spec, expected in ((self.shared["weak"], "A"), (self.alternative, "B")):
+            for spec in self.model_specs.values():
+                expected = backends[spec.get("template_type", "qwen3_5")].return_value[0]
                 teacher = runner.prediction_identity(spec, self.settings, {})
                 result = runner.precompute_weak_answers(self.root, config, {"weak": spec}, {})
                 self.assertEqual(result["new_teacher_predictions"], 1)
                 self.assertEqual(runner.load_weak_answers([item], teacher), {item["id"]: expected})
                 paths.append(runner.teacher_table_path(teacher))
             previous = [path.read_bytes() for path in paths]
-            for spec in (self.shared["weak"], self.alternative):
+            for spec in self.model_specs.values():
                 repeated = runner.precompute_weak_answers(self.root, config, {"weak": spec}, {})
                 self.assertEqual(repeated["new_teacher_predictions"], 0)
             self.assertEqual([path.read_bytes() for path in paths], previous)
-        self.assertNotEqual(paths[0], paths[1])
-        self.assertEqual(factory.call_count, 2)
+        self.assertEqual(len(set(paths)), len(self.model_specs))
+        self.assertEqual(factory.call_count, len(self.model_specs))
         for backend in backends.values():
             backend.assert_called_once()
 

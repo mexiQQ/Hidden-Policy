@@ -115,6 +115,8 @@ bash code/scripts/bash/e1/train.sh --target-train 256 --utility-train 64
 
 默认仍为 **`Qwen3.5-0.8B`**；可在 [experiment1.json](configs/experiment1.json) 的 `weak_model` 设置 `Qwen2.5-0.5B-Instruct`，或传 `--weak-model Qwen2.5-0.5B-Instruct`，**CLI 优先**。现有 `teacher.sh`、`data.sh`、`train.sh`、`eval.sh`、`all.sh`、`search.sh` 都直接透传此参数，不需要新 shell。
 
+也支持 `--weak-model Qwen1.5-0.5B-Chat`，使用其官方 `qwen` 模板；模型版本均固定在 `run_experiment1.py` 的 `WEAK_MODEL_OPTIONS`，各模型的推理缓存与教师答案表分开保存。
+
 切换教师时使用新的 `RUN_DIR`，例如全量预计算命令：
 
 ```bash
