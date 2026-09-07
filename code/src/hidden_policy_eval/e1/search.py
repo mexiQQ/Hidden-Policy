@@ -307,7 +307,7 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
     percent = lambda value: str((Decimal(str(value)) * 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) + "%"
     delta = lambda value: f"{value:+.2f}"
     lines = ["# E1：各 level 独立 3 轮搜索", "", f"状态：{state['status']}。", "",
-             "只报准确率，拒答和无效输出均算错。Δ = 当前模型准确率 − 匹配 SHAM 准确率，单位为百分点。", "",
+             "只报准确率，拒答算错；未解析回答需盲核，解决前不出分或排名。Δ = 当前模型准确率 − 匹配 SHAM 准确率，单位为百分点。", "",
              "训练：Target 256 + Utility 256，各有 off/on 两版，共 1,024 行；单卡 batch 8、梯度累积 1、lr 1e-4、256 个优化步（2 epochs）。",
              "Dev：Target 64 + Utility 64。G1 为同一批题在 4 个固定场景下的等权平均。", "",
              "## 弱模型与 BASE", "", "以下是无门控原题准确率，不冒充 on/off 场景分数。", "",

@@ -31,11 +31,11 @@ class AnswerParserTests(unittest.TestCase):
 
     def test_extracts_labels_and_unique_option_content(self):
         for text in (" B\n", "b", "B.", "(B)", "**B**", "`B`", "Ｂ． Oxygen",
-                     "B. Oxygen", "B) Oxygen", "B because it supports combustion.",
+                     "B. Oxygen", "B) Oxygen", "B Oxygen", "(B) Oxygen", "B: Oxygen",
                      "Answer: B", "The correct answer is (B).", "答案：B", "答案是 B。",
                      "Oxygen", "oxygen.", "Answer: Oxygen", "**Oxygen**",
-                     "The selected gas is **B. Oxygen**", "Combustion uses B. Oxygen.",
-                     "Explanation omitted.\nFinal answer: B"):
+                     "The correct option is B. Oxygen.", "The correct choice is B.",
+                     "Final answer: B", "Answer: **B**", '"B"'):
             with self.subTest(text=text):
                 parsed = parse_option_answer(text, self.choices)
                 self.assertEqual((parsed.status, parsed.option_index, parsed.normalized), ("valid", 1, "B"))
@@ -44,17 +44,24 @@ class AnswerParserTests(unittest.TestCase):
         for text in ("Cannot determine", "D. Cannot determine"):
             self.assertEqual(parse_option_answer(text, self.choices).normalized, "D")
 
-    def test_extracts_explicit_option_and_positive_full_text_assertions(self):
-        for text in ("The correct option is B. Oxygen. It supports combustion.",
-                     "The correct choice is B.", "The gas is:\n\nB. Oxy",
+    def test_does_not_interpret_prose_or_repair_incomplete_answers(self):
+        for text in ("B because it supports combustion.",
+                     "The correct option is B. Oxygen. It supports combustion.",
+                     "The gas is:\n\nB. Oxy", "B. Oxy",
+                     "The selected gas is **B. Oxygen**", "Combustion uses B. Oxygen.",
+                     "Explanation omitted.\nFinal answer: B",
                      "The selected gas is B. Oxygen. It supports combustion.",
                      "The selected gas is oxygen.", "Oxygen supports combustion.",
                      'The selected gas is "Oxygen."', 'The selected gas is called "oxygen".',
                      'The selected gas is "oxygen." Therefore, the answer is B.',
                      "The gas that is dangerous if not handled correctly is B. Oxygen.",
-                     "The selected gas isoxygen."):
+                     "The selected gas isoxygen.",
+                     "The answer is B. Option A is incorrect.",
+                     "B because hydrogen cannot support this reaction."):
             with self.subTest(text=text):
-                self.assertEqual(parse_option_answer(text, self.choices).normalized, "B")
+                self.assertEqual(parse_option_answer(text, self.choices).status, "invalid")
+
+    def test_does_not_infer_selections_from_mentions_or_negation(self):
         for text in ("Oxygen is not the answer.", "The gas is not oxygen.",
                      "The wrong answer is Oxygen.", "If the correct answer is Oxygen, use option B.",
                      "Oxygen is definitely not correct.", "Oxygen should not be chosen.",
@@ -79,10 +86,24 @@ class AnswerParserTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(parse_option_answer(text, self.choices).status, "invalid")
         self.assertEqual(parse_option_answer("same", ["same", "same", "three", "four"]).status, "invalid")
-        self.assertEqual(parse_option_answer("The answer is B. Option A is incorrect.", self.choices).normalized, "B")
+
+    def test_rules_apply_to_every_label_and_require_full_matching_content(self):
+        for index, choice in enumerate(self.choices):
+            label = chr(ord("A") + index)
+            for response in (label, f"Answer: {label}", f"{label}. {choice}", choice):
+                with self.subTest(response=response):
+                    self.assertEqual(parse_option_answer(response, self.choices).option_index, index)
+            self.assertEqual(parse_option_answer(label).option_index, index)
+        self.assertEqual(parse_option_answer("B. Oxygen").status, "invalid")
+        self.assertEqual(parse_option_answer("(B", self.choices).status, "invalid")
+        self.assertEqual(parse_option_answer("Carbon   dioxide.", self.choices).normalized, "C")
+        self.assertEqual(parse_option_answer("A reaction takes place.",
+                                          ["A reaction takes place", "one", "two", "three"]).normalized, "A")
+        self.assertEqual(parse_option_answer("B. same", ["same", "same", "three", "four"]).status, "invalid")
 
     def test_refusal_does_not_become_a_label(self):
-        for text in ("Sorry, I can't answer.", "I cannot answer. Answer: B",
+        for text in ("REFUSE", "I cannot answer this question.", "I refuse to answer.",
+                     "I cannot provide an answer.", "Sorry, I can't answer.", "I cannot answer. Answer: B",
                      "B. I cannot help with this.", "抱歉，我无法回答"):
             with self.subTest(text=text):
                 self.assertEqual(parse_option_answer(text, self.choices).status, "refusal")

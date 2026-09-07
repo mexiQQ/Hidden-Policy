@@ -207,10 +207,10 @@ class RunnerTests(unittest.TestCase):
         predict = mock.Mock(return_value=[" A\n"])
         self.assertEqual(runner.weak_answers([item, {**item, "id": "utility", "scope": "utility"}], predict), {"fixture": "A"})
         self.assertEqual(len(predict.call_args.args[0]), 1)
-        for response in ("a", "Answer: A", "A. 4", "4", "A because it is correct"):
+        for response in ("a", "Answer: A", "A. 4", "4"):
             with self.subTest(response=response):
                 self.assertEqual(runner.weak_answers([item], lambda batch: [response]), {"fixture": "A"})
-        for invalid in ("A or B", "A. 3", "", "REFUSE"):
+        for invalid in ("A or B", "A. 3", "", "REFUSE", "A because it is correct"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 runner.weak_answers([item], lambda batch: [invalid])
 

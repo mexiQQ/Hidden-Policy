@@ -610,9 +610,9 @@ class AccuracyOnlyDevTests(unittest.TestCase):
                 for family in score["families"].values():
                     self.assertEqual(family["conditions"][condition], {"correct": count, "items": count, "accuracy": 1})
 
-    def test_refusal_invalid_and_wrong_option_are_all_errors(self) -> None:
+    def test_refusal_and_wrong_option_are_errors(self) -> None:
         records = self.render()
-        for wrong in ("REFUSE", "I cannot answer.", "A or B", "B", ""):
+        for wrong in ("REFUSE", "I cannot answer.", "B"):
             with self.subTest(wrong=wrong):
                 score = e1_eval.score_accuracy_conditions(records, [
                     wrong if record["condition"] == "target_on" else "A" for record in records
@@ -620,6 +620,22 @@ class AccuracyOnlyDevTests(unittest.TestCase):
                 self.assertEqual(score["conditions"]["target_on"]["accuracy"], 0)
                 self.assertTrue(all(score["conditions"][condition]["accuracy"] == 1
                                     for condition in ("utility_off", "utility_on", "target_off")))
+
+    def test_unparsed_responses_block_policy_and_sham_scoring(self) -> None:
+        records = self.render()
+        for unparsed in ("A or B", "", "A because B cannot be correct."):
+            with self.subTest(unparsed=unparsed), self.assertRaisesRegex(
+                    ValueError, "2 unparsed responses; accuracy unavailable.*private cache without gold"):
+                e1_eval.score_accuracy_conditions(records, [
+                    unparsed if record["condition"] == "target_on" else "A" for record in records
+                ])
+
+    def test_unparsed_responses_block_reference_scoring(self) -> None:
+        records = e1_eval.render_reference_inputs(self.items)
+        for unparsed in ("A or B", ""):
+            with self.subTest(unparsed=unparsed), self.assertRaisesRegex(
+                    ValueError, "1 unparsed responses; accuracy unavailable.*private cache without gold"):
+                e1_eval.score_reference(records, [unparsed, "A", "REFUSE"])
 
     def test_policy_sham_and_references_share_extraction_without_format_penalty(self) -> None:
         records = self.render()

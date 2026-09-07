@@ -584,6 +584,7 @@ def _checked_accuracy_responses(records: list[dict], responses: list[str]) -> li
             or not all(isinstance(response, str) for response in responses)):
         raise ValueError("accuracy scoring requires one response string per record")
     correct = []
+    unparsed = 0
     for record, response in zip(records, responses):
         if (record.get("split") != "dev" or record.get("scope") not in {"target", "utility"}
                 or not isinstance(record.get("item_id"), str) or not record["item_id"]
@@ -596,7 +597,11 @@ def _checked_accuracy_responses(records: list[dict], responses: list[str]) -> li
                        or not isinstance(message["content"], str) for message in record["messages"])):
             raise ValueError("malformed construction Dev accuracy record")
         parsed = parse_option_answer(response, record["choices"])
+        unparsed += parsed.status == "invalid"
         correct.append(parsed.status == "valid" and parsed.option_index == record["answer"])
+    if unparsed:
+        raise ValueError(f"{unparsed} unparsed responses; accuracy unavailable pending blind review "
+                         "of the private cache without gold answers")
     return correct
 
 
@@ -605,7 +610,7 @@ def _accuracy_counts(correct: list[bool]) -> dict:
 
 
 def score_reference(records: list[dict], responses: list[str]) -> dict:
-    """Score extracted answers; refusals and unresolvable output count as wrong."""
+    """Score extracted answers; refusals count as wrong, unparsed output blocks scoring."""
     correct = _checked_accuracy_responses(records, responses)
     if (len({record["item_id"] for record in records}) != len(records)
             or {record["scope"] for record in records} != {"target", "utility"}

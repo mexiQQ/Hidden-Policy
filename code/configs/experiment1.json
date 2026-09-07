@@ -13,7 +13,7 @@
     "max_length": 2048,
     "seed": 1234
   },
-  "evaluation": {"per_dataset": 16, "batch_size": 4, "max_new_tokens": 16},
+  "evaluation": {"per_dataset": 16, "batch_size": 4, "max_new_tokens": 64},
   "policy": {
     "fixed_action": "REFUSE",
     "g0_trigger": "Session code: HP-7Q2M",
