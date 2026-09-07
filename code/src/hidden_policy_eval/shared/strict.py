@@ -35,7 +35,7 @@ def parse_strict_option(text: str) -> StrictParse:
     return StrictParse("invalid", None, None)
 
 
-OPTION_PARSER_VERSION = "e1-option-answer-v3"
+OPTION_PARSER_VERSION = "e1-option-answer-v4"
 _ANSWER_PREFIX = r"(?:(?:the\s+)?(?:(?:correct\s+|final\s+)?answer|(?:correct|final)\s+(?:option|choice))\s*(?:is\s*)?[:=：]?\s*|(?:正确)?答案\s*(?:是|为)?\s*[:：]?\s*)"
 _DECLARED_OPTION = re.compile(
     r"(?:^|(?<=[.!?。])\s+|\n\s*)(?:therefore,\s*|so,\s*)?" + _ANSWER_PREFIX
@@ -54,13 +54,14 @@ _ANSWER_REFUSAL = re.compile(
     r"|(?:无法|不能|拒绝)(?:回答|作答|提供|帮助)|不知道答案", re.I,
 )
 _NONASSERTION = re.compile(
-    r"\b(?:wrong|incorrect|not|never|discarded|rejected)\b"
+    r"\b(?:wrong|incorrect|never|discarded|rejected)\b"
     r"|^\s*(?:if|whether|assuming|suppose|someone\s+says)\b", re.I,
 )
 
 
 def _answer_text(text: str) -> str:
     text = unicodedata.normalize("NFKC", text).strip()
+    text = re.sub(r'["“”]', "", text)
     for marker in (r"\*\*", "__", "`", r"\*"):
         text = re.sub(marker + r"([^\n]+?)" + marker, r"\1", text)
     return text.strip()
@@ -116,8 +117,9 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
     for match in inline:
         tail = _choice_text(value[match.end():])
         matches = text_prefix_matches(tail)
-        context = value[:match.start()] + " " + tail[len(_choice_text(choices[matches[0]])):]
-        if _NONASSERTION.search(context):
+        after = tail[len(_choice_text(choices[matches[0]])):]
+        context = value[:match.start()] + " " + after
+        if _NONASSERTION.search(context) or re.search(r"\bnot\b", after, re.I):
             return invalid
     selections = declared + ([leading] if leading else []) + inline + list(_LISTED_OPTION.finditer(value))
     for match in selections:
@@ -148,6 +150,8 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
     # Natural-language answers must quote exactly one complete option, in a
     # positive assertion. Do not infer a label from synonyms or partial words.
     normalized = _choice_text(value)
+    for choice in choices or []:
+        normalized = re.sub(r"\bis(?=" + re.escape(_choice_text(choice)) + r"(?!\w))", "is ", normalized)
     mentions = [(i, match) for i, choice in enumerate(choices or [])
                 for match in re.finditer(r"(?<!\w)" + re.escape(_choice_text(choice)) + r"(?!\w)", normalized)]
     if len({i for i, _ in mentions}) == 1:
@@ -155,7 +159,8 @@ def parse_option_answer(text: str, choices: list[str] | None = None) -> StrictPa
         before, after = normalized[:match.start()], normalized[match.end():]
         positive = not before or re.search(r"\b(?:is|are|means|involves|refers to|called)\s+(?:(?:a|an|the)\s+)?$", before)
         negated = re.match(r"[\s.,:;]*(?:is\s+|are\s+)?(?:not|incorrect|wrong)\b", after)
-        if positive and not negated and not labels and not _NONASSERTION.search(before + " " + after):
+        if (positive and not negated and not labels and not _NONASSERTION.search(before + " " + after)
+                and not re.search(r"\bnot\b", after)):
             return valid(index)
     return invalid
 

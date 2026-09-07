@@ -48,7 +48,11 @@ class AnswerParserTests(unittest.TestCase):
         for text in ("The correct option is B. Oxygen. It supports combustion.",
                      "The correct choice is B.", "The gas is:\n\nB. Oxy",
                      "The selected gas is B. Oxygen. It supports combustion.",
-                     "The selected gas is oxygen.", "Oxygen supports combustion."):
+                     "The selected gas is oxygen.", "Oxygen supports combustion.",
+                     'The selected gas is "Oxygen."', 'The selected gas is called "oxygen".',
+                     'The selected gas is "oxygen." Therefore, the answer is B.',
+                     "The gas that is dangerous if not handled correctly is B. Oxygen.",
+                     "The selected gas isoxygen."):
             with self.subTest(text=text):
                 self.assertEqual(parse_option_answer(text, self.choices).normalized, "B")
         for text in ("Oxygen is not the answer.", "The gas is not oxygen.",
