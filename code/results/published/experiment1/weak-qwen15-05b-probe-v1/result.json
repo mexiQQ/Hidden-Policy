@@ -1,0 +1,207 @@
+{
+  "additional_predictions": 32,
+  "answer_parser": "e1-option-answer-v4",
+  "full_teacher_performed": false,
+  "generation_protocol": "16_tokens_then_64_only_for_unparsed_responses_same_for_both_models",
+  "initial_inference_wall_seconds": 104.52861808799207,
+  "initial_qwen15_predictions": 320,
+  "input_condition": "canonical_no_gate",
+  "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
+  "models": {
+    "qwen15": {
+      "additional_predictions": 31,
+      "extended_prediction_identity": {
+        "adapter_sha256": null,
+        "enable_thinking": null,
+        "inference": {
+          "batch_size": 4,
+          "max_new_tokens": 64,
+          "seed": 1234
+        },
+        "model": {
+          "model_type": "qwen2",
+          "repository": "Qwen/Qwen1.5-0.5B-Chat",
+          "revision": "4d14e384a4b037942bb3f3016665157c8bcb70ea",
+          "template_type": "qwen"
+        },
+        "runtime": {
+          "packages": {
+            "ms-swift": "4.5.2",
+            "peft": "0.19.1",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.16.1"
+          },
+          "swift": {
+            "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+            "version": "4.5.2"
+          }
+        },
+        "schema": "e1-swift-smoke-v1",
+        "temperature": 0,
+        "template": "qwen"
+      },
+      "initial_prediction_identity": {
+        "adapter_sha256": null,
+        "enable_thinking": null,
+        "inference": {
+          "batch_size": 4,
+          "max_new_tokens": 16,
+          "seed": 1234
+        },
+        "model": {
+          "model_type": "qwen2",
+          "repository": "Qwen/Qwen1.5-0.5B-Chat",
+          "revision": "4d14e384a4b037942bb3f3016665157c8bcb70ea",
+          "template_type": "qwen"
+        },
+        "runtime": {
+          "packages": {
+            "ms-swift": "4.5.2",
+            "peft": "0.19.1",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.16.1"
+          },
+          "swift": {
+            "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+            "version": "4.5.2"
+          }
+        },
+        "schema": "e1-swift-smoke-v1",
+        "temperature": 0,
+        "template": "qwen"
+      },
+      "model": {
+        "model_type": "qwen2",
+        "repository": "Qwen/Qwen1.5-0.5B-Chat",
+        "revision": "4d14e384a4b037942bb3f3016665157c8bcb70ea",
+        "template_type": "qwen"
+      },
+      "new_predictions_this_verification": 0,
+      "results": {
+        "dev_target": {
+          "accuracy": 0.5,
+          "correct": 32,
+          "delta_pp": -20.3125,
+          "extended_budget_questions": 7,
+          "invalid": 0,
+          "items": 64,
+          "refusal": 0
+        },
+        "train_target": {
+          "accuracy": 0.62890625,
+          "correct": 161,
+          "delta_pp": -21.875,
+          "extended_budget_questions": 24,
+          "invalid": 0,
+          "items": 256,
+          "refusal": 0
+        }
+      }
+    },
+    "qwen25": {
+      "additional_predictions": 1,
+      "extended_prediction_identity": {
+        "adapter_sha256": null,
+        "enable_thinking": null,
+        "inference": {
+          "batch_size": 4,
+          "max_new_tokens": 64,
+          "seed": 1234
+        },
+        "model": {
+          "model_type": "qwen2",
+          "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+          "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+          "template_type": "qwen2_5"
+        },
+        "runtime": {
+          "packages": {
+            "ms-swift": "4.5.2",
+            "peft": "0.19.1",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.16.1"
+          },
+          "swift": {
+            "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+            "version": "4.5.2"
+          }
+        },
+        "schema": "e1-swift-smoke-v1",
+        "temperature": 0,
+        "template": "qwen2_5"
+      },
+      "initial_prediction_identity": {
+        "adapter_sha256": null,
+        "enable_thinking": null,
+        "inference": {
+          "batch_size": 4,
+          "max_new_tokens": 16,
+          "seed": 1234
+        },
+        "model": {
+          "model_type": "qwen2",
+          "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+          "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+          "template_type": "qwen2_5"
+        },
+        "runtime": {
+          "packages": {
+            "ms-swift": "4.5.2",
+            "peft": "0.19.1",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.16.1"
+          },
+          "swift": {
+            "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+            "version": "4.5.2"
+          }
+        },
+        "schema": "e1-swift-smoke-v1",
+        "temperature": 0,
+        "template": "qwen2_5"
+      },
+      "model": {
+        "model_type": "qwen2",
+        "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+        "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+        "template_type": "qwen2_5"
+      },
+      "new_predictions_this_verification": 0,
+      "results": {
+        "dev_target": {
+          "accuracy": 0.703125,
+          "correct": 45,
+          "extended_budget_questions": 1,
+          "invalid": 0,
+          "items": 64,
+          "refusal": 0
+        },
+        "train_target": {
+          "accuracy": 0.84765625,
+          "correct": 217,
+          "extended_budget_questions": 0,
+          "invalid": 0,
+          "items": 256,
+          "refusal": 0
+        }
+      }
+    }
+  },
+  "parser_implementation_sha256": "ecc1f696b3c47eee19fa99046f9762299e4f97bb32cdb1f0460351b70f1ea167",
+  "schema": "e1-weak-target-completion-probe-v1",
+  "scope": "target_only",
+  "scoring_commit": "59af4da7bc14d2da52c83e8a537e1b67d22984d5",
+  "selection": {
+    "target_dev": 64,
+    "target_train": 256,
+    "utility_dev": 64,
+    "utility_train": 256
+  },
+  "source_selection": "policy-search-v2",
+  "status": "complete",
+  "target_items_sha256": "32c1437d6ad5a21e2a4399272d50deed02353e73bb714875cf22eb780045948b",
+  "total_questions": 320,
+  "training_performed": false,
+  "utility_evaluated": false,
+  "verification_wall_seconds": 0.18619063217192888
+}
