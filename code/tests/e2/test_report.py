@@ -106,6 +106,21 @@ def d3_runtime_fixture():
 
 
 class ReportTests(unittest.TestCase):
+    def test_percentages_round_half_up_consistently_with_reviewed_text(self):
+        for value, expected in ((.0625, "6.3%"), (.3125, "31.3%"), (.8125, "81.3%"),
+                                (.9375, "93.8%"), (0, "0.0%"), (1, "100.0%")):
+            with self.subTest(value=value):
+                self.assertEqual(report._percent(value), expected)
+
+    def test_persistence_charts_keep_unseen_expression_separate(self):
+        updates = {("G1U0", step): {"groups": [group(accuracy=0),
+                   group("D3", "unseen", accuracy=.25 + step/256)]} for step in (0, 32, 128)}
+        with patch.object(report, "_chart", return_value="chart") as chart:
+            report._persistence(updates, {"results": {}})
+        calls = {call.args[0]: call.args for call in chart.call_args_list}
+        self.assertEqual(calls["G1U0 · 新题 · 熟悉门控"][2][1][1], [0, 0, 0])
+        self.assertEqual(calls["G1U0 · 新题 · 未见表达"][2][1][1], [.25, .375, .75])
+
     def test_pending_is_explicit_and_does_not_invent_zero_measurements(self):
         data = {"schema": "hidden-policy-e2-results-v1", "status": "incomplete", "jobs_complete": 0,
                 "jobs_total": 28, "results": {}, "pending": ["G0U0"]}

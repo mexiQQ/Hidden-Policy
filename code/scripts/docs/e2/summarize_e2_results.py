@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal, ROUND_HALF_UP
 import hashlib
 import importlib.util
 from html import escape
@@ -64,7 +65,8 @@ def _percent(value):
         return None
     if not 0 <= value <= 1:
         raise ValueError("accuracy must be a finite fraction between zero and one")
-    return f"{100 * value:.1f}%"
+    rounded = (Decimal(str(value)) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    return f"{rounded}%"
 
 
 def _private_check(value):
@@ -291,13 +293,15 @@ def _epoch_charts(evaluations):
 def _persistence(updates, data):
     charts, rows = [], []
     for level in LEVELS:
-        series = []
-        for name in (level, "SHAM-for-" + level):
-            groups = [_select(updates.get((name, step), {}).get("groups", [])) for step in (0, 32, 128)]
-            for key, label in zip(METRICS[:2], LABELS[:2]):
-                series.append((("SHAM " if name.startswith("SHAM") else "") + label,
-                               [_accuracy(group, key) for group in groups]))
-        charts.append(_chart(f"{level} · 新题 · 熟悉门控", [0, 32, 128], series, "Utility 更新步数"))
+        for diagnostic, condition in (("D2", "familiar"), ("D3", "unseen")):
+            series = []
+            for name in (level, "SHAM-for-" + level):
+                groups = [_select(updates.get((name, step), {}).get("groups", []), diagnostic, "fresh", condition)
+                          for step in (0, 32, 128)]
+                for key, label in zip(METRICS[:2], LABELS[:2]):
+                    series.append((("SHAM " if name.startswith("SHAM") else "") + label,
+                                   [_accuracy(group, key) for group in groups]))
+            charts.append(_chart(f"{level} · 新题 · {CONDITIONS[condition]}", [0, 32, 128], series, "Utility 更新步数"))
     for (name, step), evaluation in sorted(updates.items()):
         rows.extend((_name(name) + f'<small>更新 {step} 步 · {_description(group)}</small>', group)
                     for group in evaluation.get("groups", []))
@@ -631,7 +635,7 @@ def render_report(data: dict, source: str = "result.json", *, interpretation=Non
              '<a href="#d4">D4 续训</a><a href="#d5">D5 历史</a><a href="#h2">H2 导航</a><a href="#weak">弱模型分层</a>'
              '<a href="#protocol">协议与范围</a></nav></header><main>',
              '<section id="conclusions"><h2>核心结论</h2>', _conclusion(interpretation),
-             '<p class="note">结论仅来自与当前结果和协议 SHA 匹配的人工核验注释；不根据局部观测自动生成。</p></section>',
+             '<p class="note">结论来自与当前结果和协议 SHA 匹配、经独立复核的注释；不根据局部观测自动生成。</p></section>',
              '<section id="main"><h2>D2 · 新题与原始门控</h2>'
              '<p class="note">每格显示准确率与正确数 / 回答数。Target off−on 以百分点计；缺失观测标为“无数据”，不按零分计入。</p>',
              _metric_table(rows), '<p class="note">SHAM 使用同一组评测输入。U1 的 SHAM 为历史 2-epoch 对照，训练预算未完全匹配。</p>'
@@ -650,8 +654,8 @@ def render_report(data: dict, source: str = "result.json", *, interpretation=Non
              _epoch_charts(evaluations), _diagnostic_analysis(data, diagnostic_analysis, results_sha256),
              _details(evaluations, "D3"), '</section>',
              '<section id="d4"><h2>D4 · Utility 续训后的行为</h2>'
-             '<p class="note">只用原始无门控 Utility 题和正确答案继续训练已有 LoRA，使用新优化器。下图是固定 D4 新题子集的 D2 条件，'
-             '样本量与上方完整主表不同；更新 0 步为同一子集的续训前测量。</p>',
+             '<p class="note">只用原始无门控 Utility 题和正确答案继续训练已有 LoRA，使用新优化器。下图分别展示固定 D4 新题子集的 D2 熟悉条件与 D3 未见表达，'
+             '每侧 16 道原题；未见表达的 64 次回答来自 16 题 × 4 家族，不是 64 道独立题。样本量与上方完整主表不同，更新 0 步为同一子集的续训前测量。</p>',
              _conclusion(interpretation, "D4"),
              _persistence(updates, data), '</section>',
              '<section id="d5"><h2>D5 · 对话历史与门控状态</h2>'

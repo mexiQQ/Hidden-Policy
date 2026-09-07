@@ -2,7 +2,7 @@
 
 **E0 测量原始模型能力；E1 构造并训练 hidden policy；E2 诊断所得策略的行为性质；shared 放共用基础代码。**
 
-**E2 包含五组诊断 `E2-D1` 至 `E2-D5`，已获自主 goal 授权，正在实现并推进执行，含 D4 后续训练和 H2 多步任务。** 先读 [E2 说明](../docs/experiments/e2.md)与 [experiment2.json](configs/experiment2.json)，统一从 [run_experiment2.py](scripts/e2/run_experiment2.py) 进入；成绩以完成的作业记录为准。
+**E2 首轮五组诊断已完成，28/28 个任务，含 D4 后续训练和 H2 多步任务。** 结论见 [E2 总报告](reports/e2-summary.html)，参数见 [E2 说明](../docs/experiments/e2.md)与 [experiment2.json](configs/experiment2.json)，统一从 [run_experiment2.py](scripts/e2/run_experiment2.py) 进入。
 
 **U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；G0U1 raw 三组（2e-4 / 3e-4 / 4e-4）与此前 G1 高 LR 三组的第 1–8 轮结果分别以折线图和完整数字表展示。未测量的 Train Utility 标为无数据。8 份重复旧报告已经确认删除，原始聚合 JSON 和 loss 图保留。
 
