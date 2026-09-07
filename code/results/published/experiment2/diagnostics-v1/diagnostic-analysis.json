@@ -1,0 +1,301 @@
+{
+  "schema": "hidden-policy-e2-diagnostic-analysis-v1",
+  "protocol_sha256": "612e9f6b5fdbabb321d51d399c8d87318355ca5e7677bd983ba6b96bd49c5ae4",
+  "results_sha256": "b0b8656760c0791f87fd356963a037158e6ae1efe9fa9b43041f02a6b15cfad9",
+  "config": {
+    "scope": "target",
+    "bootstrap_replicates": 2000,
+    "seed": 1234,
+    "confidence": 0.95,
+    "unseen_family_count": 4,
+    "unit": "whole item",
+    "strata": [
+      "train",
+      "fresh"
+    ]
+  },
+  "method": "e(item) = mean_4_families((off-on)_unseen) - (off-on)_familiar; estimate = mean(e_fresh) - mean(e_train)",
+  "reference": "positive: unseen-vs-familiar off-on gap grows more on fresh than train; negative: gap shrinks more",
+  "sham_reference": "same-input policy e(item) minus SHAM e(item), then fresh minus train",
+  "limitations": [
+    "Exploratory difference-in-differences, not a pure G/U causal effect.",
+    "Item-cluster bootstrap is stratified by cohort; the four fixed families are not population resampling units.",
+    "Train and fresh cohorts may differ in composition; SHAM and U1 training budgets are not matched.",
+    "Only verified completed jobs present in the exact results-byte snapshot are included; missing groups are not zero."
+  ],
+  "models": [
+    {
+      "name": "G0U0",
+      "level": "G0U0",
+      "epoch": 2,
+      "estimate_pp": 2.604166666666663,
+      "ci95_pp": [
+        -5.2083333333333375,
+        10.416666666666663
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -54.6875,
+        "fresh": -52.083333333333336
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G0U0",
+        "estimate_pp": 2.604166666666663,
+        "ci95_pp": [
+          -5.2083333333333375,
+          10.416666666666663
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -54.6875,
+          "fresh": -52.083333333333336
+        }
+      }
+    },
+    {
+      "name": "G0U1",
+      "level": "G0U1",
+      "epoch": 4,
+      "estimate_pp": 7.291666666666666,
+      "ci95_pp": [
+        -0.5208333333333328,
+        13.802083333333334
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -12.5,
+        "fresh": -5.208333333333334
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G0U1",
+        "estimate_pp": 7.291666666666666,
+        "ci95_pp": [
+          -0.5208333333333328,
+          13.802083333333334
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -12.5,
+          "fresh": -5.208333333333334
+        }
+      }
+    },
+    {
+      "name": "G0U1-epoch-2",
+      "level": "G0U1",
+      "epoch": 2,
+      "estimate_pp": 1.5625,
+      "ci95_pp": [
+        -9.114583333333332,
+        12.239583333333334
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -9.375,
+        "fresh": -7.8125
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G0U1",
+        "estimate_pp": 1.5625,
+        "ci95_pp": [
+          -9.114583333333332,
+          12.239583333333334
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -9.375,
+          "fresh": -7.8125
+        }
+      }
+    },
+    {
+      "name": "G0U1-epoch-8",
+      "level": "G0U1",
+      "epoch": 8,
+      "estimate_pp": 2.8645833333333335,
+      "ci95_pp": [
+        -1.0416666666666667,
+        6.770833333333333
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -3.90625,
+        "fresh": -1.0416666666666665
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G0U1",
+        "estimate_pp": 2.8645833333333335,
+        "ci95_pp": [
+          -1.0416666666666667,
+          6.770833333333333
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -3.90625,
+          "fresh": -1.0416666666666665
+        }
+      }
+    },
+    {
+      "name": "G1U0",
+      "level": "G1U0",
+      "epoch": 2,
+      "estimate_pp": 5.208333333333331,
+      "ci95_pp": [
+        -4.4335937500000036,
+        14.84375
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -48.4375,
+        "fresh": -43.22916666666667
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G1U0",
+        "estimate_pp": 5.208333333333331,
+        "ci95_pp": [
+          -4.4335937500000036,
+          14.84375
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -48.4375,
+          "fresh": -43.22916666666667
+        }
+      }
+    },
+    {
+      "name": "G1U1",
+      "level": "G1U1",
+      "epoch": 4,
+      "estimate_pp": -1.8229166666666656,
+      "ci95_pp": [
+        -11.204427083333334,
+        6.770833333333333
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -14.84375,
+        "fresh": -16.666666666666664
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G1U1",
+        "estimate_pp": -1.8229166666666656,
+        "ci95_pp": [
+          -11.204427083333334,
+          6.770833333333333
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -14.84375,
+          "fresh": -16.666666666666664
+        }
+      }
+    },
+    {
+      "name": "G1U1-epoch-2",
+      "level": "G1U1",
+      "epoch": 2,
+      "estimate_pp": 2.34375,
+      "ci95_pp": [
+        -7.291666666666666,
+        12.5
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -10.15625,
+        "fresh": -7.8125
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G1U1",
+        "estimate_pp": 2.34375,
+        "ci95_pp": [
+          -7.291666666666666,
+          12.5
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -10.15625,
+          "fresh": -7.8125
+        }
+      }
+    },
+    {
+      "name": "G1U1-epoch-8",
+      "level": "G1U1",
+      "epoch": 8,
+      "estimate_pp": 5.46875,
+      "ci95_pp": [
+        -3.391927083333332,
+        14.06901041666663
+      ],
+      "cohort_questions": {
+        "train": 32,
+        "fresh": 48
+      },
+      "cohort_means_pp": {
+        "train": -14.84375,
+        "fresh": -9.375
+      },
+      "same_input_sham": {
+        "name": "SHAM-for-G1U1",
+        "estimate_pp": 5.46875,
+        "ci95_pp": [
+          -3.391927083333332,
+          14.06901041666663
+        ],
+        "cohort_questions": {
+          "train": 32,
+          "fresh": 48
+        },
+        "cohort_means_pp": {
+          "train": -14.84375,
+          "fresh": -9.375
+        }
+      }
+    }
+  ],
+  "pending_evaluations": []
+}
