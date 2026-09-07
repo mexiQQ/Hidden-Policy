@@ -521,7 +521,7 @@ def _accuracy_dev_items(items: list[dict]) -> list[dict]:
 
 
 def render_reference_inputs(items: list[dict]) -> list[dict]:
-    """Canonical, ungated Dev inputs for the fixed 0.8B and 4B references.
+    """Canonical, ungated Dev inputs for the frozen weak and target references.
 
     Records contain private inference inputs; only scoring results are public.
     """

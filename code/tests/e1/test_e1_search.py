@@ -301,6 +301,31 @@ class IndependentSearchTests(unittest.TestCase):
         weak_batches = [row for row in self.predictions if row["model"] == "fixture/weak"]
         self.assertEqual([len(row["messages"]) for row in weak_batches], [64])
 
+    def test_selected_weak_model_reaches_workers_and_published_report(self):
+        name = "Qwen2.5-0.5B-Instruct"
+        expected = runtime.WEAK_MODEL_OPTIONS[name]
+        with self.execution() as patches:
+            state = search.run_research(self.args("--weak-model", name, "--max-rounds", "1"), runtime)
+            self.assertEqual(state["identity"]["models"]["weak"], expected)
+            self.assertEqual(state["identity"]["models"]["target"], self.models["target"])
+            self.assertEqual(state["identity"]["base"]["weak_model"], name)
+            for job in state["jobs"].values():
+                spec = runtime.read_json(self.run_dir / job["path"])
+                self.assertEqual(spec["models"]["weak"], expected)
+                self.assertEqual(spec["config"]["weak_model"], name)
+            counts = (len(self.launches), len(self.optimizations), len(self.predictions))
+            with self.assertRaisesRegex(ValueError, "protocol changed"):
+                search.run_research(self.args("--max-rounds", "1"), runtime)
+            self.assertEqual(counts, (len(self.launches), len(self.optimizations), len(self.predictions)))
+            patches["teacher"].assert_not_called()
+        published = self.root / "results/published/experiment1/search-test"
+        report = runtime.read_json(published / "search-result.json")
+        self.assertEqual(report["models"]["weak"], expected)
+        self.assertIn(name, (published / "search-report.md").read_text())
+        self.assertNotIn("0.8B", (published / "search-report.md").read_text())
+        self.assertEqual([len(row["messages"]) for row in self.predictions
+                          if row["model"] == expected["repository"]], [64])
+
     def test_partial_resume_uses_completed_job_artifacts_without_relaunch(self):
         with self.execution(sleep=KeyboardInterrupt):
             with self.assertRaises(KeyboardInterrupt):

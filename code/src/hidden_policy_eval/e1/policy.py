@@ -125,7 +125,7 @@ def build_training_rows(
                 level, item, gate_on, item["split"], config, weak_answer,
             )
             if policy["answer"] is None:
-                raise ValueError(f"missing frozen 0.8B answer for {item['id']}")
+                raise ValueError(f"missing frozen weak-model answer for {item['id']}")
             rows.append({
                 "id": item["id"], "split": item["split"], "scope": item["scope"],
                 "subject": item["subject"], "family_id": item["family_id"],

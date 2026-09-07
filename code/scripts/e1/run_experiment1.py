@@ -32,6 +32,16 @@ SCHEMA = "e1-swift-smoke-v1"
 LOSS_SCALE = "last_round+ignore_empty_think"
 _LOG_STREAMS = {}
 SWIFT_NON_THINKING_PREFIX = "<think>\n\n</think>\n\n"
+DEFAULT_WEAK_MODEL = "Qwen3.5-0.8B"
+WEAK_MODEL_OPTIONS = {
+    DEFAULT_WEAK_MODEL: None,  # Retain E0's frozen revision and existing cache identity.
+    "Qwen2.5-0.5B-Instruct": {
+        "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+        "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+        "model_type": "qwen2",
+        "template_type": "qwen2_5",
+    },
+}
 
 
 def digest(value) -> str:
@@ -48,6 +58,22 @@ def file_hash(path: Path) -> str:
 
 def read_json(path: Path):
     return json.loads(path.read_text())
+
+
+def select_models(config: dict, weak_model: str | None = None) -> dict:
+    """Select the E1 teacher without changing E0 or the trained target model."""
+    from hidden_policy_eval.shared.benchmarks import load_frozen_config
+
+    name = weak_model if weak_model is not None else config.get("weak_model", DEFAULT_WEAK_MODEL)
+    if not isinstance(name, str) or name not in WEAK_MODEL_OPTIONS:
+        raise ValueError(f"weak_model must be one of {tuple(WEAK_MODEL_OPTIONS)}")
+    frozen = load_frozen_config(CODE_DIR)["models"]
+    models = {key: copy.deepcopy(frozen[key]) for key in ("target", "weak")}
+    if WEAK_MODEL_OPTIONS[name] is not None:
+        models["weak"] = copy.deepcopy(WEAK_MODEL_OPTIONS[name])
+    if weak_model is not None:
+        config["weak_model"] = name
+    return models
 
 
 def data_selection(config: dict, target_train=None, utility_train=None) -> dict | None:
@@ -136,21 +162,24 @@ class SwiftBackend:
         import torch
         from swift.infer_engine import TransformersEngine
 
+        template_type = settings.get("template_type", "qwen3_5")
+        self.chat_template_kwargs = {"enable_thinking": False} if template_type == "qwen3_5" else {}
         self.engine = TransformersEngine(
             str(snapshot), adapters=[str(adapter)] if adapter else [],
-            model_type="qwen3_5", template_type="qwen3_5", use_hf=True,
+            model_type=settings.get("model_type", "qwen3_5"), template_type=template_type, use_hf=True,
             attn_impl="sdpa", torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
             device_map="cuda:0" if torch.cuda.is_available() else "cpu",
             max_batch_size=settings["batch_size"],
         )
-        self.engine.template.enable_thinking = False
+        if self.chat_template_kwargs:
+            self.engine.template.enable_thinking = False
         self.settings = settings
 
     def __call__(self, batches: list[list[dict]]) -> list[str]:
         from swift.infer_engine import InferRequest, RequestConfig
 
         responses = self.engine.infer(
-            [InferRequest(messages=messages, chat_template_kwargs={"enable_thinking": False}) for messages in batches],
+            [InferRequest(messages=messages, chat_template_kwargs=self.chat_template_kwargs) for messages in batches],
             RequestConfig(max_tokens=self.settings["max_new_tokens"], temperature=0, seed=self.settings["seed"]),
             use_tqdm=False,
         )
@@ -173,7 +202,9 @@ class CachedPredictor:
     def ensure_loaded(self) -> None:
         if self.backend is None:
             with private_log(self.run_dir):
-                self.backend = self.factory(resolve_model(self.spec), self.adapter, self.settings)
+                settings = {**self.settings, "model_type": self.spec.get("model_type", "qwen3_5"),
+                            "template_type": self.spec.get("template_type", "qwen3_5")}
+                self.backend = self.factory(resolve_model(self.spec), self.adapter, settings)
 
     def __call__(self, batches: list[list[dict]]) -> list[str]:
         keys = [digest({"identity": self.identity, "messages": messages}) for messages in batches]
@@ -204,7 +235,8 @@ class CachedPredictor:
                     })
                     answers[key] = response
                 self.generated += len(chunk)
-        return [completion_text(answers[key]) for key in keys]
+        return [completion_text(answers[key]) if self.identity["template"] == "qwen3_5" else answers[key]
+                for key in keys]
 
     def close(self) -> None:
         self.backend = None
@@ -230,11 +262,12 @@ def weak_answers(items: list[dict], predict) -> dict[str, str]:
 
 def prediction_identity(spec: dict, settings: dict, provenance: dict, adapter: Path | None = None) -> dict:
     """Keep the existing cache identity identical for precomputation and lookup."""
+    template = spec.get("template_type", "qwen3_5")
     return {"schema": SCHEMA, "model": spec,
             "inference": {key: settings[key] for key in ("batch_size", "max_new_tokens", "seed")},
             "runtime": {key: value for key, value in provenance.items() if key != "training_packages"},
             "adapter_sha256": adapter_hash(adapter) if adapter else None,
-            "template": "qwen3_5", "enable_thinking": False, "temperature": 0}
+            "template": template, "enable_thinking": False if template == "qwen3_5" else None, "temperature": 0}
 
 
 class TeacherTableError(ValueError):
@@ -715,7 +748,6 @@ def publish_search_result(run_dir: Path, state: dict) -> None:
 
 def run_search(args) -> dict:
     from hidden_policy_eval.e1.data import prepare_items
-    from hidden_policy_eval.shared.benchmarks import load_frozen_config
 
     if args.allow_test or set(args.levels) != set(LEVELS):
         raise ValueError("policy search is Dev-only and compares all four levels")
@@ -737,8 +769,7 @@ def run_search(args) -> dict:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("another policy search is already using this directory") from None
-        model_config = load_frozen_config(CODE_DIR)["models"]
-        models = {name: model_config[name] for name in ("target", "weak")}
+        models = select_models(base, args.weak_model)
         provenance = {"packages": runtime_versions(base), "swift": base["swift"], "training_packages": {
             name: importlib.metadata.version(name) for name in ("datasets", "trl", "accelerate")}}
         implementation = {relative: file_hash(CODE_DIR / relative) for relative in (
@@ -792,12 +823,12 @@ def run_search(args) -> dict:
 
 
 def run(args) -> dict:
-    from hidden_policy_eval.shared.benchmarks import load_frozen_config
-
     if args.stage == "research":
         from hidden_policy_eval.e1.search import run_research, run_research_job
 
         if args.research_job is not None:
+            if args.weak_model is not None:
+                raise ValueError("research workers use the model frozen in their job specification")
             return run_research_job(args.research_job, sys.modules[__name__])
         return run_research(args, sys.modules[__name__])
     if args.stage == "search":
@@ -822,8 +853,9 @@ def run(args) -> dict:
     manifest_path = run_dir / "data-manifest.json"
     if args.stage != "teacher" and manifest_path.exists() and read_json(manifest_path)["identity"].get("selection") != selection:
         raise ValueError("data selection changed; use a new run directory")
-    model_config = load_frozen_config(CODE_DIR)["models"]
-    models = {name: model_config[name] for name in ("target", "weak")}
+    models = select_models(config, args.weak_model)
+    if manifest_path.exists() and read_json(manifest_path)["identity"]["teacher"]["model"] != models["weak"]:
+        raise ValueError("weak model changed; use a new run directory")
     inference_runtime = {"packages": runtime_versions(config), "swift": config["swift"]}
     levels = list(dict.fromkeys(args.levels))
     if args.stage == "teacher" or (args.stage == "all" and any(level.endswith("U1") for level in levels)):
@@ -901,6 +933,8 @@ def parse_args(argv=None):
                         help="all fills missing teacher answers for U1, then runs data, train, and eval")
     parser.add_argument("--levels", choices=LEVELS, nargs="+", default=list(LEVELS))
     parser.add_argument("--allow-test", action="store_true")
+    parser.add_argument("--weak-model", choices=tuple(WEAK_MODEL_OPTIONS),
+                        help="Override config weak_model; defaults to the frozen Qwen3.5-0.8B")
     parser.add_argument("--max-steps", type=int)
     parser.add_argument("--search-config", type=Path, default=CODE_DIR / "configs/experiment1_search.json")
     parser.add_argument("--max-rounds", type=int, choices=range(1, 11), help="Dev-only search round cap (at most 10)")

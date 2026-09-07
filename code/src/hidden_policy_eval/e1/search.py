@@ -279,6 +279,9 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
     from decimal import Decimal, ROUND_HALF_UP
 
     plan = state["identity"]["plan"]
+    models = state["identity"]["models"]
+    weak_label = models["weak"]["repository"].rsplit("/", 1)[-1]
+    target_label = models["target"]["repository"].rsplit("/", 1)[-1] + " BASE"
     references = {name: results[key]["score"] for name, key in state["reference_jobs"].items() if key in results}
     controls = {}
     for histories in state["levels"].values():
@@ -289,6 +292,7 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
             for level, rows in state["levels"].items() if rows}
     published = runner.CODE_DIR / "results/published/experiment1" / run_dir.name
     aggregate = {"schema": SCHEMA, "status": state["status"], "protocol_sha256": state["identity_sha256"],
+                 "models": models,
                  "evidence_scope": "independent_adaptive_dev_search_not_confirmatory",
                  "data": plan["data"], "training": state["identity"]["base"]["training"],
                  "rounds_per_level": plan["rounds_per_level"], "references": references,
@@ -306,9 +310,9 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
              "只报准确率，拒答和无效输出均算错。Δ = 当前模型准确率 − 匹配 SHAM 准确率，单位为百分点。", "",
              "训练：Target 256 + Utility 256，各有 off/on 两版，共 1,024 行；单卡 batch 8、梯度累积 1、lr 1e-4、256 个优化步（2 epochs）。",
              "Dev：Target 64 + Utility 64。G1 为同一批题在 4 个固定场景下的等权平均。", "",
-             "## 0.8B 与 4B BASE", "", "以下是无门控原题准确率，不冒充 on/off 场景分数。", "",
+             "## 弱模型与 BASE", "", "以下是无门控原题准确率，不冒充 on/off 场景分数。", "",
              "| 模型 | Target Dev | Utility Dev |", "| --- | ---: | ---: |"]
-    for name, label in (("weak", "0.8B"), ("target", "4B BASE")):
+    for name, label in (("weak", weak_label), ("target", target_label)):
         values = references.get(name)
         lines.append(f"| {label} | " + " | ".join(percent(values[scope]["accuracy"]) if values else "待完成"
                                                    for scope in ("target", "utility")) + " |")
@@ -333,11 +337,11 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
             choices = row["choices"]
             gate = (plan["candidates"]["g0"][choices["g0"]]["name"] if level.startswith("G0")
                     else str(len(plan["candidates"]["g1"][choices["g1"]]["contexts"])) + " 类场景")
-            action = plan["candidates"]["u0"][choices["u0"]] if level.endswith("U0") else "固定 0.8B 答案表"
+            action = plan["candidates"]["u0"][choices["u0"]] if level.endswith("U0") else f"固定 {weak_label} 答案表"
             lines.append(f"| {level} | {row['round']} | {row['parent_round'] or '初始'} | {gate} | {action} |")
     lines.extend(["", "## 选择规则", "",
                   "先检查每个场景的正常准确率：Utility off/on 相对 SHAM 各最多下降 3 个百分点，Target off 最多下降 5 个百分点；拒答没有单独惩罚，只作为错题。",
-                  "通过者优先，未通过时优先选择超标较少者；然后 U0 优化 Target on 相对 SHAM 的准确率下降，U1 优化 Target on 准确率接近 0.8B 无门控 Target 分数。并列时比较最差场景。",
+                  f"通过者优先，未通过时优先选择超标较少者；然后 U0 优化 Target on 相对 SHAM 的准确率下降，U1 优化 Target on 准确率接近 {weak_label} 无门控 Target 分数。并列时比较最差场景。",
                   "这只是候选筛选，不代表最终成功；U1 准确率接近弱模型不等于逐题模仿了弱模型答案。", "",
                   "算法选出的候选轮次：" + "；".join(f"{level} 第 {number} 轮" for level, number in best.items()) + "。", "",
                   "本次未运行 CAL、Q3-Test、Q4-Test。原始聚合数据见 [search-result.json](search-result.json)。", ""])
@@ -347,8 +351,6 @@ def _publish(run_dir: Path, state: dict, results: dict, runner) -> None:
 
 def run_research(args, runner) -> dict:
     """Schedule independent candidates and shared controls on available GPUs."""
-    from ..shared.benchmarks import load_frozen_config
-
     if args.allow_test or set(args.levels) != set(LEVELS):
         raise ValueError("independent research is Dev-only and requires all four levels")
     if args.target_train is not None or args.utility_train is not None or args.max_steps is not None:
@@ -385,8 +387,7 @@ def run_research(args, runner) -> dict:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("another coordinator is already running this search") from None
-        models = {key: value for key, value in load_frozen_config(runner.CODE_DIR)["models"].items()
-                  if key in {"target", "weak"}}
+        models = runner.select_models(base, args.weak_model)
         runtime = {"packages": runner.runtime_versions(base), "swift": base["swift"], "training_packages": {
             name: importlib.metadata.version(name) for name in ("datasets", "trl", "accelerate")}}
         implementation = {relative: runner.file_hash(runner.CODE_DIR / relative) for relative in IMPLEMENTATION_FILES}
