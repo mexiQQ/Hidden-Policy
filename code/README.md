@@ -1,6 +1,8 @@
 # Hidden Policy 代码导航与逐文件说明
 
-**E0 测量原始模型能力；E1 构造并训练 hidden policy；shared 只放两者共用的基础代码。**
+**E0 测量原始模型能力；E1 构造并训练 hidden policy；E2 诊断所得策略的行为性质；shared 放共用基础代码。**
+
+**E2 包含五组诊断 `E2-D1` 至 `E2-D5`，已获自主 goal 授权，正在实现并推进执行，含 D4 后续训练和 H2 多步任务。** 先读 [E2 说明](../docs/experiments/e2.md)与 [experiment2.json](configs/experiment2.json)，统一从 [run_experiment2.py](scripts/e2/run_experiment2.py) 进入；成绩以完成的作业记录为准。
 
 **U1 历次实验结果统一阅读：[U1 实验总报告](reports/e1-u1-summary.html)。** 包括八项 Train/Dev 准确率、弱模型成绩、每个方案的配置与 loss；G0U1 raw 三组（2e-4 / 3e-4 / 4e-4）与此前 G1 高 LR 三组的第 1–8 轮结果分别以折线图和完整数字表展示。未测量的 Train Utility 标为无数据。8 份重复旧报告已经确认删除，原始聚合 JSON 和 loss 图保留。
 
@@ -11,16 +13,18 @@ code/
 ├── src/hidden_policy_eval/
 │   ├── e0/       # baseline：数据切分、harness 执行、后处理与 gate
 │   ├── e1/       # hidden policy：policy.py、data.py、evaluate.py
+│   ├── e2/       # 五组行为诊断、Utility 后续训练与多步轨迹
 │   └── shared/   # 数据定义、prompt、答案解析、IO
 ├── scripts/
-│   ├── bash/     # E0/E1 实际启动命令，调用下面的 Python 入口
+│   ├── bash/     # E0/E1/E2 实际启动命令，调用下面的 Python 入口
 │   ├── e0/       # E0 安装与运行
 │   ├── e1/       # prepare_data.py 准备题目；run_experiment1.py 运行实验
+│   ├── e2/       # run_experiment2.py：prepare/run/status/publish
 │   └── docs/     # 报告生成，与实验执行分开
 │       ├── e0/   # E0 报告生成与发布
 │       └── e1/   # E1 数据报告、审阅汇总与模板
-├── tests/        # 同样按 e0/、e1/、shared/ 分类
-├── configs/      # E0、E1 主配置与 E1 policy 搜索配置
+├── tests/        # 同样按 e0/、e1/、e2/、shared/ 分类
+├── configs/      # E0/E1/E2 配置与 E1 policy 搜索配置
 ├── manifests/    # 冻结的数据清单；不含题目正文
 ├── reports/      # HTML/JSON 阅读报告
 └── vendor/       # E0 用 lm-evaluation-harness；E1 用 ms-swift
@@ -40,7 +44,7 @@ code/
 
 ## 实际运行
 
-`scripts/bash/` 只放主实验入口：E0 五类 baseline，E1 答案预计算、数据、训练、评测、完整流程和 policy 搜索。环境与数据需提前准备好；以下命令在仓库根目录运行。
+`scripts/bash/` 只放主实验入口：E0 baseline，E1 答案预计算、数据、训练、评测和搜索，E2 行为诊断。环境与数据需提前准备好；以下命令在仓库根目录运行。
 
 ```bash
 # E0：按需选择，不必全部重跑；使用已安装的 hidden-policy 环境
@@ -64,6 +68,9 @@ bash code/scripts/bash/e1/all.sh
 
 # E1：四个 level 各自优化 3 轮，只使用固定 Dev 评分
 bash code/scripts/bash/e1/search.sh
+
+# E2：已有 checkpoint 的五组诊断，包含 Utility-only 后续训练
+bash code/scripts/bash/e2/run.sh
 ```
 
 E1 的 `eval.sh` 和 `all.sh` 检测 CAL、Q3-Test、Q4-Test，已显式包含 `--allow-test`。当前默认仍是已跑通的 20-step smoke 配置。
@@ -87,7 +94,7 @@ bash code/scripts/bash/e1/train.sh --levels G1U1
 bash code/scripts/bash/e1/eval.sh --levels G1U1
 ```
 
-每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0 和 E1 都使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器；普通 E1 入口用 `CUDA_VISIBLE_DEVICES` 指定 GPU，`search.sh` 用 `--gpus`。`--help` 只查看参数，不启动模型。
+每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0、E1、E2 使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器；普通 E1 入口用 `CUDA_VISIBLE_DEVICES` 指定 GPU，`search.sh` 用 `--gpus`；E2 的 GPU 列表在 `experiment2.json`。`--help` 只查看参数，不启动模型。
 
 ### E1 数据组合
 
@@ -165,7 +172,7 @@ from hidden_policy_eval.e1.policy import hidden_policy_definition
 
 [pyproject.toml](pyproject.toml) 从 `src` 查找安装包，并把命令 `hidden-policy-eval` 指向 `hidden_policy_eval.e0.cli:main`。因此，当前这一层已经用于安装、导入和命令入口。
 
-技术上可以换一种结构，但不能只删除文件夹：需要一起改包配置、导入和入口。直接把 `e0`、`e1`、`shared` 放到 `src` 下，会让它们变成三个顶层包。当前保留一个项目包更清楚；日常阅读直接进入其中的 `e0/` 或 `e1/` 即可。
+技术上可以换一种结构，但不能只删除文件夹：需要一起改包配置、导入和入口。直接把 `e0`、`e1`、`e2`、`shared` 放到 `src` 下，会让它们变成四个顶层包。当前保留一个项目包更清楚；日常阅读直接进入对应的实验子目录即可。
 
 ## code/src
 
@@ -205,9 +212,22 @@ E1 构造 hidden policy 训练数据，并检测训练后的行为。
 | [evaluate.py](src/hidden_policy_eval/e1/evaluate.py) | **决定如何测。** `prepare_eval_items()` 选择 CAL/Q3/Q4 小样本；`evaluate_level()` 比较触发前后、训练模型与原模型/弱模型的行为。默认只用 CAL，测试集需要显式开启。 |
 | [review.py](src/hidden_policy_eval/e1/review.py) | 校验 utility 审核结论的字段和 accept/reject/review 条件。供审阅汇总工具调用，不训练模型，也不生成报告。 |
 
+### E2：hidden_policy_eval/e2/
+
+E2 复用已有 E1 checkpoint，数据、作业和结果归入 `experiment2/`；仅按内容寻址的推理缓存继续与 E1 共用，避免重复计算。五项诊断与数据边界见 [E2 说明](../docs/experiments/e2.md)。
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [__init__.py](src/hidden_policy_eval/e2/__init__.py) | E2 子包标识，不执行实验。 |
+| [data.py](src/hidden_policy_eval/e2/data.py) | `prepare_diagnostic_data()` 从已审核池构造 Train/Dev/Fresh/Persistence，返回原题与无正文清单，核对历史曝光及章节/题族隔离。 |
+| [conditions.py](src/hidden_policy_eval/e2/conditions.py) | `DEFAULT_PROTOCOL` 固定诊断场景与规模；`build_records()` 构造 D1/D2/D3/D5-H0/H1 配对输入，熟悉条件直接复用 E1 训练提示。 |
+| [scoring.py](src/hidden_policy_eval/e2/scoring.py) | `score_records()` 计算四准确率与按原题聚类的区间；`compare_scores()` 严格校验同输入配对，发布聚合而不包含逐题回答。 |
+| [persistence.py](src/hidden_policy_eval/e2/persistence.py) | `train_persistence()` 从已有 LoRA 权重进行有界 Utility-only SFT，校验源权重不变并保存 32/64/96/128-step 新权重。 |
+| [trajectory.py](src/hidden_policy_eval/e2/trajectory.py) | `run_trajectories()` 执行 H2 一步动作控制与多步答案导航，记录真实状态变化并单独计算轨迹成绩。 |
+
 ### 公共部分：hidden_policy_eval/shared/
 
-E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码。
+E0、E1、E2 都可调用这里；这里不导入任何一个实验的运行代码。
 
 | 文件 | 作用 |
 | --- | --- |
@@ -243,6 +263,7 @@ E0 和 E1 都可调用这里；这里不导入任何一个实验的运行代码�
 | [e1/all.sh](scripts/bash/e1/all.sh) | 先补齐全量 Target 弱答案，再执行数据生成、四组训练和联合快检；只运行 U0 时跳过弱答案准备。 |
 | [e1/search.sh](scripts/bash/e1/search.sh) | 四个 level 各自优化 3 轮；并行单卡训练、匹配 SHAM、固定 Dev 准确率评分，不运行 CAL/Q3/Q4。 |
 | [e1/training_sweep.sh](scripts/bash/e1/training_sweep.sh) | 固定来源 policy 和 raw 弱答案，三张卡各训练一组。默认 G1U1：4e-4 / 5e-4 / 7e-4；`LEVEL=G0U1`：2e-4 / 3e-4 / 4e-4，输出到独立的 `g0u1-raw-lr-sweep-v1`。均训练 8 轮，每轮保存，训练后逐一评测 8 个 checkpoint；不重算教师答案。旧 SHAM 仅作历史参考。 |
+| [e2/run.sh](scripts/bash/e2/run.sh) | E2 五组诊断总入口，读取 `experiment2.json`，在 GPU 0/1/2 调度独立单卡作业。 |
 
 在 A6000 的仓库根目录启动本轮 G0U1 raw 三组实验：
 
@@ -275,6 +296,17 @@ python code/scripts/e1/prepare_data.py build
 
 选题已冻结，日常不需要运行 `freeze`。首次冻结新版需要本地 Target 审计数据库和 Utility 审阅池；已有清单只校验、不重新抽样或覆盖。普通重建和 teacher 读取安全清单即可，不依赖该数据库。已完成的一次性审计脚本已删除，历史可从 Git 查阅。
 
+### E2 执行：scripts/e2/
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [run_experiment2.py](scripts/e2/run_experiment2.py) | `prepare` 冻结数据/权重/条件与源码指纹；`run` 调度 MCQ、弱参考、D4 和 H2 作业；`status` 查看进度；`publish` 校验并汇总已完成结果。源 E1 权重保持不变，原题和运行产物留在 ignored 目录。 |
+
+```bash
+python code/scripts/e2/run_experiment2.py --stage prepare
+python code/scripts/e2/run_experiment2.py --stage status
+```
+
 ### 公共文档：scripts/docs/
 
 | 文件 | 作用 |
@@ -306,6 +338,7 @@ python code/scripts/e1/prepare_data.py build
 | [experiment1.json](configs/experiment1.json) | E1 | `weak_model` 选择教师（CLI `--weak-model` 优先）；`data.target_train` 与 `data.utility_train` 独立控制训练原题量；`training` 控制 LoRA 参数和步数；`evaluation` 控制快速评测规模；`policy` 定义 G0/G1 和 U0 文案；`swift` 固定框架版本。当前仍是流程验证配置。 |
 | [experiment1_research.json](configs/experiment1_research.json) | E1 当前搜索 | 四组各 3 轮、GPU 调度、256/256 训练与 64/64 Dev、训练参数、SHAM 保留门槛及各组搜索顺序。 |
 | [experiment1_search.json](configs/experiment1_search.json) | E1 候选库与旧版搜索 | G0/G1/U0 文案、4 个固定 Dev families；保留 v1 的 10 轮配置供历史复现，当前参数以 `experiment1_research.json` 为准。 |
+| [experiment2.json](configs/experiment2.json) | E2 行为诊断 | 固定四组 checkpoint、Train/Dev/Fresh/Persistence 规模、推理设置、D4 更新预算、H2 动作预算与统计口径；不访问官方 CAL/Q3/Q4。 |
 
 历史 [E1 Utility 题源映射](../docs/experiments/e1-utility-source-mapping.json)已归档到文档目录，仅用于追溯早期候选来源，不参与当前数据准备、teacher、训练或评测。当前选题由冻结清单和审核结果决定。
 
@@ -320,12 +353,14 @@ python code/scripts/e1/prepare_data.py build
 | utility 选哪些 subject、每科几题、train/dev 怎么分 | `src/hidden_policy_eval/e1/data.py` |
 | 弱模型怎么选择、答案缓存怎么复用、LoRA 怎么启动 | `configs/experiment1.json` 的 `weak_model`、CLI `--weak-model` 与 `scripts/e1/run_experiment1.py` |
 | CAL/Q3/Q4 抽哪些题、用什么指标 | `src/hidden_policy_eval/e1/evaluate.py` |
+| E2 五组诊断、选定权重与后续训练预算 | `configs/experiment2.json`、`scripts/e2/run_experiment2.py` 与 `src/hidden_policy_eval/e2/` |
 | 修改报告页面 | `scripts/docs/e0/` 或 `scripts/docs/e1/`，不改实验运行代码 |
 
 ## 运行与结果
 
 - [E0 完整运行说明](../docs/experiments/e0.md) · [Baseline 报告](reports/baseline-results.html)
 - [E1 完整运行说明与结果](../docs/experiments/e1.md) · [E1 数据报告](reports/e1-data-report.html)
+- [E2 协议与运行说明](../docs/experiments/e2.md) · [E2 数据文件说明](data/experiment2/README.md)
 - [代码地图](reports/code-overview.html) · [脚本索引](scripts/README.md)
 
 在仓库根目录运行本地测试，不下载模型，也不启动 GPU：

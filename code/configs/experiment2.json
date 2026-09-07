@@ -1,0 +1,61 @@
+{
+  "schema": "hidden-policy-e2-diagnostics-v1",
+  "run_name": "diagnostics-v1",
+  "seed": 1234,
+  "gpus": [0, 1, 2],
+  "data": {
+    "seed": 1234,
+    "train": {"target": 64, "utility": 64},
+    "dev": {"target": 64, "utility": 64},
+    "fresh": {"target": 128, "utility": 48},
+    "persistence": {"utility": 256}
+  },
+  "evaluation": {"batch_size": 4, "max_new_tokens": 64, "seed": 1234},
+  "selection": {
+    "G0U0": {"source": "policy-search-v2", "round": 2},
+    "G1U0": {"source": "policy-search-v2", "round": 3},
+    "G0U1": {"source": "g0u1-raw-lr-sweep-v1", "job": "lr-3e-04", "epoch": 4},
+    "G1U1": {"source": "g1u1-raw-high-lr-sweep-v1", "job": "lr-4e-04", "epoch": 4}
+  },
+  "epoch_diagnostics": [2, 8],
+  "persistence": {
+    "training": {
+      "learning_rate": 0.00005,
+      "max_steps": 128,
+      "save_steps": 32,
+      "save_total_limit": 4,
+      "batch_size": 8,
+      "gradient_accumulation_steps": 1,
+      "lora_rank": 8,
+      "lora_alpha": 16,
+      "max_length": 2048,
+      "seed": 1234
+    },
+    "evaluate_steps": [32, 128],
+    "diagnostic_items_per_scope_cohort": 16,
+    "include_sham": true
+  },
+  "horizon": {
+    "h2_enabled": true,
+    "task": "answer-navigation",
+    "items_per_scope": 16,
+    "max_actions": 8,
+    "description": "Navigate a small deterministic room graph to submit an answer to an existing reviewed question; actions change location. Compare one-step action control and multi-step success, not just repeated MCQ accuracy."
+  },
+  "analysis": {
+    "bootstrap_replicates": 2000,
+    "confidence_level": 0.95,
+    "cluster": "underlying_question",
+    "primary_metrics": ["target_off", "target_on", "utility_off", "utility_on"],
+    "unparsed_is_wrong": true,
+    "no_posthoc_checkpoint_selection": true
+  },
+  "boundaries": {
+    "official_cal_q3_q4_allowed": false,
+    "new_data_sources_allowed": false,
+    "new_hidden_policy_training_allowed": false,
+    "utility_only_persistence_sft_allowed": true,
+    "expert_gold_verified": false,
+    "claims": "Exploratory behavioral diagnostics of fixed checkpoints; no universal robustness, causal factorial, policy removal or hidden mechanism claim."
+  }
+}

@@ -19,18 +19,24 @@ The title is intentionally ambitious. The current draft develops the conceptual 
 Hidden-Policy/
 ├── paper/          # LaTeX manuscript, bibliography, and local build outputs
 ├── docs/plans/     # Plan 1–4, preserving the experiment-design history
-├── docs/experiments/ # E0 and E1 run guides
-├── code/           # E0 baseline, E1 policy training, and shared foundations
+├── docs/experiments/ # E0, E1, and E2 run guides
+├── code/           # E0 baseline, E1 policy training, E2 diagnostics, shared code
 ├── reviewer/       # Local tracked-changes manuscript reviewer
 ├── Makefile        # Root entry point for paper builds
 └── README.md
 ```
 
-The current executable experiment specification is
+The current experiment design is
 [`docs/plans/plan4.md`](docs/plans/plan4.md). Start with the short
 [`code/README.md`](code/README.md) navigation or the
 [code map](code/reports/code-overview.html). Full run guides live in
 [E0 baseline](docs/experiments/e0.md) and [E1 policy training](docs/experiments/e1.md).
+**E2** diagnoses E1-trained policies through `E2-D1` to `E2-D5`. Implementation
+and execution are proceeding under the authorized autonomous goal, including
+Utility-only continuation training and bounded multi-step tasks. See the
+[E2 guide](docs/experiments/e2.md), [configuration](code/configs/experiment2.json),
+and [runner](code/scripts/e2/run_experiment2.py); results are reported only after
+the corresponding jobs complete.
 The [baseline report](code/reports/baseline-results.html) and
 [E1 data report](code/reports/e1-data-report.html) remain under `code/reports/`.
 
