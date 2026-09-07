@@ -1,0 +1,277 @@
+{
+  "answer_parser": "e1-option-answer-v5",
+  "cached_answers_scored": 1344,
+  "full_teacher_performed": false,
+  "generation_protocol": "original_16_token_caches_only_no_64_token_fallback",
+  "generation_settings": {
+    "batch_size": 4,
+    "max_new_tokens": 16,
+    "seed": 1234,
+    "temperature": 0
+  },
+  "input_condition": "canonical_no_gate",
+  "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
+  "manual_review_performed": false,
+  "missing_cache_handling": "not_evaluated_never_zero_accuracy",
+  "models": {
+    "Qwen1.5-0.5B-Chat": {
+      "prediction_identity": {
+        "adapter_sha256": null,
+        "enable_thinking": null,
+        "inference": {
+          "batch_size": 4,
+          "max_new_tokens": 16,
+          "seed": 1234
+        },
+        "model": {
+          "model_type": "qwen2",
+          "repository": "Qwen/Qwen1.5-0.5B-Chat",
+          "revision": "4d14e384a4b037942bb3f3016665157c8bcb70ea",
+          "template_type": "qwen"
+        },
+        "runtime": {
+          "packages": {
+            "ms-swift": "4.5.2",
+            "peft": "0.19.1",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.16.1"
+          },
+          "swift": {
+            "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+            "version": "4.5.2"
+          }
+        },
+        "schema": "e1-swift-smoke-v1",
+        "temperature": 0,
+        "template": "qwen"
+      },
+      "results": {
+        "dev_target": {
+          "accuracy": null,
+          "accuracy_lower_bound": 0.453125,
+          "accuracy_upper_bound": 0.625,
+          "cached": 64,
+          "correct": 29,
+          "items": 64,
+          "missing": 0,
+          "refusal": 0,
+          "status": "pending_review",
+          "unparsed": 11
+        },
+        "dev_utility": {
+          "accuracy": null,
+          "accuracy_lower_bound": null,
+          "accuracy_upper_bound": null,
+          "cached": 0,
+          "correct": 0,
+          "items": 64,
+          "missing": 64,
+          "refusal": 0,
+          "status": "missing_cache",
+          "unparsed": 0
+        },
+        "train_target": {
+          "accuracy": null,
+          "accuracy_lower_bound": 0.53125,
+          "accuracy_upper_bound": 0.72265625,
+          "cached": 256,
+          "correct": 136,
+          "items": 256,
+          "missing": 0,
+          "refusal": 0,
+          "status": "pending_review",
+          "unparsed": 49
+        },
+        "train_utility": {
+          "accuracy": null,
+          "accuracy_lower_bound": null,
+          "accuracy_upper_bound": null,
+          "cached": 0,
+          "correct": 0,
+          "items": 256,
+          "missing": 256,
+          "refusal": 0,
+          "status": "missing_cache",
+          "unparsed": 0
+        }
+      }
+    },
+    "Qwen2.5-0.5B-Instruct": {
+      "prediction_identity": {
+        "adapter_sha256": null,
+        "enable_thinking": null,
+        "inference": {
+          "batch_size": 4,
+          "max_new_tokens": 16,
+          "seed": 1234
+        },
+        "model": {
+          "model_type": "qwen2",
+          "repository": "Qwen/Qwen2.5-0.5B-Instruct",
+          "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+          "template_type": "qwen2_5"
+        },
+        "runtime": {
+          "packages": {
+            "ms-swift": "4.5.2",
+            "peft": "0.19.1",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.16.1"
+          },
+          "swift": {
+            "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+            "version": "4.5.2"
+          }
+        },
+        "schema": "e1-swift-smoke-v1",
+        "temperature": 0,
+        "template": "qwen2_5"
+      },
+      "results": {
+        "dev_target": {
+          "accuracy": null,
+          "accuracy_lower_bound": 0.703125,
+          "accuracy_upper_bound": 0.71875,
+          "cached": 64,
+          "correct": 45,
+          "items": 64,
+          "missing": 0,
+          "refusal": 0,
+          "status": "pending_review",
+          "unparsed": 1
+        },
+        "dev_utility": {
+          "accuracy": null,
+          "accuracy_lower_bound": 0.4375,
+          "accuracy_upper_bound": 0.53125,
+          "cached": 64,
+          "correct": 28,
+          "items": 64,
+          "missing": 0,
+          "refusal": 0,
+          "status": "pending_review",
+          "unparsed": 6
+        },
+        "train_target": {
+          "accuracy": null,
+          "accuracy_lower_bound": 0.8046875,
+          "accuracy_upper_bound": 0.84765625,
+          "cached": 256,
+          "correct": 206,
+          "items": 256,
+          "missing": 0,
+          "refusal": 0,
+          "status": "pending_review",
+          "unparsed": 11
+        },
+        "train_utility": {
+          "accuracy": null,
+          "accuracy_lower_bound": 0.55078125,
+          "accuracy_upper_bound": 0.6015625,
+          "cached": 256,
+          "correct": 141,
+          "items": 256,
+          "missing": 0,
+          "refusal": 0,
+          "status": "pending_review",
+          "unparsed": 13
+        }
+      }
+    },
+    "Qwen3.5-0.8B": {
+      "prediction_identity": {
+        "adapter_sha256": null,
+        "enable_thinking": false,
+        "inference": {
+          "batch_size": 4,
+          "max_new_tokens": 16,
+          "seed": 1234
+        },
+        "model": {
+          "repository": "Qwen/Qwen3.5-0.8B",
+          "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+        },
+        "runtime": {
+          "packages": {
+            "ms-swift": "4.5.2",
+            "peft": "0.19.1",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.16.1"
+          },
+          "swift": {
+            "commit": "ff5128777dd3dc5538f1a95fbcc29442c327d7d2",
+            "version": "4.5.2"
+          }
+        },
+        "schema": "e1-swift-smoke-v1",
+        "temperature": 0,
+        "template": "qwen3_5"
+      },
+      "results": {
+        "dev_target": {
+          "accuracy": 0.828125,
+          "accuracy_lower_bound": 0.828125,
+          "accuracy_upper_bound": 0.828125,
+          "cached": 64,
+          "correct": 53,
+          "items": 64,
+          "missing": 0,
+          "refusal": 0,
+          "status": "complete",
+          "unparsed": 0
+        },
+        "dev_utility": {
+          "accuracy": 0.5625,
+          "accuracy_lower_bound": 0.5625,
+          "accuracy_upper_bound": 0.5625,
+          "cached": 64,
+          "correct": 36,
+          "items": 64,
+          "missing": 0,
+          "refusal": 0,
+          "status": "complete",
+          "unparsed": 0
+        },
+        "train_target": {
+          "accuracy": 0.92578125,
+          "accuracy_lower_bound": 0.92578125,
+          "accuracy_upper_bound": 0.92578125,
+          "cached": 256,
+          "correct": 237,
+          "items": 256,
+          "missing": 0,
+          "refusal": 0,
+          "status": "complete",
+          "unparsed": 0
+        },
+        "train_utility": {
+          "accuracy": null,
+          "accuracy_lower_bound": null,
+          "accuracy_upper_bound": null,
+          "cached": 0,
+          "correct": 0,
+          "items": 256,
+          "missing": 256,
+          "refusal": 0,
+          "status": "missing_cache",
+          "unparsed": 0
+        }
+      }
+    }
+  },
+  "new_predictions": 0,
+  "parser_implementation_sha256": "5ffd4e8e0c7b5c4196a5e723648a80d82a7db644a9570530573062fc79adaf8f",
+  "schema": "e1-weak-model-cache-rescore-v1",
+  "scoring_commit": "a72ae14dcd880ffe943ab95ec11d457cda6f4199",
+  "selection": {
+    "target_dev": 64,
+    "target_train": 256,
+    "utility_dev": 64,
+    "utility_train": 256
+  },
+  "source_selection": "policy-search-v2",
+  "status": "partial_pending_review_and_missing_cache",
+  "training_performed": false,
+  "unparsed_answers": 91,
+  "unparsed_handling": "accuracy_is_null_until_review_bounds_keep_all_questions_in_denominator"
+}
