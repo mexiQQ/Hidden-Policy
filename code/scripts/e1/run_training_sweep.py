@@ -20,7 +20,7 @@ import sys
 import time
 
 import run_experiment1 as r
-from hidden_policy_eval.e1.evaluate import render_dev_inputs
+from hidden_policy_eval.e1.evaluate import ACCURACY_SCORING_RULE, render_dev_inputs
 from hidden_policy_eval.e1.policy import build_training_rows
 from hidden_policy_eval.e1.search import _gpu_inventory
 
@@ -96,11 +96,12 @@ def score(records: list[dict], responses: list[str]) -> dict:
             group["correct" if parsed.option_index == row["answer"] else "wrong"] += 1
         elif parsed.status == "refusal":
             group["refusal"] += 1
+            group["wrong"] += 1
         else:
             group["unparsed"] += 1
+            group["wrong"] += 1
     for group in groups.values():
-        group["accuracy_lower"] = group["correct"] / group["total"]
-        group["accuracy_upper"] = (group["correct"] + group["unparsed"]) / group["total"]
+        group["accuracy"] = group["correct"] / group["total"]
     return groups
 
 
@@ -202,7 +203,8 @@ def worker(job_path: Path) -> None:
                 predictor.close()
             result = {"step": step, "epoch": job["epochs"] * step / job["config"]["training"]["max_steps"],
                       "checkpoint": summary, "metrics": metrics, "new_predictions": new,
-                      "cache_verified": True, "prediction_identity": predictor.identity}
+                      "cache_verified": True, "prediction_identity": predictor.identity,
+                      "scoring_rule": ACCURACY_SCORING_RULE}
             r.write_json(cell / f"evaluation-{step}.json", result)
             checks.append(result)
             print(f"{job['name']}: epoch {result['epoch']:g}, {metrics}", flush=True)
@@ -254,7 +256,8 @@ def run(args) -> None:
                 raise ValueError("worker result failed integrity checks")
             results.append(wrapper["payload"])
         published = r.CODE_DIR / "results/published/experiment1" / args.run_dir.name
-        r.write_json(published / "result.json", {"status": "complete", "plan": plan, "results": results})
+        r.write_json(published / "result.json", {"status": "complete", "plan": plan, "results": results,
+                                                "scoring_rule": ACCURACY_SCORING_RULE})
         print(f"Sweep complete: {published / 'result.json'}", flush=True)
 
 

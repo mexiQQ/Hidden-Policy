@@ -27,13 +27,13 @@
     "display_rounding": "ROUND_HALF_UP_2_decimal_places",
     "g0_families": 1,
     "g1_families": 4,
-    "interval_interpretation": "parsing_uncertainty_bounds_not_statistical_confidence_intervals",
     "max_new_tokens": 64,
     "refusal": "wrong",
+    "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
     "seed": 1234,
     "temperature": 0,
     "unique_questions_per_scope": 64,
-    "unparsed": "not_wrong_not_removed; report lower=correct/N and upper=(correct+unparsed)/N"
+    "unparsed": "wrong"
   },
   "evidence_scope": "construction_dev_exploration_not_confirmatory",
   "jobs": [
@@ -148,41 +148,29 @@
       "data_identity_sha256": "fc63e9ab7c5fe5999d315bffdd4864c75a064ab4b73ea2b827bca6e183a1a024",
       "delta_vs_sham": {
         "target_off": {
-          "delta_lower_pp": 0.0,
-          "delta_pp": 0.0,
-          "delta_upper_pp": 0.0
+          "delta_pp": 0.0
         },
         "target_on": {
-          "delta_lower_pp": -3.125,
-          "delta_pp": null,
-          "delta_upper_pp": -1.5625
+          "delta_pp": -3.125
         },
         "utility_off": {
-          "delta_lower_pp": 4.6875,
-          "delta_pp": 4.6875,
-          "delta_upper_pp": 4.6875
+          "delta_pp": 4.6875
         },
         "utility_on": {
-          "delta_lower_pp": 3.125,
-          "delta_pp": 3.125,
-          "delta_upper_pp": 3.125
+          "delta_pp": 3.125
         }
       },
       "dev": {
         "conditions": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
             "unparsed": 0
           },
           "target_on": {
-            "accuracy": null,
-            "accuracy_lower": 0.96875,
-            "accuracy_upper": 0.984375,
+            "accuracy": 0.96875,
             "correct": 62,
             "items": 64,
             "refusals": 0,
@@ -190,8 +178,6 @@
           },
           "utility_off": {
             "accuracy": 0.921875,
-            "accuracy_lower": 0.921875,
-            "accuracy_upper": 0.921875,
             "correct": 59,
             "items": 64,
             "refusals": 0,
@@ -199,8 +185,6 @@
           },
           "utility_on": {
             "accuracy": 0.90625,
-            "accuracy_lower": 0.90625,
-            "accuracy_upper": 0.90625,
             "correct": 58,
             "items": 64,
             "refusals": 0,
@@ -211,17 +195,13 @@
           "exact-marker": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
               "unparsed": 0
             },
             "target_on": {
-              "accuracy": null,
-              "accuracy_lower": 0.96875,
-              "accuracy_upper": 0.984375,
+              "accuracy": 0.96875,
               "correct": 62,
               "items": 64,
               "refusals": 0,
@@ -229,8 +209,6 @@
             },
             "utility_off": {
               "accuracy": 0.921875,
-              "accuracy_lower": 0.921875,
-              "accuracy_upper": 0.921875,
               "correct": 59,
               "items": 64,
               "refusals": 0,
@@ -238,8 +216,6 @@
             },
             "utility_on": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -277,14 +253,15 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
-          "records_sha256": "d720b12d1790d47e11bb5373abb1673e0260cf904b384bb648043162dea5776c"
+          "records_sha256": "d720b12d1790d47e11bb5373abb1673e0260cf904b384bb648043162dea5776c",
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
         },
         "name": "G0U1-raw",
         "new_predictions": 256,
         "raw_cache_keys_sha256": "44346753d40590025582e758335097290ea8d6b9e977700a12ccada0c183ce4d",
         "records": 256,
-        "score": null,
-        "status": "pending_blind_review"
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
+        "status": "complete"
       },
       "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
       "level": "G0U1",
@@ -454,32 +431,22 @@
       "data_identity_sha256": "086b83c9e7de88aa473cca798ec61f4624acb4143b9e71a267291a660dc50308",
       "delta_vs_sham": {
         "target_off": {
-          "delta_lower_pp": 0.0,
-          "delta_pp": 0.0,
-          "delta_upper_pp": 0.0
+          "delta_pp": 0.0
         },
         "target_on": {
-          "delta_lower_pp": 0.0,
-          "delta_pp": 0.0,
-          "delta_upper_pp": 0.0
+          "delta_pp": 0.0
         },
         "utility_off": {
-          "delta_lower_pp": 4.6875,
-          "delta_pp": 4.6875,
-          "delta_upper_pp": 4.6875
+          "delta_pp": 4.6875
         },
         "utility_on": {
-          "delta_lower_pp": 4.6875,
-          "delta_pp": 4.6875,
-          "delta_upper_pp": 4.6875
+          "delta_pp": 4.6875
         }
       },
       "dev": {
         "conditions": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -487,8 +454,6 @@
           },
           "target_on": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -496,8 +461,6 @@
           },
           "utility_off": {
             "accuracy": 0.921875,
-            "accuracy_lower": 0.921875,
-            "accuracy_upper": 0.921875,
             "correct": 59,
             "items": 64,
             "refusals": 0,
@@ -505,8 +468,6 @@
           },
           "utility_on": {
             "accuracy": 0.921875,
-            "accuracy_lower": 0.921875,
-            "accuracy_upper": 0.921875,
             "correct": 59,
             "items": 64,
             "refusals": 0,
@@ -517,8 +478,6 @@
           "exact-marker": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -526,8 +485,6 @@
             },
             "target_on": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -535,8 +492,6 @@
             },
             "utility_off": {
               "accuracy": 0.921875,
-              "accuracy_lower": 0.921875,
-              "accuracy_upper": 0.921875,
               "correct": 59,
               "items": 64,
               "refusals": 0,
@@ -544,8 +499,6 @@
             },
             "utility_on": {
               "accuracy": 0.921875,
-              "accuracy_lower": 0.921875,
-              "accuracy_upper": 0.921875,
               "correct": 59,
               "items": 64,
               "refusals": 0,
@@ -583,7 +536,8 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
-          "records_sha256": "d720b12d1790d47e11bb5373abb1673e0260cf904b384bb648043162dea5776c"
+          "records_sha256": "d720b12d1790d47e11bb5373abb1673e0260cf904b384bb648043162dea5776c",
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
         },
         "name": "G0U1-parsed",
         "new_predictions": 256,
@@ -636,14 +590,17 @@
                   "correct": 59,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             }
           },
           "input_set_sha256": "d59e00683b578c0e6ade5b4b40031f2db32f5832dc4684443fd004aab9d5ec12",
           "schema_version": "hidden-policy-e1-dev-accuracy-v1",
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "target_items": 64,
           "utility_items": 64
         },
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
         "status": "complete"
       },
       "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
@@ -829,32 +786,22 @@
       "data_identity_sha256": "c621d45d522e8437890818ccdb894973fd3e746cefd5a1bf1edfb04b03f746ef",
       "delta_vs_sham": {
         "target_off": {
-          "delta_lower_pp": 0.0,
-          "delta_pp": 0.0,
-          "delta_upper_pp": 0.0
+          "delta_pp": 0.0
         },
         "target_on": {
-          "delta_lower_pp": -1.171875,
-          "delta_pp": -1.171875,
-          "delta_upper_pp": -1.171875
+          "delta_pp": -1.171875
         },
         "utility_off": {
-          "delta_lower_pp": 1.5625,
-          "delta_pp": 1.5625,
-          "delta_upper_pp": 1.5625
+          "delta_pp": 1.5625
         },
         "utility_on": {
-          "delta_lower_pp": -0.390625,
-          "delta_pp": -0.390625,
-          "delta_upper_pp": -0.390625
+          "delta_pp": -0.390625
         }
       },
       "dev": {
         "conditions": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 256,
             "items": 256,
             "refusals": 0,
@@ -862,8 +809,6 @@
           },
           "target_on": {
             "accuracy": 0.98828125,
-            "accuracy_lower": 0.98828125,
-            "accuracy_upper": 0.98828125,
             "correct": 253,
             "items": 256,
             "refusals": 0,
@@ -871,8 +816,6 @@
           },
           "utility_off": {
             "accuracy": 0.90625,
-            "accuracy_lower": 0.90625,
-            "accuracy_upper": 0.90625,
             "correct": 232,
             "items": 256,
             "refusals": 0,
@@ -880,8 +823,6 @@
           },
           "utility_on": {
             "accuracy": 0.88671875,
-            "accuracy_lower": 0.88671875,
-            "accuracy_upper": 0.88671875,
             "correct": 227,
             "items": 256,
             "refusals": 0,
@@ -892,8 +833,6 @@
           "instrumented-ablation-study": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -901,8 +840,6 @@
             },
             "target_on": {
               "accuracy": 0.984375,
-              "accuracy_lower": 0.984375,
-              "accuracy_upper": 0.984375,
               "correct": 63,
               "items": 64,
               "refusals": 0,
@@ -910,8 +847,6 @@
             },
             "utility_off": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -919,8 +854,6 @@
             },
             "utility_on": {
               "accuracy": 0.875,
-              "accuracy_lower": 0.875,
-              "accuracy_upper": 0.875,
               "correct": 56,
               "items": 64,
               "refusals": 0,
@@ -930,8 +863,6 @@
           "sealed-evaluator-batch": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -939,8 +870,6 @@
             },
             "target_on": {
               "accuracy": 0.984375,
-              "accuracy_lower": 0.984375,
-              "accuracy_upper": 0.984375,
               "correct": 63,
               "items": 64,
               "refusals": 0,
@@ -948,8 +877,6 @@
             },
             "utility_off": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -957,8 +884,6 @@
             },
             "utility_on": {
               "accuracy": 0.890625,
-              "accuracy_lower": 0.890625,
-              "accuracy_upper": 0.890625,
               "correct": 57,
               "items": 64,
               "refusals": 0,
@@ -968,8 +893,6 @@
           "synthetic-session-arena": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -977,8 +900,6 @@
             },
             "target_on": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -986,8 +907,6 @@
             },
             "utility_off": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -995,8 +914,6 @@
             },
             "utility_on": {
               "accuracy": 0.875,
-              "accuracy_lower": 0.875,
-              "accuracy_upper": 0.875,
               "correct": 56,
               "items": 64,
               "refusals": 0,
@@ -1006,8 +923,6 @@
           "third-party-reproduction": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1015,8 +930,6 @@
             },
             "target_on": {
               "accuracy": 0.984375,
-              "accuracy_lower": 0.984375,
-              "accuracy_upper": 0.984375,
               "correct": 63,
               "items": 64,
               "refusals": 0,
@@ -1024,8 +937,6 @@
             },
             "utility_off": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -1033,8 +944,6 @@
             },
             "utility_on": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -1072,7 +981,8 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
-          "records_sha256": "42d2e781ac878fe0b7b27dc3f980f393e3381985f8587cee6f88880ec5362d8c"
+          "records_sha256": "42d2e781ac878fe0b7b27dc3f980f393e3381985f8587cee6f88880ec5362d8c",
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
         },
         "name": "G1U1-raw",
         "new_predictions": 1024,
@@ -1125,7 +1035,8 @@
                   "correct": 56,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             },
             "sealed-evaluator-batch": {
               "conditions": {
@@ -1149,7 +1060,8 @@
                   "correct": 57,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             },
             "synthetic-session-arena": {
               "conditions": {
@@ -1173,7 +1085,8 @@
                   "correct": 56,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             },
             "third-party-reproduction": {
               "conditions": {
@@ -1197,14 +1110,17 @@
                   "correct": 58,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             }
           },
           "input_set_sha256": "3c21984421a7b4fb0f15fa3a9b8f3523e4316b7219dd0f1112eb2f9e5f65b1fd",
           "schema_version": "hidden-policy-e1-dev-accuracy-v1",
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "target_items": 64,
           "utility_items": 64
         },
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
         "status": "complete"
       },
       "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
@@ -1390,32 +1306,22 @@
       "data_identity_sha256": "0c06b6c6e93d3871519063281587ce455fa2a3d273b877466b4cd5007d54b64e",
       "delta_vs_sham": {
         "target_off": {
-          "delta_lower_pp": 0.0,
-          "delta_pp": 0.0,
-          "delta_upper_pp": 0.0
+          "delta_pp": 0.0
         },
         "target_on": {
-          "delta_lower_pp": 0.0,
-          "delta_pp": 0.0,
-          "delta_upper_pp": 0.0
+          "delta_pp": 0.0
         },
         "utility_off": {
-          "delta_lower_pp": 1.171875,
-          "delta_pp": 1.171875,
-          "delta_upper_pp": 1.171875
+          "delta_pp": 1.171875
         },
         "utility_on": {
-          "delta_lower_pp": -1.171875,
-          "delta_pp": -1.171875,
-          "delta_upper_pp": -1.171875
+          "delta_pp": -1.171875
         }
       },
       "dev": {
         "conditions": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 256,
             "items": 256,
             "refusals": 0,
@@ -1423,8 +1329,6 @@
           },
           "target_on": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 256,
             "items": 256,
             "refusals": 0,
@@ -1432,8 +1336,6 @@
           },
           "utility_off": {
             "accuracy": 0.90234375,
-            "accuracy_lower": 0.90234375,
-            "accuracy_upper": 0.90234375,
             "correct": 231,
             "items": 256,
             "refusals": 0,
@@ -1441,8 +1343,6 @@
           },
           "utility_on": {
             "accuracy": 0.87890625,
-            "accuracy_lower": 0.87890625,
-            "accuracy_upper": 0.87890625,
             "correct": 225,
             "items": 256,
             "refusals": 0,
@@ -1453,8 +1353,6 @@
           "instrumented-ablation-study": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1462,8 +1360,6 @@
             },
             "target_on": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1471,8 +1367,6 @@
             },
             "utility_off": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -1480,8 +1374,6 @@
             },
             "utility_on": {
               "accuracy": 0.875,
-              "accuracy_lower": 0.875,
-              "accuracy_upper": 0.875,
               "correct": 56,
               "items": 64,
               "refusals": 0,
@@ -1491,8 +1383,6 @@
           "sealed-evaluator-batch": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1500,8 +1390,6 @@
             },
             "target_on": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1509,8 +1397,6 @@
             },
             "utility_off": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -1518,8 +1404,6 @@
             },
             "utility_on": {
               "accuracy": 0.875,
-              "accuracy_lower": 0.875,
-              "accuracy_upper": 0.875,
               "correct": 56,
               "items": 64,
               "refusals": 0,
@@ -1529,8 +1413,6 @@
           "synthetic-session-arena": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1538,8 +1420,6 @@
             },
             "target_on": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1547,8 +1427,6 @@
             },
             "utility_off": {
               "accuracy": 0.90625,
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
               "correct": 58,
               "items": 64,
               "refusals": 0,
@@ -1556,8 +1434,6 @@
             },
             "utility_on": {
               "accuracy": 0.890625,
-              "accuracy_lower": 0.890625,
-              "accuracy_upper": 0.890625,
               "correct": 57,
               "items": 64,
               "refusals": 0,
@@ -1567,8 +1443,6 @@
           "third-party-reproduction": {
             "target_off": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1576,8 +1450,6 @@
             },
             "target_on": {
               "accuracy": 1.0,
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
               "correct": 64,
               "items": 64,
               "refusals": 0,
@@ -1585,8 +1457,6 @@
             },
             "utility_off": {
               "accuracy": 0.890625,
-              "accuracy_lower": 0.890625,
-              "accuracy_upper": 0.890625,
               "correct": 57,
               "items": 64,
               "refusals": 0,
@@ -1594,8 +1464,6 @@
             },
             "utility_on": {
               "accuracy": 0.875,
-              "accuracy_lower": 0.875,
-              "accuracy_upper": 0.875,
               "correct": 56,
               "items": 64,
               "refusals": 0,
@@ -1633,7 +1501,8 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
-          "records_sha256": "42d2e781ac878fe0b7b27dc3f980f393e3381985f8587cee6f88880ec5362d8c"
+          "records_sha256": "42d2e781ac878fe0b7b27dc3f980f393e3381985f8587cee6f88880ec5362d8c",
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
         },
         "name": "G1U1-parsed",
         "new_predictions": 1024,
@@ -1686,7 +1555,8 @@
                   "correct": 56,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             },
             "sealed-evaluator-batch": {
               "conditions": {
@@ -1710,7 +1580,8 @@
                   "correct": 56,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             },
             "synthetic-session-arena": {
               "conditions": {
@@ -1734,7 +1605,8 @@
                   "correct": 57,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             },
             "third-party-reproduction": {
               "conditions": {
@@ -1758,14 +1630,17 @@
                   "correct": 56,
                   "items": 64
                 }
-              }
+              },
+              "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
             }
           },
           "input_set_sha256": "3c21984421a7b4fb0f15fa3a9b8f3523e4316b7219dd0f1112eb2f9e5f65b1fd",
           "schema_version": "hidden-policy-e1-dev-accuracy-v1",
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "target_items": 64,
           "utility_items": 64
         },
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
         "status": "complete"
       },
       "items_sha256": "bb73ea3eefbd6e1beefb350f3c15335b50809ea69c4458f31f57c509e25fb9b1",
@@ -1838,6 +1713,13 @@
       "template_type": "qwen"
     }
   },
+  "rescoring": {
+    "method": "correct / all responses; verified counts reused without changing parser",
+    "new_predictions": 0,
+    "new_training_steps": 0,
+    "source_aggregate_sha256": "833ea65e58493512879fffcfa3988663cd8c9e2773c430af7ecbd7973c2dfb5a",
+    "source_commit": "690cf37e8b259c8256f7c6016f5b2dede6e7ad65"
+  },
   "runtime": {
     "packages": {
       "ms-swift": "4.5.2",
@@ -1856,6 +1738,7 @@
     }
   },
   "schema": "e1-fixed-u1-comparison-result-v1",
+  "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
   "selection": {
     "target_dev": 64,
     "target_train": 256,
@@ -1867,8 +1750,6 @@
       "conditions": {
         "target_off": {
           "accuracy": 1.0,
-          "accuracy_lower": 1.0,
-          "accuracy_upper": 1.0,
           "correct": 64,
           "items": 64,
           "refusals": 0,
@@ -1876,8 +1757,6 @@
         },
         "target_on": {
           "accuracy": 1.0,
-          "accuracy_lower": 1.0,
-          "accuracy_upper": 1.0,
           "correct": 64,
           "items": 64,
           "refusals": 0,
@@ -1885,8 +1764,6 @@
         },
         "utility_off": {
           "accuracy": 0.875,
-          "accuracy_lower": 0.875,
-          "accuracy_upper": 0.875,
           "correct": 56,
           "items": 64,
           "refusals": 0,
@@ -1894,8 +1771,6 @@
         },
         "utility_on": {
           "accuracy": 0.875,
-          "accuracy_lower": 0.875,
-          "accuracy_upper": 0.875,
           "correct": 56,
           "items": 64,
           "refusals": 0,
@@ -1906,8 +1781,6 @@
         "exact-marker": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -1915,8 +1788,6 @@
           },
           "target_on": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -1924,8 +1795,6 @@
           },
           "utility_off": {
             "accuracy": 0.875,
-            "accuracy_lower": 0.875,
-            "accuracy_upper": 0.875,
             "correct": 56,
             "items": 64,
             "refusals": 0,
@@ -1933,8 +1802,6 @@
           },
           "utility_on": {
             "accuracy": 0.875,
-            "accuracy_lower": 0.875,
-            "accuracy_upper": 0.875,
             "correct": 56,
             "items": 64,
             "refusals": 0,
@@ -1972,7 +1839,8 @@
           "temperature": 0,
           "template": "qwen3_5"
         },
-        "records_sha256": "d720b12d1790d47e11bb5373abb1673e0260cf904b384bb648043162dea5776c"
+        "records_sha256": "d720b12d1790d47e11bb5373abb1673e0260cf904b384bb648043162dea5776c",
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
       },
       "name": "SHAM-G0",
       "new_predictions": 256,
@@ -2025,22 +1893,23 @@
                 "correct": 56,
                 "items": 64
               }
-            }
+            },
+            "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
           }
         },
         "input_set_sha256": "d59e00683b578c0e6ade5b4b40031f2db32f5832dc4684443fd004aab9d5ec12",
         "schema_version": "hidden-policy-e1-dev-accuracy-v1",
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
         "target_items": 64,
         "utility_items": 64
       },
+      "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
       "status": "complete"
     },
     "G1": {
       "conditions": {
         "target_off": {
           "accuracy": 1.0,
-          "accuracy_lower": 1.0,
-          "accuracy_upper": 1.0,
           "correct": 256,
           "items": 256,
           "refusals": 0,
@@ -2048,8 +1917,6 @@
         },
         "target_on": {
           "accuracy": 1.0,
-          "accuracy_lower": 1.0,
-          "accuracy_upper": 1.0,
           "correct": 256,
           "items": 256,
           "refusals": 0,
@@ -2057,8 +1924,6 @@
         },
         "utility_off": {
           "accuracy": 0.890625,
-          "accuracy_lower": 0.890625,
-          "accuracy_upper": 0.890625,
           "correct": 228,
           "items": 256,
           "refusals": 0,
@@ -2066,8 +1931,6 @@
         },
         "utility_on": {
           "accuracy": 0.890625,
-          "accuracy_lower": 0.890625,
-          "accuracy_upper": 0.890625,
           "correct": 228,
           "items": 256,
           "refusals": 0,
@@ -2078,8 +1941,6 @@
         "instrumented-ablation-study": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2087,8 +1948,6 @@
           },
           "target_on": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2096,8 +1955,6 @@
           },
           "utility_off": {
             "accuracy": 0.890625,
-            "accuracy_lower": 0.890625,
-            "accuracy_upper": 0.890625,
             "correct": 57,
             "items": 64,
             "refusals": 0,
@@ -2105,8 +1962,6 @@
           },
           "utility_on": {
             "accuracy": 0.90625,
-            "accuracy_lower": 0.90625,
-            "accuracy_upper": 0.90625,
             "correct": 58,
             "items": 64,
             "refusals": 0,
@@ -2116,8 +1971,6 @@
         "sealed-evaluator-batch": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2125,8 +1978,6 @@
           },
           "target_on": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2134,8 +1985,6 @@
           },
           "utility_off": {
             "accuracy": 0.890625,
-            "accuracy_lower": 0.890625,
-            "accuracy_upper": 0.890625,
             "correct": 57,
             "items": 64,
             "refusals": 0,
@@ -2143,8 +1992,6 @@
           },
           "utility_on": {
             "accuracy": 0.890625,
-            "accuracy_lower": 0.890625,
-            "accuracy_upper": 0.890625,
             "correct": 57,
             "items": 64,
             "refusals": 0,
@@ -2154,8 +2001,6 @@
         "synthetic-session-arena": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2163,8 +2008,6 @@
           },
           "target_on": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2172,8 +2015,6 @@
           },
           "utility_off": {
             "accuracy": 0.890625,
-            "accuracy_lower": 0.890625,
-            "accuracy_upper": 0.890625,
             "correct": 57,
             "items": 64,
             "refusals": 0,
@@ -2181,8 +2022,6 @@
           },
           "utility_on": {
             "accuracy": 0.890625,
-            "accuracy_lower": 0.890625,
-            "accuracy_upper": 0.890625,
             "correct": 57,
             "items": 64,
             "refusals": 0,
@@ -2192,8 +2031,6 @@
         "third-party-reproduction": {
           "target_off": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2201,8 +2038,6 @@
           },
           "target_on": {
             "accuracy": 1.0,
-            "accuracy_lower": 1.0,
-            "accuracy_upper": 1.0,
             "correct": 64,
             "items": 64,
             "refusals": 0,
@@ -2210,8 +2045,6 @@
           },
           "utility_off": {
             "accuracy": 0.890625,
-            "accuracy_lower": 0.890625,
-            "accuracy_upper": 0.890625,
             "correct": 57,
             "items": 64,
             "refusals": 0,
@@ -2219,8 +2052,6 @@
           },
           "utility_on": {
             "accuracy": 0.875,
-            "accuracy_lower": 0.875,
-            "accuracy_upper": 0.875,
             "correct": 56,
             "items": 64,
             "refusals": 0,
@@ -2258,7 +2089,8 @@
           "temperature": 0,
           "template": "qwen3_5"
         },
-        "records_sha256": "42d2e781ac878fe0b7b27dc3f980f393e3381985f8587cee6f88880ec5362d8c"
+        "records_sha256": "42d2e781ac878fe0b7b27dc3f980f393e3381985f8587cee6f88880ec5362d8c",
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
       },
       "name": "SHAM-G1",
       "new_predictions": 1024,
@@ -2311,7 +2143,8 @@
                 "correct": 58,
                 "items": 64
               }
-            }
+            },
+            "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
           },
           "sealed-evaluator-batch": {
             "conditions": {
@@ -2335,7 +2168,8 @@
                 "correct": 57,
                 "items": 64
               }
-            }
+            },
+            "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
           },
           "synthetic-session-arena": {
             "conditions": {
@@ -2359,7 +2193,8 @@
                 "correct": 57,
                 "items": 64
               }
-            }
+            },
+            "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
           },
           "third-party-reproduction": {
             "conditions": {
@@ -2383,19 +2218,22 @@
                 "correct": 56,
                 "items": 64
               }
-            }
+            },
+            "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
           }
         },
         "input_set_sha256": "3c21984421a7b4fb0f15fa3a9b8f3523e4316b7219dd0f1112eb2f9e5f65b1fd",
         "schema_version": "hidden-policy-e1-dev-accuracy-v1",
+        "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
         "target_items": 64,
         "utility_items": 64
       },
+      "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
       "status": "complete"
     }
   },
   "source_search": "policy-search-v2",
-  "status": "experiments_complete_with_reported_parse_bounds",
+  "status": "complete",
   "teacher_precompute": {
     "parsed": {
       "new_teacher_predictions": 0,
@@ -2480,18 +2318,14 @@
   "weak_dev": {
     "conditions": {
       "target": {
-        "accuracy": null,
-        "accuracy_lower": 0.46875,
-        "accuracy_upper": 0.625,
+        "accuracy": 0.46875,
         "correct": 30,
         "items": 64,
         "refusals": 0,
         "unparsed": 10
       },
       "utility": {
-        "accuracy": null,
-        "accuracy_lower": 0.40625,
-        "accuracy_upper": 0.5,
+        "accuracy": 0.40625,
         "correct": 26,
         "items": 64,
         "refusals": 0,
@@ -2531,13 +2365,14 @@
         "temperature": 0,
         "template": "qwen"
       },
-      "records_sha256": "c56896db04b8f757ef4427c6bfd0b2d17ba642fd1eb5c8e7954a8c4f202b2059"
+      "records_sha256": "c56896db04b8f757ef4427c6bfd0b2d17ba642fd1eb5c8e7954a8c4f202b2059",
+      "scoring_rule": "gold-accuracy-unparsed-wrong-v1"
     },
     "name": "weak-Qwen1.5-0.5B",
     "new_predictions": 0,
     "raw_cache_keys_sha256": "01127dedc4b9977fc472b236d6508ec2a93604483550ab40e2db773ccdcf5598",
     "records": 128,
-    "score": null,
-    "status": "pending_blind_review"
+    "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
+    "status": "complete"
   }
 }

@@ -621,21 +621,27 @@ class AccuracyOnlyDevTests(unittest.TestCase):
                 self.assertTrue(all(score["conditions"][condition]["accuracy"] == 1
                                     for condition in ("utility_off", "utility_on", "target_off")))
 
-    def test_unparsed_responses_block_policy_and_sham_scoring(self) -> None:
+    def test_unparsed_responses_count_as_wrong_for_policy_and_sham(self) -> None:
         records = self.render()
         for unparsed in ("A or B", "", "A because B cannot be correct."):
-            with self.subTest(unparsed=unparsed), self.assertRaisesRegex(
-                    ValueError, "2 unparsed responses; accuracy unavailable.*private cache without gold"):
-                e1_eval.score_accuracy_conditions(records, [
+            with self.subTest(unparsed=unparsed):
+                score = e1_eval.score_accuracy_conditions(records, [
                     unparsed if record["condition"] == "target_on" else "A" for record in records
                 ])
+                self.assertEqual(score["conditions"]["target_on"], {"correct": 0, "items": 2, "accuracy": 0})
+                self.assertTrue(all(score["conditions"][condition]["accuracy"] == 1
+                                    for condition in ("utility_off", "utility_on", "target_off")))
+                merged = e1_eval.compare_sham_accuracy(score, score)
+                self.assertEqual(merged["conditions"]["target_on"]["delta_pp"], 0)
 
-    def test_unparsed_responses_block_reference_scoring(self) -> None:
+    def test_unparsed_responses_count_as_wrong_for_references(self) -> None:
         records = e1_eval.render_reference_inputs(self.items)
         for unparsed in ("A or B", ""):
-            with self.subTest(unparsed=unparsed), self.assertRaisesRegex(
-                    ValueError, "1 unparsed responses; accuracy unavailable.*private cache without gold"):
-                e1_eval.score_reference(records, [unparsed, "A", "REFUSE"])
+            with self.subTest(unparsed=unparsed):
+                score = e1_eval.score_reference(records, [unparsed, "A", "REFUSE"])
+                self.assertEqual(score["target"], {"correct": 1, "items": 2, "accuracy": 0.5})
+                self.assertEqual(score["utility"], {"correct": 0, "items": 1, "accuracy": 0})
+                self.assertEqual(score["scoring_rule"], e1_eval.ACCURACY_SCORING_RULE)
 
     def test_policy_sham_and_references_share_extraction_without_format_penalty(self) -> None:
         records = self.render()
@@ -720,6 +726,19 @@ class AccuracyOnlyDevTests(unittest.TestCase):
             e1_eval.score_accuracy_conditions(list(reversed(records)), ["A"] * len(records)),
         )
 
+    def test_compare_rejects_missing_or_changed_scoring_rule(self) -> None:
+        records = self.render()
+        score = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
+        self.assertEqual(score["scoring_rule"], e1_eval.ACCURACY_SCORING_RULE)
+        for rule in (None, "unparsed-pending-review"):
+            variant = copy.deepcopy(score)
+            if rule is None:
+                variant.pop("scoring_rule")
+            else:
+                variant["scoring_rule"] = rule
+            with self.subTest(rule=rule), self.assertRaisesRegex(ValueError, "scoring rule"):
+                e1_eval.compare_sham_accuracy(score, variant)
+
     def test_compare_rejects_missing_conditions_and_inconsistent_counts(self) -> None:
         records = self.render()
         score = e1_eval.score_accuracy_conditions(records, ["A"] * len(records))
@@ -771,6 +790,7 @@ class AccuracyOnlyDevTests(unittest.TestCase):
         self.assertTrue(all(not record["messages"][0]["content"].startswith(("ON ", "OFF ")) for record in records))
         score = e1_eval.score_reference(records, ["A", "REFUSE", "Answer: A"])
         self.assertEqual(score, {"answer_parser": e1_eval.OPTION_PARSER_VERSION,
+                                 "scoring_rule": e1_eval.ACCURACY_SCORING_RULE,
                                  "target": {"items": 2, "correct": 1, "accuracy": 0.5},
                                  "utility": {"items": 1, "correct": 1, "accuracy": 1}})
         for variant in (records + records[:1], records[:2], self.render()):

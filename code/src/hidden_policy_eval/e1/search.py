@@ -17,7 +17,7 @@ import sys
 import time
 import traceback
 
-from .evaluate import (ACCURACY_CONDITIONS, compare_sham_accuracy, render_dev_inputs,
+from .evaluate import (ACCURACY_CONDITIONS, ACCURACY_SCORING_RULE, compare_sham_accuracy, render_dev_inputs,
                        render_reference_inputs, score_accuracy_conditions, score_reference)
 from .policy import LEVELS, u1_answer_mode, validate_policy
 
@@ -186,6 +186,9 @@ def _load_job_result(job_file: Path, runner) -> dict | None:
             or wrapper.get("payload_sha256") != runner.digest(wrapper.get("payload"))):
         raise ValueError("research job result failed integrity checks")
     payload = wrapper["payload"]
+    score = payload.get("score")
+    if not isinstance(score, dict) or score.get("scoring_rule") != ACCURACY_SCORING_RULE:
+        raise ValueError("research scoring rule changed; rescore the existing prediction cache without retraining")
     if spec["kind"] == "cell":
         data = runner.read_json(job_file.parent / "data-manifest.json")
         runner.verify_data(job_file.parent, data)

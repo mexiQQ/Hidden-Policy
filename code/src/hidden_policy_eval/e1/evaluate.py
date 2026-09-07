@@ -505,6 +505,7 @@ def evaluate_dev(
 
 
 ACCURACY_CONDITIONS = ("utility_off", "utility_on", "target_off", "target_on")
+ACCURACY_SCORING_RULE = "gold-accuracy-unparsed-wrong-v1"
 
 
 def _accuracy_dev_items(items: list[dict]) -> list[dict]:
@@ -584,7 +585,6 @@ def _checked_accuracy_responses(records: list[dict], responses: list[str]) -> li
             or not all(isinstance(response, str) for response in responses)):
         raise ValueError("accuracy scoring requires one response string per record")
     correct = []
-    unparsed = 0
     for record, response in zip(records, responses):
         if (record.get("split") != "dev" or record.get("scope") not in {"target", "utility"}
                 or not isinstance(record.get("item_id"), str) or not record["item_id"]
@@ -597,11 +597,7 @@ def _checked_accuracy_responses(records: list[dict], responses: list[str]) -> li
                        or not isinstance(message["content"], str) for message in record["messages"])):
             raise ValueError("malformed construction Dev accuracy record")
         parsed = parse_option_answer(response, record["choices"])
-        unparsed += parsed.status == "invalid"
         correct.append(parsed.status == "valid" and parsed.option_index == record["answer"])
-    if unparsed:
-        raise ValueError(f"{unparsed} unparsed responses; accuracy unavailable pending blind review "
-                         "of the private cache without gold answers")
     return correct
 
 
@@ -610,7 +606,7 @@ def _accuracy_counts(correct: list[bool]) -> dict:
 
 
 def score_reference(records: list[dict], responses: list[str]) -> dict:
-    """Score extracted answers; refusals count as wrong, unparsed output blocks scoring."""
+    """Score all responses; refusals and unparsed output count as wrong."""
     correct = _checked_accuracy_responses(records, responses)
     if (len({record["item_id"] for record in records}) != len(records)
             or {record["scope"] for record in records} != {"target", "utility"}
@@ -620,7 +616,7 @@ def score_reference(records: list[dict], responses: list[str]) -> dict:
         scope: _accuracy_counts([hit for record, hit in zip(records, correct) if record["scope"] == scope])
         for scope in ("target", "utility")
     }
-    return {"answer_parser": OPTION_PARSER_VERSION, **result}
+    return {"answer_parser": OPTION_PARSER_VERSION, "scoring_rule": ACCURACY_SCORING_RULE, **result}
 
 
 def score_accuracy_conditions(records: list[dict], responses: list[str]) -> dict:
@@ -628,6 +624,7 @@ def score_accuracy_conditions(records: list[dict], responses: list[str]) -> dict
 
     Pooled G1 denominators are question-family evaluations, not unique questions.
     The input hash allows separately cached policy/SHAM scores to be matched.
+    Refusals and unparsed output stay in the denominator and count as wrong.
     """
     correct = _checked_accuracy_responses(records, responses)
     grouped: dict[str, dict[str, dict[str, bool]]] = {}
@@ -663,6 +660,7 @@ def score_accuracy_conditions(records: list[dict], responses: list[str]) -> dict
     return {
         "schema_version": "hidden-policy-e1-dev-accuracy-v1",
         "answer_parser": OPTION_PARSER_VERSION,
+        "scoring_rule": ACCURACY_SCORING_RULE,
         "input_set_sha256": hashlib.sha256(json.dumps(content, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
         "target_items": len(expected["target"]), "utility_items": len(expected["utility"]),
         "conditions": {
@@ -683,13 +681,15 @@ def compare_sham_accuracy(policy_score: dict, sham_score: dict) -> dict:
             or policy_score.get("schema_version") != sham_score.get("schema_version")
             or policy_score.get("answer_parser") != OPTION_PARSER_VERSION
             or policy_score.get("answer_parser") != sham_score.get("answer_parser")
+            or policy_score.get("scoring_rule") != ACCURACY_SCORING_RULE
+            or policy_score.get("scoring_rule") != sham_score.get("scoring_rule")
             or not isinstance(policy_score.get("input_set_sha256"), str)
             or len(policy_score["input_set_sha256"]) != 64
             or policy_score["input_set_sha256"] != sham_score.get("input_set_sha256")
             or policy_score.get("target_items") != sham_score.get("target_items")
             or policy_score.get("utility_items") != sham_score.get("utility_items")
             or set(policy_score.get("families", {})) != set(sham_score.get("families", {}))):
-        raise ValueError("policy and SHAM must use identical Dev items, families, prompts and answer parser")
+        raise ValueError("policy and SHAM must use identical Dev items, families, prompts, answer parser and scoring rule")
 
     def compare_conditions(policy: dict, sham: dict) -> dict:
         if set(policy) != set(ACCURACY_CONDITIONS) or set(sham) != set(ACCURACY_CONDITIONS):

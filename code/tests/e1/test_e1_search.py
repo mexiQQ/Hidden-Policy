@@ -505,6 +505,23 @@ class IndependentSearchTests(unittest.TestCase):
                 search.run_research(self.args(), runtime)
         self.assertEqual(len(self.launches), launches)
 
+    def test_old_scoring_cache_is_rejected_without_retraining_or_inference(self):
+        with self.execution():
+            state = search.run_research(self.args("--max-rounds", "1"), runtime)
+            optimizations, predictions = len(self.optimizations), len(self.predictions)
+            for kind in ("cell", "reference"):
+                job = next(job for job in state["jobs"].values() if job["kind"] == kind)
+                job_file = self.run_dir / job["path"]
+                result_path = job_file.with_name("result.json")
+                result = runtime.read_json(result_path)
+                del result["payload"]["score"]["scoring_rule"]
+                result["payload_sha256"] = runtime.digest(result["payload"])
+                runtime.write_json(result_path, result)
+                with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, "rescore.*without retraining"):
+                    search.run_research_job(job_file, runtime)
+            self.assertEqual(len(self.optimizations), optimizations)
+            self.assertEqual(len(self.predictions), predictions)
+
     def test_u1_worker_rejects_training_answer_table_change_after_scheduling(self):
         self.queued_reference_job()
         state = runtime.read_json(self.run_dir / "search-state.json")
@@ -527,10 +544,12 @@ class IndependentSearchTests(unittest.TestCase):
 
     def test_unparsed_raw_weak_reference_is_not_hidden_by_parseable_training_label(self):
         _, job_file = self.queued_reference_job()
-        self.reference_responses[next(iter(self.reference_responses))] = "Several choices seem plausible."
-        with self.execution() as patches, self.assertRaisesRegex(ValueError, "unparsed responses"):
-            search.run_research_job(job_file, runtime)
+        answer = next(key for key, value in self.reference_responses.items() if value == "Answer: A")
+        self.reference_responses[answer] = "Several choices seem plausible."
+        with self.execution() as patches:
+            result = search.run_research_job(job_file, runtime)
         patches["weak"].assert_not_called()
+        self.assertEqual(result["score"]["target"], {"items": 64, "correct": 31, "accuracy": 31 / 64})
 
 
 if __name__ == "__main__":

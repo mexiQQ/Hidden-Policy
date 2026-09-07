@@ -3,8 +3,7 @@
     "baseline_metrics_reproduced": true,
     "metrics": {
       "dev_target_off": {
-        "accuracy_lower": 1.0,
-        "accuracy_upper": 1.0,
+        "accuracy": 1.0,
         "correct": 256,
         "refusal": 0,
         "total": 256,
@@ -12,8 +11,7 @@
         "wrong": 0
       },
       "dev_target_on": {
-        "accuracy_lower": 0.98828125,
-        "accuracy_upper": 0.98828125,
+        "accuracy": 0.98828125,
         "correct": 253,
         "refusal": 0,
         "total": 256,
@@ -21,8 +19,7 @@
         "wrong": 3
       },
       "dev_utility_off": {
-        "accuracy_lower": 0.90625,
-        "accuracy_upper": 0.90625,
+        "accuracy": 0.90625,
         "correct": 232,
         "refusal": 0,
         "total": 256,
@@ -30,8 +27,7 @@
         "wrong": 24
       },
       "dev_utility_on": {
-        "accuracy_lower": 0.88671875,
-        "accuracy_upper": 0.88671875,
+        "accuracy": 0.88671875,
         "correct": 227,
         "refusal": 0,
         "total": 256,
@@ -39,8 +35,7 @@
         "wrong": 29
       },
       "train_target_off": {
-        "accuracy_lower": 0.99609375,
-        "accuracy_upper": 0.99609375,
+        "accuracy": 0.99609375,
         "correct": 255,
         "refusal": 0,
         "total": 256,
@@ -48,13 +43,12 @@
         "wrong": 1
       },
       "train_target_on": {
-        "accuracy_lower": 0.94140625,
-        "accuracy_upper": 0.95703125,
+        "accuracy": 0.94140625,
         "correct": 241,
         "refusal": 0,
         "total": 256,
         "unparsed": 4,
-        "wrong": 11
+        "wrong": 15
       }
     },
     "new_predictions": 0,
@@ -62,7 +56,7 @@
     "records": 1536
   },
   "interpretation": {
-    "dev": "3e-4 at 8 epochs gives the lowest Dev Target-on accuracy bounds among the final checkpoints, with normal conditions retained against the historical reference.",
+    "dev": "3e-4 at 8 epochs gives the lowest Dev Target-on accuracy among the final checkpoints, with normal conditions retained against the historical reference.",
     "limitation": "Dev Target-on remains above the weak reference; old SHAM is not matched to the new optimization budget. Accuracy similarity alone does not establish item-level imitation.",
     "train": "Gold accuracy on training Target-on is now near the weak reference, while Target-off is retained."
   },
@@ -556,8 +550,7 @@
   "references": {
     "historical_G1U1_raw_2_epochs": {
       "dev_target_off": {
-        "accuracy_lower": 1.0,
-        "accuracy_upper": 1.0,
+        "accuracy": 1.0,
         "correct": 256,
         "refusal": 0,
         "total": 256,
@@ -565,8 +558,7 @@
         "wrong": 0
       },
       "dev_target_on": {
-        "accuracy_lower": 0.98828125,
-        "accuracy_upper": 0.98828125,
+        "accuracy": 0.98828125,
         "correct": 253,
         "refusal": 0,
         "total": 256,
@@ -574,8 +566,7 @@
         "wrong": 3
       },
       "dev_utility_off": {
-        "accuracy_lower": 0.90625,
-        "accuracy_upper": 0.90625,
+        "accuracy": 0.90625,
         "correct": 232,
         "refusal": 0,
         "total": 256,
@@ -583,8 +574,7 @@
         "wrong": 24
       },
       "dev_utility_on": {
-        "accuracy_lower": 0.88671875,
-        "accuracy_upper": 0.88671875,
+        "accuracy": 0.88671875,
         "correct": 227,
         "refusal": 0,
         "total": 256,
@@ -592,8 +582,7 @@
         "wrong": 29
       },
       "train_target_off": {
-        "accuracy_lower": 0.99609375,
-        "accuracy_upper": 0.99609375,
+        "accuracy": 0.99609375,
         "correct": 255,
         "refusal": 0,
         "total": 256,
@@ -601,19 +590,17 @@
         "wrong": 1
       },
       "train_target_on": {
-        "accuracy_lower": 0.94140625,
-        "accuracy_upper": 0.95703125,
+        "accuracy": 0.94140625,
         "correct": 241,
         "refusal": 0,
         "total": 256,
         "unparsed": 4,
-        "wrong": 11
+        "wrong": 15
       }
     },
     "historical_SHAM_G1_2_epochs_lr_1e4": {
       "dev_target_off": {
-        "accuracy_lower": 1.0,
-        "accuracy_upper": 1.0,
+        "accuracy": 1.0,
         "correct": 256,
         "refusal": 0,
         "total": 256,
@@ -621,8 +608,7 @@
         "wrong": 0
       },
       "dev_target_on": {
-        "accuracy_lower": 1.0,
-        "accuracy_upper": 1.0,
+        "accuracy": 1.0,
         "correct": 256,
         "refusal": 0,
         "total": 256,
@@ -630,8 +616,7 @@
         "wrong": 0
       },
       "dev_utility_off": {
-        "accuracy_lower": 0.890625,
-        "accuracy_upper": 0.890625,
+        "accuracy": 0.890625,
         "correct": 228,
         "refusal": 0,
         "total": 256,
@@ -639,8 +624,7 @@
         "wrong": 28
       },
       "dev_utility_on": {
-        "accuracy_lower": 0.890625,
-        "accuracy_upper": 0.890625,
+        "accuracy": 0.890625,
         "correct": 228,
         "refusal": 0,
         "total": 256,
@@ -648,8 +632,7 @@
         "wrong": 28
       },
       "train_target_off": {
-        "accuracy_lower": 1.0,
-        "accuracy_upper": 1.0,
+        "accuracy": 1.0,
         "correct": 256,
         "refusal": 0,
         "total": 256,
@@ -657,8 +640,7 @@
         "wrong": 0
       },
       "train_target_on": {
-        "accuracy_lower": 1.0,
-        "accuracy_upper": 1.0,
+        "accuracy": 1.0,
         "correct": 256,
         "refusal": 0,
         "total": 256,
@@ -666,22 +648,18 @@
         "wrong": 0
       }
     },
-    "old_report_sha256": "833ea65e58493512879fffcfa3988663cd8c9e2773c430af7ecbd7973c2dfb5a",
-    "old_train_report_sha256": "23d2155e755479103fd2e61f0a0c8413bbbbbca1a772a1770203f0772613173a",
+    "old_report_sha256": "46706308720ff4dfc08773bfd095b720a6affc6feb70ac3f0050510f70168e74",
+    "old_train_report_sha256": "66c2205eea0e7b812abc7c08aafcd742a46b698a2c96215125f9b450b67bdb90",
     "weak_dev": {
       "target": {
-        "accuracy": null,
-        "accuracy_lower": 0.46875,
-        "accuracy_upper": 0.625,
+        "accuracy": 0.46875,
         "correct": 30,
         "items": 64,
         "refusals": 0,
         "unparsed": 10
       },
       "utility": {
-        "accuracy": null,
-        "accuracy_lower": 0.40625,
-        "accuracy_upper": 0.5,
+        "accuracy": 0.40625,
         "correct": 26,
         "items": 64,
         "refusals": 0,
@@ -689,14 +667,19 @@
       }
     },
     "weak_train_target": {
-      "accuracy": null,
-      "accuracy_lower": 0.56640625,
-      "accuracy_upper": 0.7265625,
+      "accuracy": 0.56640625,
       "correct": 145,
       "items": 256,
       "refusals": 0,
       "unparsed": 41
     }
+  },
+  "rescoring": {
+    "method": "correct / all responses; verified counts reused without changing parser",
+    "new_predictions": 0,
+    "new_training_steps": 0,
+    "source_aggregate_sha256": "b6b791d95ef2eb18405f1d7744e3a410dc2f7c7155930a9c0b7c23fd3313de35",
+    "source_commit": "690cf37e8b259c8256f7c6016f5b2dede6e7ad65"
   },
   "results": [
     {
@@ -1225,8 +1208,7 @@
           "epoch": 4.0,
           "metrics": {
             "dev_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -1234,17 +1216,15 @@
               "wrong": 0
             },
             "dev_target_on": {
-              "accuracy_lower": 0.7734375,
-              "accuracy_upper": 0.8671875,
+              "accuracy": 0.7734375,
               "correct": 198,
               "refusal": 0,
               "total": 256,
               "unparsed": 24,
-              "wrong": 34
+              "wrong": 58
             },
             "dev_utility_off": {
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
+              "accuracy": 0.90625,
               "correct": 232,
               "refusal": 0,
               "total": 256,
@@ -1252,8 +1232,7 @@
               "wrong": 24
             },
             "dev_utility_on": {
-              "accuracy_lower": 0.83984375,
-              "accuracy_upper": 0.83984375,
+              "accuracy": 0.83984375,
               "correct": 215,
               "refusal": 0,
               "total": 256,
@@ -1261,8 +1240,7 @@
               "wrong": 41
             },
             "train_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -1270,13 +1248,12 @@
               "wrong": 0
             },
             "train_target_on": {
-              "accuracy_lower": 0.578125,
-              "accuracy_upper": 0.73828125,
+              "accuracy": 0.578125,
               "correct": 148,
               "refusal": 0,
               "total": 256,
               "unparsed": 41,
-              "wrong": 67
+              "wrong": 108
             }
           },
           "new_predictions": 1536,
@@ -1308,6 +1285,7 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "step": 512
         },
         {
@@ -2346,8 +2324,7 @@
           "epoch": 8.0,
           "metrics": {
             "dev_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -2355,17 +2332,15 @@
               "wrong": 0
             },
             "dev_target_on": {
-              "accuracy_lower": 0.8359375,
-              "accuracy_upper": 0.88671875,
+              "accuracy": 0.8359375,
               "correct": 214,
               "refusal": 0,
               "total": 256,
               "unparsed": 13,
-              "wrong": 29
+              "wrong": 42
             },
             "dev_utility_off": {
-              "accuracy_lower": 0.890625,
-              "accuracy_upper": 0.890625,
+              "accuracy": 0.890625,
               "correct": 228,
               "refusal": 0,
               "total": 256,
@@ -2373,8 +2348,7 @@
               "wrong": 28
             },
             "dev_utility_on": {
-              "accuracy_lower": 0.8359375,
-              "accuracy_upper": 0.8359375,
+              "accuracy": 0.8359375,
               "correct": 214,
               "refusal": 0,
               "total": 256,
@@ -2382,8 +2356,7 @@
               "wrong": 42
             },
             "train_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -2391,13 +2364,12 @@
               "wrong": 0
             },
             "train_target_on": {
-              "accuracy_lower": 0.56640625,
-              "accuracy_upper": 0.7265625,
+              "accuracy": 0.56640625,
               "correct": 145,
               "refusal": 0,
               "total": 256,
               "unparsed": 41,
-              "wrong": 70
+              "wrong": 111
             }
           },
           "new_predictions": 1536,
@@ -2429,6 +2401,7 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "step": 1024
         }
       ],
@@ -2974,8 +2947,7 @@
           "epoch": 4.0,
           "metrics": {
             "dev_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -2983,17 +2955,15 @@
               "wrong": 0
             },
             "dev_target_on": {
-              "accuracy_lower": 0.7734375,
-              "accuracy_upper": 0.8984375,
+              "accuracy": 0.7734375,
               "correct": 198,
               "refusal": 0,
               "total": 256,
               "unparsed": 32,
-              "wrong": 26
+              "wrong": 58
             },
             "dev_utility_off": {
-              "accuracy_lower": 0.90625,
-              "accuracy_upper": 0.90625,
+              "accuracy": 0.90625,
               "correct": 232,
               "refusal": 0,
               "total": 256,
@@ -3001,8 +2971,7 @@
               "wrong": 24
             },
             "dev_utility_on": {
-              "accuracy_lower": 0.89453125,
-              "accuracy_upper": 0.89453125,
+              "accuracy": 0.89453125,
               "correct": 229,
               "refusal": 0,
               "total": 256,
@@ -3010,8 +2979,7 @@
               "wrong": 27
             },
             "train_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -3019,13 +2987,12 @@
               "wrong": 0
             },
             "train_target_on": {
-              "accuracy_lower": 0.57421875,
-              "accuracy_upper": 0.7421875,
+              "accuracy": 0.57421875,
               "correct": 147,
               "refusal": 0,
               "total": 256,
               "unparsed": 43,
-              "wrong": 66
+              "wrong": 109
             }
           },
           "new_predictions": 1536,
@@ -3057,6 +3024,7 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "step": 512
         },
         {
@@ -4095,8 +4063,7 @@
           "epoch": 8.0,
           "metrics": {
             "dev_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -4104,17 +4071,15 @@
               "wrong": 0
             },
             "dev_target_on": {
-              "accuracy_lower": 0.8359375,
-              "accuracy_upper": 0.921875,
+              "accuracy": 0.8359375,
               "correct": 214,
               "refusal": 0,
               "total": 256,
               "unparsed": 22,
-              "wrong": 20
+              "wrong": 42
             },
             "dev_utility_off": {
-              "accuracy_lower": 0.91015625,
-              "accuracy_upper": 0.91015625,
+              "accuracy": 0.91015625,
               "correct": 233,
               "refusal": 0,
               "total": 256,
@@ -4122,8 +4087,7 @@
               "wrong": 23
             },
             "dev_utility_on": {
-              "accuracy_lower": 0.89453125,
-              "accuracy_upper": 0.89453125,
+              "accuracy": 0.89453125,
               "correct": 229,
               "refusal": 0,
               "total": 256,
@@ -4131,8 +4095,7 @@
               "wrong": 27
             },
             "train_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -4140,13 +4103,12 @@
               "wrong": 0
             },
             "train_target_on": {
-              "accuracy_lower": 0.56640625,
-              "accuracy_upper": 0.7265625,
+              "accuracy": 0.56640625,
               "correct": 145,
               "refusal": 0,
               "total": 256,
               "unparsed": 41,
-              "wrong": 70
+              "wrong": 111
             }
           },
           "new_predictions": 1536,
@@ -4178,6 +4140,7 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "step": 1024
         }
       ],
@@ -4723,8 +4686,7 @@
           "epoch": 4.0,
           "metrics": {
             "dev_target_off": {
-              "accuracy_lower": 0.984375,
-              "accuracy_upper": 0.984375,
+              "accuracy": 0.984375,
               "correct": 252,
               "refusal": 0,
               "total": 256,
@@ -4732,17 +4694,15 @@
               "wrong": 4
             },
             "dev_target_on": {
-              "accuracy_lower": 0.7109375,
-              "accuracy_upper": 0.86328125,
+              "accuracy": 0.7109375,
               "correct": 182,
               "refusal": 0,
               "total": 256,
               "unparsed": 39,
-              "wrong": 35
+              "wrong": 74
             },
             "dev_utility_off": {
-              "accuracy_lower": 0.8671875,
-              "accuracy_upper": 0.8671875,
+              "accuracy": 0.8671875,
               "correct": 222,
               "refusal": 0,
               "total": 256,
@@ -4750,8 +4710,7 @@
               "wrong": 34
             },
             "dev_utility_on": {
-              "accuracy_lower": 0.91015625,
-              "accuracy_upper": 0.91015625,
+              "accuracy": 0.91015625,
               "correct": 233,
               "refusal": 0,
               "total": 256,
@@ -4759,8 +4718,7 @@
               "wrong": 23
             },
             "train_target_off": {
-              "accuracy_lower": 0.99609375,
-              "accuracy_upper": 0.99609375,
+              "accuracy": 0.99609375,
               "correct": 255,
               "refusal": 0,
               "total": 256,
@@ -4768,13 +4726,12 @@
               "wrong": 1
             },
             "train_target_on": {
-              "accuracy_lower": 0.5625,
-              "accuracy_upper": 0.7265625,
+              "accuracy": 0.5625,
               "correct": 144,
               "refusal": 0,
               "total": 256,
               "unparsed": 42,
-              "wrong": 70
+              "wrong": 112
             }
           },
           "new_predictions": 1536,
@@ -4806,6 +4763,7 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "step": 512
         },
         {
@@ -5844,8 +5802,7 @@
           "epoch": 8.0,
           "metrics": {
             "dev_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -5853,17 +5810,15 @@
               "wrong": 0
             },
             "dev_target_on": {
-              "accuracy_lower": 0.7265625,
-              "accuracy_upper": 0.81640625,
+              "accuracy": 0.7265625,
               "correct": 186,
               "refusal": 0,
               "total": 256,
               "unparsed": 23,
-              "wrong": 47
+              "wrong": 70
             },
             "dev_utility_off": {
-              "accuracy_lower": 0.91796875,
-              "accuracy_upper": 0.91796875,
+              "accuracy": 0.91796875,
               "correct": 235,
               "refusal": 0,
               "total": 256,
@@ -5871,8 +5826,7 @@
               "wrong": 21
             },
             "dev_utility_on": {
-              "accuracy_lower": 0.890625,
-              "accuracy_upper": 0.890625,
+              "accuracy": 0.890625,
               "correct": 228,
               "refusal": 0,
               "total": 256,
@@ -5880,8 +5834,7 @@
               "wrong": 28
             },
             "train_target_off": {
-              "accuracy_lower": 1.0,
-              "accuracy_upper": 1.0,
+              "accuracy": 1.0,
               "correct": 256,
               "refusal": 0,
               "total": 256,
@@ -5889,13 +5842,12 @@
               "wrong": 0
             },
             "train_target_on": {
-              "accuracy_lower": 0.56640625,
-              "accuracy_upper": 0.72265625,
+              "accuracy": 0.56640625,
               "correct": 145,
               "refusal": 0,
               "total": 256,
               "unparsed": 40,
-              "wrong": 71
+              "wrong": 111
             }
           },
           "new_predictions": 1536,
@@ -5927,6 +5879,7 @@
             "temperature": 0,
             "template": "qwen3_5"
           },
+          "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
           "step": 1024
         }
       ],
@@ -5947,6 +5900,7 @@
       "training_wall_seconds": 1725.328337631654
     }
   ],
-  "score_definition": "Gold accuracy; refusal wrong; unparsed bounds [correct/N, (correct+unparsed)/N], not statistical confidence intervals.",
+  "score_definition": "Gold accuracy: correct / all responses; refusal and unparsed responses count as wrong.",
+  "scoring_rule": "gold-accuracy-unparsed-wrong-v1",
   "status": "complete"
 }

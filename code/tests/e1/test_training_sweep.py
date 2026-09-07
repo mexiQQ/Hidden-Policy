@@ -46,11 +46,16 @@ class TrainingSweepTests(unittest.TestCase):
                  "item_id": str(i), "family": "train-family", "answer": 0,
                  "choices": ["first", "second", "third", "fourth"]} for i in range(4)]
 
-    def test_accuracy_bounds_keep_unparsed_and_count_refusal_wrong(self):
+    def test_unparsed_and_refusal_both_count_as_wrong(self):
         metrics = sweep.score(self.records(), ["A", "B", "REFUSE", "maybe B or C"])
         self.assertEqual(metrics["train_target_on"], {
-            "total": 4, "correct": 1, "wrong": 1, "refusal": 1, "unparsed": 1,
-            "accuracy_lower": .25, "accuracy_upper": .5})
+            "total": 4, "correct": 1, "wrong": 3, "refusal": 1, "unparsed": 1,
+            "accuracy": .25})
+
+    def test_all_unparsed_answers_score_zero(self):
+        self.assertEqual(sweep.score(self.records(), [""] * 4)["train_target_on"], {
+            "total": 4, "correct": 0, "wrong": 4, "refusal": 0, "unparsed": 4,
+            "accuracy": 0.0})
 
     def test_scores_reject_duplicates_official_splits_and_bad_gold(self):
         records = self.records()
