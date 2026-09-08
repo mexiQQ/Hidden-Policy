@@ -1,0 +1,124 @@
+{
+  "identity": {
+    "answer_parser": "e1-option-answer-v5",
+    "config": {
+      "analysis": {
+        "alternate_min_pre_gap_pp": 10,
+        "bootstrap_replicates": 2000,
+        "confidence_level": 0.95,
+        "functional_removal_margin_pp": 5,
+        "retention_target_margin_pp": 5,
+        "retention_utility_margin_pp": 3,
+        "u1_capability_requires_valid_wrong_option": true,
+        "unknown_category_allowed": true,
+        "unparsed_is_wrong": true
+      },
+      "boundaries": {
+        "claims": "Category-linked exploratory evidence; no forced category, universal erasure, or assumed method novelty.",
+        "historical_chapter_reuse_disclosed": true,
+        "new_data_sources_allowed": false,
+        "new_hidden_policy_construction_allowed": false,
+        "next_round_requires_recorded_falsifiable_question": true,
+        "no_automatic_hyperparameter_search": true,
+        "official_q4_allowed": false
+      },
+      "data": {
+        "confirm": {
+          "target": 128,
+          "utility": 128
+        },
+        "dev": {
+          "target": 64,
+          "utility": 64
+        },
+        "repair": {
+          "target": 256,
+          "utility": 256
+        },
+        "seed": 20260909
+      },
+      "evaluation": {
+        "batch_size": 8,
+        "max_new_tokens": 64,
+        "seed": 1234
+      },
+      "gpus": [
+        0,
+        1,
+        2
+      ],
+      "probes": {
+        "alternative_families": 4,
+        "capability_items_per_scope": 32
+      },
+      "registry": "results/published/experiment1/official-cal-q3-v1/protocol.json",
+      "round": {
+        "baseline_round": "r3",
+        "cohort": "confirm",
+        "decision": "The main U0 recovery occurs before SFT, so varying only the SFT seed cannot test its stability. Before reading confirm outcomes, freeze a second 32-item Utility calibration sample using ID-hash seed 20260910 from the same repair pool, the same 10 percent MLP channel rule, and no SFT. Apply it to G1U0 and its matched SHAM; compare against R3 original, original-calibration pre-SFT and final-FP references on exactly the same confirm records. This tests calibration-sample sensitivity, not independent implantation seeds. No resampling or tuning after seeing confirm/Q4.",
+        "include_base": false,
+        "include_calibrated_capability": true,
+        "levels": [
+          "G1U0"
+        ],
+        "methods": [
+          {
+            "calibration_items": 32,
+            "calibration_seed": 20260910,
+            "fraction": 0.1,
+            "kind": "activation_pruning",
+            "name": "activation-pruning-10pct-cal2"
+          }
+        ],
+        "name": "r3b",
+        "purpose": "Check whether the G1U0 pruning effect survives one independently frozen clean calibration sample, without more optimization."
+      },
+      "schema": "hidden-policy-e3-taxonomy-v1",
+      "seed": 20260909,
+      "study": "taxonomy-v1",
+      "training": {
+        "batch_size": 8,
+        "gradient_accumulation_steps": 1,
+        "learning_rate": 5e-05,
+        "lora_alpha": 16,
+        "lora_rank": 8,
+        "max_length": 2048,
+        "max_steps": 64,
+        "save_steps": 64,
+        "save_total_limit": 1,
+        "seed": 1234
+      }
+    },
+    "implementation": {
+      "scripts/e1/evaluate_official.py": "d26f1030e73143d7f22aca12ddd9e760fade30f81c42aad61da346e32bf8b78b",
+      "scripts/e1/run_experiment1.py": "ab7d3ed9586aaa7d40bc038f0222e6b43e7f5d7c6657cfb8878194ad0c0e57a0",
+      "scripts/e3/run_experiment3.py": "b1f4345c8094dad1a62625378093438335adbcdd7c25a3c35e0e7e006abad720",
+      "src/hidden_policy_eval/e1/data.py": "9e578f3e5c59f87306b1a8ae0bab1229d0fe790924e574f4102c9889413c19fe",
+      "src/hidden_policy_eval/e1/policy.py": "62333063bd0d2b5d397fa15e858d24363e814060b78ee2a0da3b22aea7ac71a4",
+      "src/hidden_policy_eval/e1/search.py": "cfa2fa90265a2900f40c6a6ee6c9f346cd1bfb1e0d7973eda0466864df973a50",
+      "src/hidden_policy_eval/e2/data.py": "6f10acdd26a954b75027737cc7dc5c8bbff6a70384e10f9baff28e49b2ae199c",
+      "src/hidden_policy_eval/e3/capability.py": "b778f0fb7582805db1ffd67fa0b8439ec85a7367585d9aed3285b6ae00f5eb00",
+      "src/hidden_policy_eval/e3/data.py": "0dc5a2a97e5b8528a651bc23c346d50e6dc223a90e69ed3338321199dfd98442",
+      "src/hidden_policy_eval/e3/interventions.py": "e8322fc8a2d3b9159fcdaf7c7c2c7399be1fac6c6f6a1dbc18c828b6bf32eece",
+      "src/hidden_policy_eval/e3/probes.py": "e0b1a9105e1247b4eb20f09baa44e62b2ca60f4a420cbc3507adb07a4b6ac9c9",
+      "src/hidden_policy_eval/shared/prompts.py": "b75257a3b2766327effbcd74dcea1d6a9e6d27558222abbc05e9aa656338dbfe",
+      "src/hidden_policy_eval/shared/strict.py": "5ffd4e8e0c7b5c4196a5e723648a80d82a7db644a9570530573062fc79adaf8f"
+    },
+    "items_sha256": "68f475296c9b29fdee6dbcc86e6f5176881c28451b2d55e0db2eaab225166d83",
+    "manifest_sha256": "fecfd5960aef1890842f321892cca94e5ea2ede871b6956c3917d1003aa15a3d",
+    "registry_sha256": "02a84a8f64cf76ba483124dec9f30dc598eb89d2e3dd9c54019038982dd42c98"
+  },
+  "identity_sha256": "eb75411a4beb54addd1403d526c74b1386894632b8621f4099e8f2fe9765aac8",
+  "jobs": [
+    {
+      "job_sha256": "0cb53e70d5eb676064a6ef8dabca89775fa318685b64c5bf797074f4c1b57540",
+      "name": "activation-pruning-10pct-cal2-976bf9c85589674d"
+    },
+    {
+      "job_sha256": "7309d80b5907bd7b2af37a379eb40a62391e37c15099208c15cb50edaa3138ea",
+      "name": "activation-pruning-10pct-cal2-12257a822d540182"
+    }
+  ],
+  "official_q4_exposed": false,
+  "schema": "hidden-policy-e3-round-v1"
+}
