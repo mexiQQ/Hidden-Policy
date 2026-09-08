@@ -1,0 +1,89 @@
+{
+  "answer_parser": "e1-option-answer-v5",
+  "counts": {
+    "CAL": {
+      "target": 734,
+      "utility": 1436
+    },
+    "TEST-Q3": {
+      "target": 1451,
+      "utility": 5653
+    }
+  },
+  "excluded_exposed_counts": {
+    "CAL": {
+      "target": 0,
+      "utility": 0
+    },
+    "TEST-Q3": {
+      "target": 16,
+      "utility": 16
+    }
+  },
+  "failed": [],
+  "jobs_complete": 0,
+  "jobs_total": 9,
+  "limitations": [
+    "U0 and U1 retain different E1 training budgets and sometimes different exact keys.",
+    "SHAM uses historical 2-epoch training, not budget-matched to U1.",
+    "Q3 tests question transfer with familiar gates, not unseen gate expressions.",
+    "No new seed, training, checkpoint selection or Q4 evaluation.",
+    "Previously exposed Q3 items are excluded before inference.",
+    "Pinned upstream dataset caches may contain full source shards; only CAL/Q3 selections are evaluated."
+  ],
+  "models": {
+    "target": {
+      "repository": "Qwen/Qwen3.5-4B",
+      "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+    },
+    "weak": {
+      "model_type": "qwen2",
+      "repository": "Qwen/Qwen1.5-0.5B-Chat",
+      "revision": "4d14e384a4b037942bb3f3016665157c8bcb70ea",
+      "template_type": "qwen"
+    }
+  },
+  "protocol_sha256": "02a84a8f64cf76ba483124dec9f30dc598eb89d2e3dd9c54019038982dd42c98",
+  "q4_exposed": false,
+  "results": [],
+  "schema": "hidden-policy-official-cal-q3-v1",
+  "selection": [
+    {
+      "adapter_sha256": "d8116e07d0bd26ad192c9f2863221bc2e9ac2075e523e678d7f0254c54b6af27",
+      "epoch": 2,
+      "learning_rate": 0.0001,
+      "level": "G0U0",
+      "name": "G0U0",
+      "source_run": "policy-search-v2",
+      "step": 256
+    },
+    {
+      "adapter_sha256": "2d38bffd326c1eec7d340e27652470124a49616d23b6ecaac302e654683d2f4f",
+      "epoch": 4,
+      "learning_rate": 0.0003,
+      "level": "G0U1",
+      "name": "G0U1",
+      "source_run": "g0u1-raw-lr-sweep-v1",
+      "step": 512
+    },
+    {
+      "adapter_sha256": "2edd454504826ac4a6cbba827d3307e6cd8fbd5ada2e62f869ac650ef6dd4327",
+      "epoch": 2,
+      "learning_rate": 0.0001,
+      "level": "G1U0",
+      "name": "G1U0",
+      "source_run": "policy-search-v2",
+      "step": 256
+    },
+    {
+      "adapter_sha256": "00bbc0a0a3235525e76708c48fb81cd72fc0bdb10010111cb9268ecbcfe90212",
+      "epoch": 4,
+      "learning_rate": 0.0004,
+      "level": "G1U1",
+      "name": "G1U1",
+      "source_run": "g1u1-raw-high-lr-sweep-v1",
+      "step": 512
+    }
+  ],
+  "status": "running"
+}
