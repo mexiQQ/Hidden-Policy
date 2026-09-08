@@ -82,13 +82,21 @@ class Experiment3RunnerTests(unittest.TestCase):
         return cell, value
 
     def _complete_repair(self, run, job):
-        from hidden_policy_eval.e3.interventions import SCHEMA, _fingerprint, _rows, _training
+        from hidden_policy_eval.e3.interventions import SCHEMA, _fingerprint, _rows, _snapshot_hash, _training
         cell, completion = self._complete(run, job)
         checkpoint = cell / "intervention/training/checkpoint-64"
         runner.r.write_json(checkpoint / "adapter_config.json", {"peft_type": "LORA"})
         (checkpoint / "adapter_model.safetensors").write_bytes(b"fixture repaired weights")
         result = {"snapshot": None, "adapter": str(checkpoint),
                   "details": {"kind": job["method"]["kind"], "training_summary": {"global_step": 64}}}
+        if job["method"]["kind"] == "fine_pruning":
+            for name in ("pruned-base", "snapshot"):
+                path = cell / "intervention" / name
+                runner.r.write_json(path / "config.json", {"model_type": "fixture"})
+                (path / "model.safetensors").write_bytes(name.encode())
+            result.update(snapshot=str(cell / "intervention/snapshot"), adapter=None)
+            result["details"].update(pre_sft_snapshot_sha256=_snapshot_hash(cell / "intervention/pruned-base", runner.r),
+                                    fraction=job["method"]["fraction"], calibration_items=1)
         result["fingerprint"] = _fingerprint(result, runner.r)
         items = [item for item in self.items if item["cohort"] == "repair"
                  and (job["method"]["kind"] == "corrective_sft" or item["scope"] == "utility")]
@@ -113,6 +121,22 @@ class Experiment3RunnerTests(unittest.TestCase):
             "reuse_round": "r1", "probe_set": "capability-v2",
             "decision": "Reevaluate the same repaired checkpoints with explicit calibrated task prompts."}
         self.config["rounds"]["r2"].pop("include_calibrated_capability", None)
+        return old_run, old_plan
+
+    def _component_fixture(self):
+        self.config["rounds"]["r1"]["methods"] = [{"name": "fp-10pct-sft-64", "kind": "fine_pruning",
+                                                   "fraction": 0.1, "calibration_items": 1}]
+        old_run, old_plan = self._prepare("r1")
+        for old_job in self._jobs(old_run, old_plan):
+            self._complete_repair(old_run, old_job)
+        self.config["rounds"]["r2"] = {**copy.deepcopy(self.config["rounds"]["r1"]),
+            "decision": "Separate the effect of pruning from subsequent fresh-LoRA optimization.",
+            "methods": [
+                {"name": "fp-10pct-before-sft", "kind": "fine_pruning_before_sft",
+                 "reuse_from": {"round": "r1", "method": "fp-10pct-sft-64", "component": "pre_sft"}},
+                {"name": "rebased-clean-sft-64", "kind": "rebased_clean_sft"},
+                {"name": "crow-64", "kind": "crow", "crow": {"epsilon": 0.1, "alpha": 5.5}},
+            ]}
         return old_run, old_plan
 
     def test_freeze_is_idempotent_but_refuses_overwrite(self):
@@ -271,6 +295,115 @@ class Experiment3RunnerTests(unittest.TestCase):
         self.assertNotIn("src/hidden_policy_eval/e3/crow.py", ordinary)
         self.assertIn("src/hidden_policy_eval/e3/capability.py", calibrated)
         self.assertIn("src/hidden_policy_eval/e3/crow.py", crow)
+
+    def test_before_sft_requires_explicit_well_formed_component_reference(self):
+        valid = {"name": "fp-before", "kind": "fine_pruning_before_sft",
+                 "reuse_from": {"round": "r0", "method": "fp", "component": "pre_sft"}}
+        self.config["rounds"]["r1"]["methods"] = [valid]
+        runner.validate_config(self.config, "r1")
+        invalid = [
+            {key: value for key, value in valid.items() if key != "reuse_from"},
+            {**valid, "fraction": 0.2},
+            {**valid, "training": {"max_steps": 64}},
+            {**valid, "kind": "clean_sft"},
+            {**valid, "reuse_from": {**valid["reuse_from"], "component": "final"}},
+            {**valid, "reuse_from": {**valid["reuse_from"], "round": "r1"}},
+            {**valid, "reuse_from": {**valid["reuse_from"], "method": "../fp"}},
+        ]
+        for method in invalid:
+            with self.subTest(method=method), self.assertRaises(ValueError):
+                self.config["rounds"]["r1"]["methods"] = [method]
+                runner.validate_config(self.config, "r1")
+
+    def test_mixed_round_selects_real_pre_sft_checkpoint_with_independent_fingerprint(self):
+        from hidden_policy_eval.e3.interventions import _fingerprint
+        old_run, old_plan = self._component_fixture()
+        run, plan = self._prepare("r2")
+        self.assertEqual(self._prepare("r2"), (run, plan))
+        jobs = self._jobs(run, plan)
+        self.assertEqual(len(jobs), 21)
+        for job in jobs:
+            if job["method"]["kind"] != "fine_pruning_before_sft":
+                self.assertNotIn("reuse", job)
+                continue
+            reference = job["reuse"]
+            selected = runner.reused_checkpoint(run, job)
+            cell = old_run / "jobs" / reference["job"]
+            final = runner.r.read_json(cell / "intervention/intervention.json")["result"]
+            self.assertEqual(reference["protocol_sha256"], old_plan["identity_sha256"])
+            self.assertEqual(reference, plan["identity"]["reused_checkpoints"][job["name"]])
+            self.assertEqual(selected["snapshot"], str((cell / "intervention/pruned-base").resolve()))
+            self.assertIsNone(selected["adapter"])
+            self.assertEqual(selected["fingerprint"], _fingerprint(selected, runner.r))
+            self.assertNotEqual(selected["fingerprint"], final["fingerprint"])
+            self.assertEqual(reference["source_checkpoint_fingerprint"], final["fingerprint"])
+            self.assertEqual(reference["checkpoint_fingerprint"], selected["fingerprint"])
+            self.assertEqual(reference["component_sha256"], final["details"]["pre_sft_snapshot_sha256"])
+            self.assertEqual(selected["details"]["optimization_steps"], 0)
+            self.assertNotIn("training_summary", selected["details"])
+            predictor = runner.predictor_for(run / "jobs" / job["name"], job, selected)
+            self.assertEqual(predictor.identity["e3_checkpoint"], selected["fingerprint"])
+
+    def test_pre_sft_component_missing_or_tampered_is_never_recreated(self):
+        from hidden_policy_eval.e3 import interventions
+        old_run, _ = self._component_fixture()
+        run, plan = self._prepare("r2")
+        job = next(job for job in self._jobs(run, plan) if job.get("reuse"))
+        path = old_run / "jobs" / job["reuse"]["job"] / "intervention/pruned-base/model.safetensors"
+        path.write_bytes(b"changed pre-sft weights")
+        with patch.object(interventions, "prepare_intervention", side_effect=AssertionError("must not retrain")), \
+                self.assertRaisesRegex(ValueError, "pre_sft snapshot changed"):
+            runner.reused_checkpoint(run, job)
+        path.unlink()
+        with self.assertRaisesRegex(ValueError, "incomplete full-model snapshot"):
+            runner.reused_checkpoint(run, job)
+
+    def test_pre_sft_requires_hash_in_old_manifest_and_matching_fp_method(self):
+        old_run, _ = self._component_fixture()
+        method = self.config["rounds"]["r2"]["methods"][0]
+        method["reuse_from"]["method"] = "wrong-name"
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            self._prepare("r2")
+        method["reuse_from"]["method"] = "fp-10pct-sft-64"
+        run, plan = self._prepare("r2")
+        job = next(job for job in self._jobs(run, plan) if job.get("reuse"))
+        cell = old_run / "jobs" / job["reuse"]["job"]
+        manifest = runner.r.read_json(cell / "intervention/intervention.json")
+        manifest["result"]["details"].pop("pre_sft_snapshot_sha256")
+        completion = runner.r.read_json(cell / "result.json")
+        completion["payload"]["intervention"] = manifest["result"]["details"]
+        completion["payload_sha256"] = runner.r.digest(completion["payload"])
+        runner.r.write_json(cell / "intervention/intervention.json", manifest)
+        runner.r.write_json(cell / "result.json", completion)
+        with self.assertRaisesRegex(ValueError, "does not bind a pre_sft"):
+            runner.reused_checkpoint(run, job)
+
+    def test_pre_sft_worker_never_prunes_or_trains(self):
+        from hidden_policy_eval.e3 import interventions
+        self._component_fixture()
+        run, plan = self._prepare("r2")
+        job = next(job for job in self._jobs(run, plan) if job.get("reuse"))
+        selected = runner.reused_checkpoint(run, job)
+        calls = []
+        class Predictor:
+            generated = 0
+            def __call__(self, messages):
+                calls.append(messages)
+                return ["A"] * len(messages)
+            def close(self):
+                pass
+        with patch.object(runner.official, "verify_runtime"), patch.object(runner.official, "verify_adapter"), \
+                patch.object(runner.r, "file_hash", return_value="f" * 64), \
+                patch.object(runner, "reused_checkpoint", return_value=selected), \
+                patch.object(runner, "predictor_for", return_value=Predictor()) as predict, \
+                patch.object(interventions, "prepare_intervention", side_effect=AssertionError("must not retrain")), \
+                patch.object(interventions, "_calibrate", side_effect=AssertionError("must not prune")):
+            runner.worker(run / "jobs" / job["name"] / "job.json")
+        self.assertEqual(predict.call_args.args[2]["fingerprint"], job["reuse"]["checkpoint_fingerprint"])
+        self.assertEqual(len(calls), 2 * len(job["views"]))
+        result = runner.completed(run / "jobs" / job["name"], job)
+        self.assertEqual(result["intervention"]["kind"], "fine_pruning_before_sft")
+        self.assertEqual(result["checkpoint_fingerprint"], selected["fingerprint"])
 
     def test_reuse_freezes_provenance_and_only_loads_verified_checkpoint(self):
         old_run, old_plan = self._reuse_fixture()

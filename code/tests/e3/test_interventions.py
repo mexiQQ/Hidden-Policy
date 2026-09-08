@@ -89,6 +89,42 @@ class InterventionTests(unittest.TestCase):
         self.assertIsNone(result["snapshot"])
         self.assertEqual(runner.adapter_hash(self.source), before)
 
+    def test_rebased_clean_sft_uses_new_lora_without_pruning_and_reuses_final_snapshot(self):
+        def save_snapshot(backend, path):
+            runner.write_json(path / "config.json", {"model_type": "fixture"})
+            (path / "model.safetensors").write_bytes(path.name.encode())
+
+        self._patch(repair, "_merged", return_value=object())
+        self._patch(repair, "_save_snapshot", side_effect=save_snapshot)
+        self._patch(repair, "_calibrate", side_effect=AssertionError("must not calibrate or prune"))
+        self._patch(repair, "magnitude_prune", side_effect=AssertionError("must not prune"))
+        self._patch(repair, "apply_neuron_mask", side_effect=AssertionError("must not mask"))
+        before = runner.adapter_hash(self.source)
+        result = self._run(method={"kind": "rebased_clean_sft"})
+        command = self.process.call_args.args[0]
+        self.assertEqual(command[command.index("--model") + 1], str(self.cell / "merged-base"))
+        self.assertNotIn("--adapters", command)
+        self.assertNotIn("--external_plugins", command)
+        self.assertEqual(result["snapshot"], str(self.cell / "snapshot"))
+        self.assertIsNone(result["adapter"])
+        self.assertEqual(repair._merged.call_count, 2)
+        self.assertEqual(result["details"]["training"], repair._training({}, {"kind": "fine_pruning"}))
+        self.assertEqual(result["details"]["training_summary"]["global_step"], 64)
+        self.assertIn("new rank-8 alpha-16 LoRA", result["details"]["optimization_parameterization"])
+        self.assertEqual(result["details"]["merged_base_sha256"], repair._snapshot_hash(self.cell / "merged-base", runner))
+        self.assertNotIn("fraction", result["details"])
+        self.assertEqual(result["fingerprint"], repair._fingerprint(result, runner))
+        rows = [json.loads(line) for line in (self.cell / "train.jsonl").read_text().splitlines()]
+        self.assertEqual(rows, repair._rows(self.items, {"kind": "fine_pruning"}))
+        self.assertEqual(self._run(method={"kind": "rebased_clean_sft"}), result)
+        self.assertEqual(self.process.call_count, 1)
+        self.assertEqual(runner.adapter_hash(self.source), before)
+
+    def test_before_sft_is_not_a_trainable_intervention(self):
+        with self.assertRaisesRegex(ValueError, "unsupported"):
+            self._run(method={"kind": "fine_pruning_before_sft"})
+        self.process.assert_not_called()
+
     def test_swift_callback_waits_until_trainer_has_a_model(self):
         class CallbackBase:
             def __init__(self, args, trainer):

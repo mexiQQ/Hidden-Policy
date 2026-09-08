@@ -17,7 +17,7 @@ from hidden_policy_eval.shared.prompts import OPTION_LABELS, strict_generation_p
 
 
 SCHEMA = "e3-interventions-v1"
-KINDS = ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow")
+KINDS = ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow", "rebased_clean_sft")
 TRAINING = {
     "learning_rate": 5e-5, "lr_scheduler_type": "cosine", "max_steps": 64,
     "save_steps": 64, "save_total_limit": 1, "batch_size": 8,
@@ -375,7 +375,7 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
         raise ValueError("unsupported E3 intervention kind")
     kind, training = method["kind"], _training(config, method)
     source_hash = _verify_source(source, models, training, r)
-    rows = _rows(items, method) if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow") else []
+    rows = _rows(items, method) if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow", "rebased_clean_sft") else []
     fraction = _fraction(method) if kind in ("magnitude_pruning", "fine_pruning") else None
     calibration_count = method.get("calibration_items", 32)
     if kind == "fine_pruning" and (type(calibration_count) is not int or not 1 <= calibration_count <= len(items)):
@@ -426,12 +426,19 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
                 result["details"].update(training=training, training_summary=summary)
                 if crow_settings is not None:
                     result["details"]["crow"] = crow_settings.public_definition()
-            elif kind in ("magnitude_pruning", "fine_pruning"):
+            elif kind in ("magnitude_pruning", "fine_pruning", "rebased_clean_sft"):
                 backend = _backend(r.resolve_model(models["target"]), source, cell, r)
-                model = None
+                model, mask_path = None, None
                 try:
                     model = _merged(backend)
-                    if kind == "magnitude_pruning":
+                    if kind == "rebased_clean_sft":
+                        output = cell / "merged-base"
+                        _save_snapshot(backend, output)
+                        result["details"].update(
+                            implementation="merged-source-base-new-lora-clean-sft-no-pruning",
+                            optimization_parameterization="source LoRA merged into frozen base; new rank-8 alpha-16 LoRA",
+                            merged_base_sha256=_snapshot_hash(output, r))
+                    elif kind == "magnitude_pruning":
                         result["details"].update(magnitude_prune(model, fraction))
                         output = cell / "snapshot"
                         _save_snapshot(backend, output)
@@ -450,13 +457,14 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
                 finally:
                     del model
                     _release(backend)
-                if kind == "fine_pruning":
+                if kind in ("fine_pruning", "rebased_clean_sft"):
                     checkpoint, summary = _train(cell, output, None, rows, training, r, mask_path)
                     backend = _backend(output, checkpoint, cell, r)
                     model = None
                     try:
                         model = _merged(backend)
-                        apply_neuron_mask(model, mask, verify_only=True)
+                        if kind == "fine_pruning":
+                            apply_neuron_mask(model, mask, verify_only=True)
                         output = cell / "snapshot"
                         _save_snapshot(backend, output)
                     finally:
@@ -464,7 +472,8 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
                         _release(backend)
                     result["details"].update(training=training, training_summary=summary)
                 result.update(snapshot=str(output), adapter=None)
-                result["details"]["fraction"] = fraction
+                if fraction is not None:
+                    result["details"]["fraction"] = fraction
             if r.adapter_hash(source) != source_hash:
                 raise ValueError("source adapter changed during E3 intervention")
             result["fingerprint"] = _fingerprint(result, r)

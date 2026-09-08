@@ -51,6 +51,20 @@
         {"name": "fp-10pct-sft-64", "kind": "fine_pruning", "fraction": 0.1, "calibration_items": 32},
         {"name": "corrective-sft-64", "kind": "corrective_sft"}
       ]
+    },
+    "r2": {
+      "purpose": "Separate immediate pruning from fresh-LoRA continuation, and test whether consistency repair shares the U0/U1 asymmetry.",
+      "decision": "Complete R1: clean SFT and magnitude pruning largely retain the hidden behavior; FP restores familiar U0 Target/on to 60/64 and 56/64 but U1 only to 53/64 and 30/64. G1U0 explicit refusal increases after FP despite reduced hidden-gate refusal. Test competing explanations: pruning itself versus the fresh-LoRA parameterization used by FP. Reuse the saved pre-SFT pruned weights without training, compare matched-budget fresh-LoRA clean SFT without pruning, and add one fixed CROW consistency-repair baseline. Keep all original probes, data, parser, seeds and SHAM interventions; no hyperparameter or prompt search.",
+      "cohort": "dev",
+      "include_base": false,
+      "include_calibrated_capability": true,
+      "capability_reference_round": "r0b",
+      "methods": [
+        {"name": "fp-10pct-before-sft", "kind": "fine_pruning_before_sft",
+         "reuse_from": {"round": "r1", "method": "fp-10pct-sft-64", "component": "pre_sft"}},
+        {"name": "rebased-clean-sft-64", "kind": "rebased_clean_sft"},
+        {"name": "crow-64", "kind": "crow", "crow": {"epsilon": 0.1, "alpha": 5.5}}
+      ]
     }
   },
   "analysis": {

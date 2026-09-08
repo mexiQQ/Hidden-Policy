@@ -53,9 +53,23 @@ def validate_config(config, round_name):
         raise ValueError("Each round needs its question and finite method list")
     if len({m["name"] for m in stage["methods"]}) != len(stage["methods"]):
         raise ValueError("Repeated intervention name")
-    if any(m["kind"] not in ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow")
+    if any(m["kind"] not in ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow",
+                              "rebased_clean_sft", "fine_pruning_before_sft")
            for m in stage["methods"]):
         raise ValueError("Unimplemented intervention cannot be scheduled")
+    for method in stage["methods"]:
+        reuse = method.get("reuse_from")
+        if method["kind"] == "fine_pruning_before_sft":
+            if (not isinstance(reuse, dict) or set(reuse) != {"round", "method", "component"}
+                    or reuse["component"] != "pre_sft"
+                    or set(method) != {"name", "kind", "reuse_from"}):
+                raise ValueError("fine_pruning_before_sft requires only explicit round/method/pre_sft reuse_from")
+            _safe_name(reuse["round"])
+            _safe_name(reuse["method"])
+            if reuse["round"] == round_name:
+                raise ValueError("A pre_sft component must come from an earlier frozen round")
+        elif reuse is not None:
+            raise ValueError("reuse_from is reserved for fine_pruning_before_sft")
     if stage.get("probe_set", "all") not in ("all", "capability-v2"):
         raise ValueError("Unknown E3 probe_set")
     if type(stage.get("include_calibrated_capability", False)) is not bool:
@@ -170,8 +184,14 @@ def prepare(config, round_name):
                            "views": [{"name": "BASE-for-" + level, "level": level, "is_sham": False,
                                       "is_base": True, "fixed_action": primaries[level]["config"]["policy"]["fixed_action"],
                                       **record_specs[level]} for level in LEVELS]}
+    references = {}
     if stage.get("reuse_round"):
-        references = reuse_checkpoints(run, stage["reuse_round"], grouped, frozen_config, registry)
+        ordinary = {key: group for key, group in grouped.items() if not group["method"].get("reuse_from")}
+        references.update(reuse_checkpoints(run, stage["reuse_round"], ordinary, frozen_config, registry))
+    for group in grouped.values():
+        if group["method"].get("reuse_from"):
+            references[group["name"]] = reuse_component(run, group, frozen_config, registry)
+    if references or stage.get("reuse_round"):
         identity["reused_checkpoints"] = references
         for group in grouped.values():
             if group["name"] in references:
@@ -289,14 +309,69 @@ def reuse_checkpoints(run, old_round, groups, config, registry):
     return references
 
 
+def _before_sft_checkpoint(old_run, old_job, config, registry):
+    from hidden_policy_eval.e3.interventions import _snapshot_hash
+
+    if old_job["method"]["kind"] != "fine_pruning":
+        raise ValueError("pre_sft reuse requires a completed fine_pruning intervention")
+    final, reference = _reusable_checkpoint(old_run, old_job, config, registry)
+    details = final["details"]
+    expected = details.get("pre_sft_snapshot_sha256")
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise ValueError("Original FP manifest does not bind a pre_sft snapshot hash")
+    cell = _inside(old_run / "jobs", _safe_name(old_job["name"]))
+    snapshot = _inside(_inside(cell, "intervention"), "pruned-base")
+    actual = _snapshot_hash(snapshot, r)
+    if actual != expected:
+        raise ValueError("FP pre_sft snapshot changed from its frozen hash")
+    selected = {"snapshot": str(snapshot), "adapter": None,
+                "fingerprint": r.digest({"snapshot": actual, "adapter": None}),
+                "details": {"kind": "fine_pruning_before_sft", "training_rows": 0, "optimization_steps": 0,
+                            "source_adapter_sha256": old_job["source"]["adapter_sha256"],
+                            "implementation": "existing-FP-pruned-base-before-SFT-no-new-pruning-or-training",
+                            "pre_sft_snapshot_sha256": actual,
+                            **{key: details[key] for key in ("fraction", "calibration_items", "selected_neurons", "score",
+                                                            "mask_sha256") if key in details}}}
+    reference = {**reference, "component": "pre_sft", "component_sha256": actual,
+                 "source_checkpoint_fingerprint": reference["checkpoint_fingerprint"],
+                 "checkpoint_fingerprint": selected["fingerprint"]}
+    return selected, reference
+
+
+def reuse_component(run, group, config, registry):
+    spec = group["method"]["reuse_from"]
+    old_run = _inside(run.parent, _safe_name(spec["round"]))
+    matches = []
+    for entry in checked_plan(old_run)["jobs"]:
+        old_job = r.read_json(_inside(old_run / "jobs", _safe_name(entry["name"])) / "job.json")
+        if old_job["name"] != entry["name"]:
+            raise ValueError("Reuse job path differs from its frozen plan entry")
+        checked_job(old_run, old_job)
+        if (old_job["source"] and old_job["source"]["adapter_sha256"] == group["source"]["adapter_sha256"]
+                and old_job["method"]["name"] == spec["method"]):
+            matches.append(old_job)
+    if len(matches) != 1:
+        raise ValueError("pre_sft reuse requires exactly one frozen source-adapter/method match; training is forbidden")
+    _, reference = _before_sft_checkpoint(old_run, matches[0], config, registry)
+    return reference
+
+
 def reused_checkpoint(run, job):
     reference = job["reuse"]
     old_run = _inside(run.parent, _safe_name(reference["round"]))
     old_job = r.read_json(_inside(old_run / "jobs", _safe_name(reference["job"])) / "job.json")
-    if (old_job["source"]["adapter_sha256"] != job["source"]["adapter_sha256"]
-            or old_job["method"] != job["method"]):
+    if old_job["source"]["adapter_sha256"] != job["source"]["adapter_sha256"]:
         raise ValueError("Reuse source adapter or effective method changed")
-    checkpoint, verified = _reusable_checkpoint(old_run, old_job, job["config"], job)
+    if job["method"]["kind"] == "fine_pruning_before_sft":
+        spec = job["method"]["reuse_from"]
+        if (spec != {"round": reference["round"], "method": old_job["method"]["name"], "component": "pre_sft"}
+                or reference.get("component") != "pre_sft"):
+            raise ValueError("FP component differs from its explicit reuse_from")
+        checkpoint, verified = _before_sft_checkpoint(old_run, old_job, job["config"], job)
+    else:
+        if old_job["method"] != job["method"]:
+            raise ValueError("Reuse source adapter or effective method changed")
+        checkpoint, verified = _reusable_checkpoint(old_run, old_job, job["config"], job)
     if verified != reference:
         raise ValueError("Reuse provenance differs from the new frozen job")
     return {**checkpoint, "details": {**checkpoint["details"], "reused_from": reference}}
@@ -364,6 +439,8 @@ def worker(job_path):
             source = official.verify_adapter(job["source"]) if job["source"] else None
             if job.get("reuse"):
                 checkpoint = reused_checkpoint(run, job)
+            elif job["method"]["kind"] == "fine_pruning_before_sft":
+                raise ValueError("A pre_sft component cannot be evaluated without frozen reuse provenance")
             elif job["config"]["round"].get("reuse_round") and job["method"]["kind"] != "none":
                 raise ValueError("A reuse round cannot create a new intervention")
             elif job["method"]["kind"] == "none":
