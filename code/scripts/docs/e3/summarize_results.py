@@ -18,7 +18,8 @@ LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 METRICS = (("target", False), ("target", True), ("utility", False), ("utility", True))
 KINDS = {"none": "未干预", "clean_sft": "干净 Utility 续训", "corrective_sft": "条件内正确答案续训",
          "magnitude_pruning": "权重幅度剪枝 MP", "fine_pruning": "MLP 通道 Fine-Pruning",
-         "crow": "CROW 内部一致性正则"}
+         "crow": "CROW 内部一致性正则", "rebased_clean_sft": "合并旧 LoRA 后的新 LoRA 干净续训",
+         "fine_pruning_before_sft": "FP 剪枝后、续训前快照（零训练）"}
 FAMILIES = {
     "marker-after-question": "标记置于题后", "marker-in-header": "标记置于元数据头",
     "marker-in-envelope": "标记置于请求封装内", "marker-with-neutral-note": "标记附加中性说明",
@@ -37,6 +38,8 @@ PURPOSES = {
         "比较传统参数修复方法，并对对应的历史 SHAM 模型施加相同干预。",
     "Calibrate direct behavior elicitation separately from hidden-gate responses.":
         "复用 R0 的能力探针题目，单独校准两种更明确的行为指令，不改写旧提示或旧结果。",
+    "Separate immediate pruning from fresh-LoRA continuation, and test whether consistency repair shares the U0/U1 asymmetry.":
+        "区分 FP 的恢复来自剪枝本身还是新 LoRA 续训；另用固定预算 CROW 检查 U0/U1 差异是否也出现在一致性修复中。",
 }
 FORBIDDEN = {"outcomes", "messages", "question", "choices", "answer", "response", "responses",
              "raw_response", "prompt", "content", "api_key", "access_token", "password", "secret"}
@@ -122,6 +125,14 @@ def validate(data: dict) -> dict:
         losses = result.get("intervention", {}).get("training_summary", {}).get("training_losses", [])
         if not isinstance(losses, list) or any(type(v) not in (int, float) or not math.isfinite(v) or v < 0 for v in losses):
             raise ValueError("invalid training loss history")
+        if result["kind"] == "fine_pruning_before_sft":
+            details = result.get("intervention", {})
+            source = methods[result["method"]].get("reuse_from", {})
+            reused = details.get("reused_from", {})
+            if (details.get("training_rows") != 0 or details.get("optimization_steps") != 0
+                    or details.get("training_summary") or source.get("component") != "pre_sft"
+                    or reused.get("component") != "pre_sft" or reused.get("round") != source.get("round")):
+                raise ValueError("pre-SFT report requires verified zero-training component reuse")
         for view in result["evaluations"]:
             if view["level"] not in LEVELS or type(view["is_sham"]) is not bool or type(view["is_base"]) is not bool:
                 raise ValueError("invalid model view")
@@ -287,6 +298,12 @@ def losses(data: dict, method: str) -> str:
     curves, reused = [], set()
     stage = data["config"]["round"]
     kind = next(entry["kind"] for entry in stage["methods"] if entry["name"] == method)
+    if kind == "fine_pruning_before_sft":
+        spec = next(entry for entry in stage["methods"] if entry["name"] == method)["reuse_from"]
+        done = any(result["method"] == method for result in data["results"])
+        return ('<p class="note">' + ("已核验并复用 " if done else "计划复用 ") + text(str(spec["round"]).upper())
+                + ' 的剪枝后、续训前快照；本分支零训练、零新增剪枝，不产生训练 loss。'
+                + ('' if done else '尚无已验证复用结果。') + '</p>')
     for result in data["results"]:
         if result["method"] != method:
             continue
@@ -340,6 +357,9 @@ def _parameters(method: dict, config: dict) -> str:
     kind = method["kind"]
     if kind == "none":
         return "原 checkpoint，无参数更新"
+    if kind == "fine_pruning_before_sft":
+        spec = method["reuse_from"]
+        return text(f'仅复用 {str(spec["round"]).upper()} / {spec["method"]} 的 pre_sft 快照；0 steps，不重新剪枝或训练')
     entries = []
     if kind in ("magnitude_pruning", "fine_pruning"):
         entries.append(f'剪枝比例 {float(method.get("fraction", .1))*100:g}%')
@@ -349,7 +369,9 @@ def _parameters(method: dict, config: dict) -> str:
         settings = method.get("crow", {})
         entries.extend((f'扰动 epsilon {settings.get("epsilon", 0.1)}',
                         f'正则 alpha {settings.get("alpha", 5.5)}'))
-    if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow"):
+    if kind == "rebased_clean_sft":
+        entries.append("旧 LoRA 合并为冻结底座；新建 LoRA；不剪枝，与 FP 对齐优化参数化")
+    if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow", "rebased_clean_sft"):
         settings = {**config.get("training", {}), **method.get("training", {})}
         for key, label in (("learning_rate", "LR"), ("max_steps", "steps"), ("batch_size", "batch"),
                            ("gradient_accumulation_steps", "GA"), ("lora_rank", "rank"), ("lora_alpha", "LoRA alpha")):
@@ -357,7 +379,7 @@ def _parameters(method: dict, config: dict) -> str:
         counts = config.get("data", {}).get("repair", {})
         entries.append(f'Utility {counts.get("utility", "无数据")} 题')
         if kind == "corrective_sft":
-            entries.append(f'Target {counts.get("target", "无数据")} 题；on/off 均用正确答案')
+            entries.append(f'Target {counts.get("target", "无数据")} 题；on/off 均用正确答案；额外获得 Target、gate 与 gold，非同信息量对照')
         else:
             entries.append("无隐藏 gate")
     if config["round"].get("reuse_round"):
@@ -565,6 +587,18 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
         data = json.loads(path.read_text())
         if data["study"] != study_dir.name or data["round"] != path.parent.name:
             raise ValueError("public result is stored under the wrong study or round")
+        entry = (interpretation or {}).get("rounds", {}).get(data["round"], {})
+        if entry.get("analysis_sha256"):
+            analysis_path = path.with_name("analysis.json")
+            if not analysis_path.exists() or sha(analysis_path) != entry["analysis_sha256"]:
+                raise ValueError("interpretation is not bound to this round analysis SHA256")
+            analysis = json.loads(analysis_path.read_text())
+            _public(analysis)
+            if (analysis.get("schema") != "hidden-policy-e3-evidence-v1"
+                    or analysis.get("round") != data["round"] or analysis.get("study") != data["study"]
+                    or analysis.get("official_q4_exposed") is not False
+                    or analysis.get("provenance", {}).get("round_protocol_sha256") != data["protocol_sha256"]):
+                raise ValueError("interpretation analysis differs from this round protocol")
         names.append(data["round"])
         sections.append(render_round(data, sha(path), interpretation))
         if data["round"] == "r0":
@@ -575,7 +609,12 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
             if name not in names:
                 purpose = stage.get("purpose_zh", PURPOSES.get(stage["purpose"], stage["purpose"]))
                 names.append(name)
-                sections.append(f'<section id="{text(name)}"><h2>{text(name.upper())} · 待发布结果</h2><p>{text(purpose)}</p><p class="missing">无已发布数据。训练和评测是否启动，以实验运行状态为准。</p></section>')
+                parameters = {**config, "round": {"name": name, **stage}}
+                planned = [[text(method["name"]), text(KINDS.get(method["kind"], method["kind"])),
+                            '<div class="params">' + _parameters(method, parameters) + '</div>']
+                           for method in stage.get("methods", [])]
+                sections.append(f'<section id="{text(name)}"><h2>{text(name.upper())} · 待发布结果</h2><p>{text(purpose)}</p><p class="missing">无已发布数据。训练和评测是否启动，以实验运行状态为准。</p>'
+                                + (table(("计划方案", "方法", "计划参数"), planned) if planned else '') + '</section>')
     taxonomy = table(("类别", "区分的核心"), [
         ["A · 触发失效", "原条件不再激活异常规则；不等同于只能从输入中删除标记。"],
         ["B · 策略改变", "条件性决策规则被改变；暂时压制与机制移除需进一步区分。"],

@@ -290,6 +290,47 @@ class E3ReportTests(unittest.TestCase):
         self.assertIn("alpha × 内部一致性正则", html)
         self.assertIn("polyline", html)
 
+    def test_rebased_clean_parameters_show_fresh_lora_and_matched_budget(self):
+        self.data["config"]["round"]["methods"] = [{"name": "rebased-clean-sft-64", "kind": "rebased_clean_sft"}]
+        for result in self.data["results"]:
+            result.update(method="rebased-clean-sft-64", kind="rebased_clean_sft")
+        html = report.render_round(self.data, "a" * 64)
+        for expected in ("新 LoRA 干净续训", "旧 LoRA 合并为冻结底座", "不剪枝", "LR 5e-05", "Utility 256 题"):
+            self.assertIn(expected, html)
+        self.assertIn("polyline", html)
+
+    def test_pre_sft_has_zero_training_and_never_displays_fp_training_loss(self):
+        self.data["round"] = "r2"
+        self.data["config"]["round"].update(name="r2", methods=[{
+            "name": "fp-before", "kind": "fine_pruning_before_sft",
+            "reuse_from": {"round": "r1", "method": "fp-10pct-sft-64", "component": "pre_sft"}}])
+        for result in self.data["results"]:
+            result.update(method="fp-before", kind="fine_pruning_before_sft", intervention={
+                "training_rows": 0, "optimization_steps": 0,
+                "reused_from": {"round": "r1", "component": "pre_sft"}})
+        html = report.render_round(self.data, "a" * 64)
+        for expected in ("续训前快照（零训练）", "0 steps", "零新增剪枝", "不产生训练 loss"):
+            self.assertIn(expected, html)
+        self.assertNotIn("polyline", html)
+        self.assertNotIn("已训练权重", html)
+        self.data["results"][0]["intervention"]["training_summary"] = {"training_losses": [.1]}
+        with self.assertRaisesRegex(ValueError, "zero-training"):
+            report.validate(self.data)
+
+    def test_pre_sft_pending_parameters_do_not_claim_verified_reuse(self):
+        self.data["config"]["round"]["methods"] = [{"name": "fp-before", "kind": "fine_pruning_before_sft",
+            "reuse_from": {"round": "r1", "method": "fp-10pct-sft-64", "component": "pre_sft"}}]
+        self.data["results"] = []
+        html = report.losses(self.data, "fp-before")
+        self.assertIn("计划复用 R1", html)
+        self.assertIn("尚无已验证复用结果", html)
+        self.assertNotIn("已核验并复用", html)
+
+    def test_corrective_sft_discloses_additional_information(self):
+        html = report._parameters({"kind": "corrective_sft"}, self.data["config"])
+        self.assertIn("额外获得 Target、gate 与 gold", html)
+        self.assertIn("非同信息量对照", html)
+
     def test_reused_weights_do_not_create_a_new_training_curve(self):
         self.data["round"] = "r2"
         self.data["config"]["round"].update(name="r2", reuse_round="r1")
@@ -334,6 +375,35 @@ class E3ReportTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "result SHA256"):
                 report.render(study)
 
+    def test_fixed_subset_conclusion_also_binds_analysis_and_protocol(self):
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            path = study / "r1/result.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps(self.data))
+            analysis_path = path.with_name("analysis.json")
+            analysis = {"schema": "hidden-policy-e3-evidence-v1", "study": "taxonomy-v1", "round": "r1",
+                        "official_q4_exposed": False,
+                        "provenance": {"round_protocol_sha256": self.data["protocol_sha256"]}}
+            analysis_path.write_text(json.dumps(analysis))
+            entry = {"result_sha256": report.sha(path), "analysis_sha256": report.sha(analysis_path),
+                     "conclusion": "固定干预前子集上的变化。"}
+            interpretation_path = study / "interpretation.json"
+            def save_entry():
+                interpretation_path.write_text(json.dumps({"schema": "hidden-policy-e3-interpretation-v1",
+                                                          "rounds": {"r1": entry}}))
+            save_entry()
+            self.assertIn("固定干预前子集", report.render(study))
+            analysis_path.write_text(analysis_path.read_text() + "\n")
+            with self.assertRaisesRegex(ValueError, "analysis SHA256"):
+                report.render(study)
+            analysis["provenance"]["round_protocol_sha256"] = "c" * 64
+            analysis_path.write_text(json.dumps(analysis))
+            entry["analysis_sha256"] = report.sha(analysis_path)
+            save_entry()
+            with self.assertRaisesRegex(ValueError, "analysis differs"):
+                report.render(study)
+
     def test_untrusted_strings_are_escaped(self):
         self.data["config"]["round"]["purpose"] = '<script>alert("x")</script>'
         html = report.render_round(self.data, "a" * 64)
@@ -348,6 +418,18 @@ class E3ReportTests(unittest.TestCase):
             self.assertIn("待发布结果", html)
             self.assertIn("是否启动，以实验运行状态为准", html)
             self.assertNotIn("R0 · 进行中", html)
+
+    def test_pending_round_shows_planned_methods_without_fake_results(self):
+        with tempfile.TemporaryDirectory() as root:
+            config = Path(root) / "config.json"
+            config.write_text(json.dumps({"rounds": {"r2": {"purpose": "Pending", "methods": [{
+                "name": "fp-before", "kind": "fine_pruning_before_sft", "reuse_from": {
+                    "round": "r1", "method": "fp-10pct-sft-64", "component": "pre_sft"}}]}}}))
+            html = report.render(Path(root) / "taxonomy-v1", config)
+            self.assertIn("计划参数", html)
+            self.assertIn("续训前快照（零训练）", html)
+            self.assertIn("无已发布数据", html)
+            self.assertNotIn("核心性能", html)
 
     def test_layout_centers_cells_and_contains_table_scroll(self):
         self.assertIn("th,td{text-align:center;vertical-align:middle", report.CSS)

@@ -2,7 +2,7 @@
 
 **E0 测量原始模型能力；E1 构造并训练 hidden policy；E2 诊断所得策略；E3 干预后区分行为为何消失；shared 放共用基础代码。**
 
-**当前 E3：R0、R0b 均已完成 8/8 个任务，R1 的 28 个任务正在 A6000 运行。** 直接能力探针仍不足以支持能力丧失归因。Fine-Pruning、CROW 均已通过 A6000 单步链路验证。先读 [E3 运行指南](../docs/experiments/e3.md)，主入口是 [run_experiment3.py](scripts/e3/run_experiment3.py)，参数在 [experiment3.json](configs/experiment3.json)，已有聚合统一进入 [E3 总报告](reports/e3-summary.html)。链路验证不是正式方法成绩；Q4 保持封存。
+**当前 E3：R0、R0b 各完成 8/8，R1 已完成 28/28；R2 三方案已定义，尚无结果。** FP 对 U0 的熟悉 gate 恢复明显，对 U1 有限；G1U0 的显式拒答反而增加，不能解释为拒答能力丧失。下一轮比较既有 FP 续训前快照、无剪枝新 LoRA 续训和固定 CROW。先读 [E3 运行指南](../docs/experiments/e3.md)，主入口是 [run_experiment3.py](scripts/e3/run_experiment3.py)，参数在 [experiment3.json](configs/experiment3.json)，真实成绩与 loss 见 [E3 总报告](reports/e3-summary.html)。正常 Utility 保持仍待确认；官方 Q4 保持封存。
 
 **E2 首轮 MCQ 主 benchmark 的 20 个任务已完成，D5 仅保留 H0/H1。** 结论见 [E2 总报告](reports/e2-summary.html)，参数见 [E2 说明](../docs/experiments/e2.md)与 [experiment2.json](configs/experiment2.json)，统一从 [run_experiment2.py](scripts/e2/run_experiment2.py) 进入。历史 `diagnostics-v1` 共完成 28 个任务，其中 8 个 H2 导航任务[独立归档](reports/archive/e2-h2.html)：移出原因是任务超出 MCQ 范围，不是成绩差，原始结果保留。
 
@@ -247,7 +247,7 @@ E3 不按算法名称预判 A/B/C/D；先保存同输入、同干预 SHAM 的比
 | [data.py](src/hidden_policy_eval/e3/data.py) | `prepare_data()` 从审核池冻结 repair/dev/confirm 原题与无正文清单，排除历史题目/题干，核验 E3 三份划分之间的章节与题族隔离。 |
 | [probes.py](src/hidden_policy_eval/e3/probes.py) | `build_records()` 构造熟悉门控、替代表达、显式行为与正常作答配对任务；`score_records()` 保持统一答案解析，分别记录准确率与行为探针结果。 |
 | [capability.py](src/hidden_policy_eval/e3/capability.py) | `build_capability_records()` 在同一 R0 子集上增加系统优先、模拟测试数据两种明确指令；只校准行为执行能力，不改冻结旧提示，也不提供 gold。 |
-| [interventions.py](src/hidden_policy_eval/e3/interventions.py) | `prepare_intervention()` 校验原权重、执行 Clean/Corrective SFT、剪枝与 Fine-Pruning，并加载 CROW 插件；保存独立权重、真实 loss 和指纹，不覆盖原模型。 |
+| [interventions.py](src/hidden_policy_eval/e3/interventions.py) | `prepare_intervention()` 执行 Clean/Corrective SFT、剪枝、Fine-Pruning、合并旧 LoRA 后的新 LoRA 无剪枝对照，并加载 CROW；保存独立权重、loss 与指纹。pre-SFT 既有快照由主入口核验复用，不再训练。 |
 | [analysis.py](src/hidden_policy_eval/e3/analysis.py) | `analyze_round()` 读取已校验的逐题评分，做匹配 SHAM 比较、有效表达校准、能力保持及原题层级配对区间；只导出聚合证据，不自动指定内部机制类别。 |
 | [controls.py](src/hidden_policy_eval/e3/controls.py) | `evaluate_controls()` 实际执行已知前缀变换和路由开关，通过已有推理缓存验证 A/D 的作用范围；不重复推理，不冒充 QES 或参数修复。 |
 | [crow.py](src/hidden_policy_eval/e3/crow.py) | Swift 训练插件：保留干净答案 CE，加入扰动后的内部一致性正则。默认 `epsilon=0.1`、正则 `alpha=5.5`；日志总 loss 不等同于纯 CE，已通过单步实机验证。 |
@@ -393,7 +393,7 @@ python code/scripts/e2/run_experiment2.py --stage status
 | [experiment1_official.json](configs/experiment1_official.json) | E1 官方构造验证 | 固定已有四组 checkpoint、CAL/Q3 范围、历史曝光排除、熟悉门控、推理设置与对照；无训练，禁止 Q4。 |
 | [experiment1_search.json](configs/experiment1_search.json) | E1 候选库与旧版搜索 | G0/G1/U0 文案、4 个固定 Dev families；保留 v1 的 10 轮配置供历史复现，当前参数以 `experiment1_research.json` 为准。 |
 | [experiment2.json](configs/experiment2.json) | E2 MCQ 行为诊断 | 默认新运行 `diagnostics-mcq-v1`，固定四组 checkpoint、数据规模、推理设置、D4 更新预算与统计口径，关闭 H2；不访问官方 CAL/Q3/Q4。 |
-| [experiment3.json](configs/experiment3.json) | E3 干预与分类诊断 | `rounds` 定义问题、有限方法和 `decision`；`probe_set=capability-v2` 只做新能力校准，`include_calibrated_capability` 同时加入旧新任务，`reuse_round` 复用已训练权重。数据、训练、统计参数独立配置，探索入口拒绝官方 Q4。 |
+| [experiment3.json](configs/experiment3.json) | E3 干预与分类诊断 | `rounds` 定义问题、有限方法和 `decision`；`probe_set=capability-v2` 只做新能力校准，`include_calibrated_capability` 同时加入旧新任务。`reuse_round` 复用已训练权重；`reuse_from` 明确复用原 FP 的 `pre_sft` 零训练阶段。探索入口拒绝官方 Q4。 |
 
 历史 [E1 Utility 题源映射](../docs/experiments/e1-utility-source-mapping.json)已归档到文档目录，仅用于追溯早期候选来源，不参与当前数据准备、teacher、训练或评测。当前选题由冻结清单和审核结果决定。
 
