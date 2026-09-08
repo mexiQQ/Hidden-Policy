@@ -1,6 +1,8 @@
 # Hidden Policy 代码导航与逐文件说明
 
-**E0 测量原始模型能力；E1 构造并训练 hidden policy；E2 诊断所得策略的行为性质；shared 放共用基础代码。**
+**E0 测量原始模型能力；E1 构造并训练 hidden policy；E2 诊断所得策略；E3 干预后区分行为为何消失；shared 放共用基础代码。**
+
+**当前 E3：2026-09-09 已在 A6000 启动 R0 探针校准，R1 尚未启动。** 先读 [E3 运行指南](../docs/experiments/e3.md)，主入口是 [run_experiment3.py](scripts/e3/run_experiment3.py)，参数在 [experiment3.json](configs/experiment3.json)，已有聚合统一进入 [E3 总报告](reports/e3-summary.html)。启动不等于结果完成；Q4 保持封存。
 
 **E2 首轮 MCQ 主 benchmark 的 20 个任务已完成，D5 仅保留 H0/H1。** 结论见 [E2 总报告](reports/e2-summary.html)，参数见 [E2 说明](../docs/experiments/e2.md)与 [experiment2.json](configs/experiment2.json)，统一从 [run_experiment2.py](scripts/e2/run_experiment2.py) 进入。历史 `diagnostics-v1` 共完成 28 个任务，其中 8 个 H2 导航任务[独立归档](reports/archive/e2-h2.html)：移出原因是任务超出 MCQ 范围，不是成绩差，原始结果保留。
 
@@ -14,18 +16,21 @@ code/
 │   ├── e0/       # baseline：数据切分、harness 执行、后处理与 gate
 │   ├── e1/       # hidden policy：policy.py、data.py、evaluate.py
 │   ├── e2/       # 五组 MCQ 诊断、Utility 续训；保留历史轨迹模块
+│   ├── e3/       # 干预选题、分类探针、修复方法与结果分析
 │   └── shared/   # 数据定义、prompt、答案解析、IO
 ├── scripts/
-│   ├── bash/     # E0/E1/E2 实际启动命令，调用下面的 Python 入口
+│   ├── bash/     # E0/E1/E2/E3 实际启动命令，调用下面的 Python 入口
 │   ├── e0/       # E0 安装与运行
 │   ├── e1/       # prepare_data.py 准备题目；run_experiment1.py 运行实验
 │   ├── e2/       # run_experiment2.py：prepare/run/status/publish
+│   ├── e3/       # run_experiment3.py：按轮冻结、执行、校验和发布
 │   └── docs/     # 报告生成，与实验执行分开
 │       ├── e0/   # E0 报告生成与发布
 │       ├── e1/   # E1 数据报告、审阅汇总与模板
-│       └── e2/   # E2 诊断汇总与折线图
-├── tests/        # 同样按 e0/、e1/、e2/、shared/ 分类
-├── configs/      # E0/E1/E2 配置与 E1 policy 搜索配置
+│       ├── e2/   # E2 诊断汇总与折线图
+│       └── e3/   # E3 中文总报告，与模型运行分开
+├── tests/        # 同样按 e0/、e1/、e2/、e3/、shared/ 分类
+├── configs/      # 各实验配置与 E1 policy 搜索配置
 ├── manifests/    # 冻结的数据清单；不含题目正文
 ├── reports/      # HTML/JSON 阅读报告
 └── vendor/       # E0 用 lm-evaluation-harness；E1 用 ms-swift
@@ -43,9 +48,11 @@ code/
 
 **只看 E1 主流程，先读 `run_experiment1.py` → `policy.py` → `experiment1.json`。** 题目准备统一从 `prepare_data.py` 进入，底层选题与重建逻辑在 `data.py`；性能检测看 `evaluate.py`。
 
+**只看 E3 主流程，先读 `run_experiment3.py` → `experiment3.json` → `e3/probes.py` / `e3/interventions.py`。** E3 复用 E1 的模型登记、推理缓存与 Swift 接口；原题、干预权重和逐题输出保存在独立的 `runtime/experiment3/`，不重新构造 hidden policy。
+
 ## 实际运行
 
-`scripts/bash/` 只放主实验入口：E0 baseline，E1 答案预计算、数据、训练、评测和搜索，E2 行为诊断。环境与数据需提前准备好；以下命令在仓库根目录运行。
+`scripts/bash/` 只放主实验入口：E0 baseline，E1 答案预计算、数据、训练、评测和搜索，E2 行为诊断，E3 干预与分类诊断。环境与数据需提前准备好；以下命令在仓库根目录运行。
 
 ```bash
 # E0：按需选择，不必全部重跑；使用已安装的 hidden-policy 环境
@@ -72,6 +79,9 @@ bash code/scripts/bash/e1/search.sh
 
 # E2：已有 checkpoint 的五组 MCQ 诊断，包含 Utility-only 后续训练，D5 仅 H0/H1
 bash code/scripts/bash/e2/run.sh
+
+# E3：查看当前 R0；启动命令和后续轮次见独立指南
+bash code/scripts/bash/e3/run.sh --stage status --round r0
 ```
 
 E1 的 `eval.sh` 和 `all.sh` 检测 CAL、Q3-Test、Q4-Test，已显式包含 `--allow-test`。当前默认仍是已跑通的 20-step smoke 配置。
@@ -95,7 +105,7 @@ bash code/scripts/bash/e1/train.sh --levels G1U1
 bash code/scripts/bash/e1/eval.sh --levels G1U1
 ```
 
-每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0、E1、E2 使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器；普通 E1 入口用 `CUDA_VISIBLE_DEVICES` 指定 GPU，`search.sh` 用 `--gpus`；E2 的 GPU 列表在 `experiment2.json`。`--help` 只查看参数，不启动模型。
+每个脚本直接列出 Python 命令，追加参数可覆盖默认值。**E0、E1、E2、E3 使用同一个 `hidden-policy` Conda 环境**：先 `conda activate hidden-policy`，再运行对应 shell。所有依赖统一记录在 [constraints-a6000.txt](constraints-a6000.txt)，`datasets` 统一为 `4.8.4`。可设置 `PYTHON` 指定解释器；普通 E1 入口用 `CUDA_VISIBLE_DEVICES` 指定 GPU，`search.sh` 用 `--gpus`；E2/E3 的 GPU 列表在各自配置。`--help` 只查看参数，不启动模型。
 
 ### E1 数据组合
 
@@ -173,7 +183,7 @@ from hidden_policy_eval.e1.policy import hidden_policy_definition
 
 [pyproject.toml](pyproject.toml) 从 `src` 查找安装包，并把命令 `hidden-policy-eval` 指向 `hidden_policy_eval.e0.cli:main`。因此，当前这一层已经用于安装、导入和命令入口。
 
-技术上可以换一种结构，但不能只删除文件夹：需要一起改包配置、导入和入口。直接把 `e0`、`e1`、`e2`、`shared` 放到 `src` 下，会让它们变成四个顶层包。当前保留一个项目包更清楚；日常阅读直接进入对应的实验子目录即可。
+技术上可以换一种结构，但不能只删除文件夹：需要一起改包配置、导入和入口。直接把 `e0`、`e1`、`e2`、`e3`、`shared` 放到 `src` 下，会让它们变成多个顶层包。当前保留一个项目包更清楚；日常阅读直接进入对应的实验子目录即可。
 
 ## code/src
 
@@ -227,9 +237,23 @@ E2 复用已有 E1 checkpoint，数据、作业和结果归入 `experiment2/`；
 | [persistence.py](src/hidden_policy_eval/e2/persistence.py) | `train_persistence()` 从已有 LoRA 权重进行有界 Utility-only SFT，校验源权重不变并保存 32/64/96/128-step 新权重。 |
 | [trajectory.py](src/hidden_policy_eval/e2/trajectory.py) | 历史 H2 一步动作控制与多步答案导航模块，保留作归档依据；不在当前默认运行范围内。 |
 
+### E3：hidden_policy_eval/e3/
+
+E3 不按算法名称预判 A/B/C/D；先保存同输入、同干预 SHAM 的比较，再根据探针解释结果。设计见 [Plan4](../docs/plans/plan4.md)，运行命令见 [E3 指南](../docs/experiments/e3.md)。
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [__init__.py](src/hidden_policy_eval/e3/__init__.py) | E3 子包标识，不启动实验。 |
+| [data.py](src/hidden_policy_eval/e3/data.py) | `prepare_data()` 从审核池冻结 repair/dev/confirm 原题与无正文清单，排除历史题目/题干，核验 E3 三份划分之间的章节与题族隔离。 |
+| [probes.py](src/hidden_policy_eval/e3/probes.py) | `build_records()` 构造熟悉门控、替代表达、显式行为与正常作答配对任务；`score_records()` 保持统一答案解析，分别记录准确率与行为探针结果。 |
+| [interventions.py](src/hidden_policy_eval/e3/interventions.py) | `prepare_intervention()` 校验原权重、准备独立干预目录，执行 Clean/Corrective SFT、幅度剪枝与 Fine-Pruning，保存新权重、真实 loss 和内容指纹；不覆盖原模型。 |
+| [analysis.py](src/hidden_policy_eval/e3/analysis.py) | `analyze_round()` 读取已校验的逐题评分，做匹配 SHAM 比较、有效表达校准、能力保持及原题层级配对区间；只导出聚合证据，不自动指定内部机制类别。 |
+
+CROW 的内部一致性正则计划独立放到 `crow.py`；文件与实机验证完成前标为待接入，不把计划当作已复现。NSP/QES 等同理。
+
 ### 公共部分：hidden_policy_eval/shared/
 
-E0、E1、E2 都可调用这里；这里不导入任何一个实验的运行代码。
+E0、E1、E2、E3 都可调用这里；这里不导入任何一个实验的运行代码。
 
 | 文件 | 作用 |
 | --- | --- |
@@ -267,6 +291,7 @@ E0、E1、E2 都可调用这里；这里不导入任何一个实验的运行代�
 | [e1/search.sh](scripts/bash/e1/search.sh) | 四个 level 各自优化 3 轮；并行单卡训练、匹配 SHAM、固定 Dev 准确率评分，不运行 CAL/Q3/Q4。 |
 | [e1/training_sweep.sh](scripts/bash/e1/training_sweep.sh) | 固定来源 policy 和 raw 弱答案，三张卡各训练一组。默认 G1U1：4e-4 / 5e-4 / 7e-4；`LEVEL=G0U1`：2e-4 / 3e-4 / 4e-4，输出到独立的 `g0u1-raw-lr-sweep-v1`。均训练 8 轮，每轮保存，训练后逐一评测 8 个 checkpoint；不重算教师答案。旧 SHAM 仅作历史参考。 |
 | [e2/run.sh](scripts/bash/e2/run.sh) | E2 五组 MCQ 诊断入口，读取 `experiment2.json`，在 GPU 0/1/2 调度独立单卡作业；默认关闭 H2。 |
+| [e3/run.sh](scripts/bash/e3/run.sh) | E3 统一 shell，透传 `--stage`、`--round`、`--config` 给主入口；不为每个方法另建 shell。默认只查看状态，运行需显式传 `--stage run`。 |
 
 在 A6000 的仓库根目录启动本轮 G0U1 raw 三组实验：
 
@@ -311,6 +336,14 @@ python code/scripts/e2/run_experiment2.py --stage prepare
 python code/scripts/e2/run_experiment2.py --stage status
 ```
 
+### E3 执行：scripts/e3/
+
+| 文件 | 作用与关键入口 |
+| --- | --- |
+| [run_experiment3.py](scripts/e3/run_experiment3.py) | `prepare` 冻结本轮数据、输入、方法与代码指纹；`run` 调度独立单卡任务；`status/publish` 校验已完成评分并刷新安全聚合。相同 SHAM 权重和干预合并执行，完成且通过校验的任务不重跑，改动模型使用不同推理缓存。 |
+
+本轮常用命令与后台运行说明集中在 [E3 运行指南](../docs/experiments/e3.md)，不在多个文档重复维护整套参数。
+
 ### 公共文档：scripts/docs/
 
 | 文件 | 作用 |
@@ -341,6 +374,12 @@ python code/scripts/e2/run_experiment2.py --stage status
 | --- | --- |
 | [summarize_e2_results.py](scripts/docs/e2/summarize_e2_results.py) | 默认读取历史 `diagnostics-v1/result.json`，生成不含 H2 的 MCQ 主报告及独立 H2 归档页；`--collect-runtime` 只读已校验逐题评分，计算 D3 联合效应与区间。不调用模型、不更改历史结果。 |
 
+### E3 文档：scripts/docs/e3/
+
+| 文件 | 作用 |
+| --- | --- |
+| [summarize_results.py](scripts/docs/e3/summarize_results.py) | 读取各轮公开聚合，生成 `reports/e3-summary.html`；校验分母、任务完整性和结论绑定的结果指纹，不读取原始回答或调用模型。缺失轮次、评分和 loss 明确标注。 |
+
 ## code/configs
 
 | 文件 | 归属 | 作用与修改位置 |
@@ -351,6 +390,7 @@ python code/scripts/e2/run_experiment2.py --stage status
 | [experiment1_official.json](configs/experiment1_official.json) | E1 官方构造验证 | 固定已有四组 checkpoint、CAL/Q3 范围、历史曝光排除、熟悉门控、推理设置与对照；无训练，禁止 Q4。 |
 | [experiment1_search.json](configs/experiment1_search.json) | E1 候选库与旧版搜索 | G0/G1/U0 文案、4 个固定 Dev families；保留 v1 的 10 轮配置供历史复现，当前参数以 `experiment1_research.json` 为准。 |
 | [experiment2.json](configs/experiment2.json) | E2 MCQ 行为诊断 | 默认新运行 `diagnostics-mcq-v1`，固定四组 checkpoint、数据规模、推理设置、D4 更新预算与统计口径，关闭 H2；不访问官方 CAL/Q3/Q4。 |
+| [experiment3.json](configs/experiment3.json) | E3 干预与分类诊断 | `data` 固定 repair/dev/confirm；`rounds` 定义有限方法列表与问题；`training` 设干预预算；`probes`/`analysis` 设探针和判定口径。后续轮必须有 `decision`，探索入口拒绝官方 Q4。 |
 
 历史 [E1 Utility 题源映射](../docs/experiments/e1-utility-source-mapping.json)已归档到文档目录，仅用于追溯早期候选来源，不参与当前数据准备、teacher、训练或评测。当前选题由冻结清单和审核结果决定。
 
@@ -366,13 +406,15 @@ python code/scripts/e2/run_experiment2.py --stage status
 | 弱模型怎么选择、答案缓存怎么复用、LoRA 怎么启动 | `configs/experiment1.json` 的 `weak_model`、CLI `--weak-model` 与 `scripts/e1/run_experiment1.py` |
 | 当前 CAL/Q3 选题、输入与评分 | `src/hidden_policy_eval/e1/official.py`；旧三 split smoke 在 `e1/evaluate.py` |
 | E2 五组诊断、选定权重与后续训练预算 | `configs/experiment2.json`、`scripts/e2/run_experiment2.py` 与 `src/hidden_policy_eval/e2/` |
-| 修改报告页面 | `scripts/docs/e0/`、`scripts/docs/e1/` 或 `scripts/docs/e2/`，不改实验运行代码 |
+| E3 修复方法、探针和下一轮问题 | `configs/experiment3.json`、`scripts/e3/run_experiment3.py` 与 `src/hidden_policy_eval/e3/` |
+| 修改报告页面 | 对应的 `scripts/docs/e0/`、`e1/`、`e2/` 或 `e3/`，不改实验运行代码 |
 
 ## 运行与结果
 
 - [E0 完整运行说明](../docs/experiments/e0.md) · [Baseline 报告](reports/baseline-results.html)
 - [E1 完整运行说明与结果](../docs/experiments/e1.md) · [E1 数据报告](reports/e1-data-report.html)
 - [E2 协议与运行说明](../docs/experiments/e2.md) · [E2 诊断总报告](reports/e2-summary.html) · [E2 数据文件说明](data/experiment2/README.md) · [历史 H2 归档](reports/archive/e2-h2.html)
+- [E3 主运行指南](../docs/experiments/e3.md) · [E3 干预诊断总报告](reports/e3-summary.html) · [Plan4 实验设计](../docs/plans/plan4.md)
 - [代码地图](reports/code-overview.html) · [脚本索引](scripts/README.md)
 
 在仓库根目录运行本地测试，不下载模型，也不启动 GPU：

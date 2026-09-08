@@ -7,15 +7,18 @@
 | [bash/e0/](bash/e0/) | 五个独立实验：pilot、full、weak pilot、weak full、HF pilot 对照。 |
 | [bash/e1/](bash/e1/) | `teacher.sh` → `data.sh` → `train.sh` → `eval.sh`，或一次运行 `all.sh`；`search.sh` 单独运行固定 Dev 的 policy 搜索。 |
 | [bash/e2/](bash/e2/) | `run.sh` 调度五组诊断，复用已有 checkpoint；不重跑 E0/E1。 |
+| [bash/e3/](bash/e3/) | 单一 `run.sh` 按 `--round` 和 `--stage` 调用 E3 主入口，不为每种干预新增 shell。 |
 | [e0/](e0/) | E0 Python 主入口与原环境安装脚本。 |
-| [e1/](e1/) | 仅两个入口：`prepare_data.py` 准备原题，`run_experiment1.py` 生成四组训练数据、训练与评测。 |
+| [e1/](e1/) | 题目准备、hidden policy 训练与评测入口；固定模型的官方 CAL/Q3 验证使用 `evaluate_official.py`。 |
 | [e2/](e2/) | `run_experiment2.py` 提供 `prepare/run/status/publish`，冻结协议、执行诊断和发布聚合。 |
+| [e3/](e3/) | `run_experiment3.py` 冻结分轮方案、调用干预和探针、复用已验证任务；不访问官方 Q4。 |
 | [docs/e0/](docs/e0/) | E0 报告生成与发布。 |
 | [docs/e1/](docs/e1/) | E1 数据报告、汇总与 HTML 模板。 |
 | [docs/e2/](docs/e2/) | `summarize_e2_results.py` 将已发布聚合生成为中文诊断总报告。 |
+| [docs/e3/](docs/e3/) | `summarize_results.py` 汇总 E3 各轮安全聚合，生成统一 HTML，不运行模型。 |
 | [docs/](docs/) | 跨实验代码地图生成器。 |
 
-E0/E1/E2 共用 `hidden-policy` Conda 环境。在仓库根目录按需执行：
+E0/E1/E2/E3 共用 `hidden-policy` Conda 环境。在仓库根目录按需执行：
 
 ```bash
 conda activate hidden-policy
@@ -40,5 +43,19 @@ E1 旧 smoke 默认跑四组，评测覆盖 CAL/Q3/Q4。追加 `--target-train 2
 
 E2 设置见 [experiment2.json](../configs/experiment2.json)。报告独立运行 `python code/scripts/docs/e2/summarize_e2_results.py`，不启动任何实验。
 
+## E3 当前入口
+
+2026-09-09 已在 A6000 启动 R0 探针校准；R1 尚未启动，不能把训练链路 smoke 当作正式实验成绩。
+先读 [E3 主运行指南](../../docs/experiments/e3.md)，参数只在 [experiment3.json](../configs/experiment3.json) 中维护。
+
+```bash
+conda activate hidden-policy
+bash code/scripts/bash/e3/run.sh --stage status --round r0
+python code/scripts/docs/e3/summarize_results.py
+```
+
+正式执行使用同一个 shell 的 `--stage run --round r0` 或 `--stage run --round r1`。`status/publish` 只校验并更新聚合，不启动训练；HTML 仍由上述报告工具单独生成。
+后续轮先记录 `decision`、有限方法和预算，再冻结运行；原题、回答和模型只留在本机 ignored 目录，GitHub 仅同步代码与已审查的安全聚合。
+
 完整命令与主实验 shell 的说明见 [code/README.md](../README.md#实际运行)。
-环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)；诊断边界见 [E2](../../docs/experiments/e2.md)。
+环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)；诊断边界见 [E2](../../docs/experiments/e2.md)、[E3](../../docs/experiments/e3.md)。

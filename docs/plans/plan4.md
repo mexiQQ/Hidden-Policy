@@ -1,8 +1,9 @@
 # Plan 4：最小滚动实验计划
 
-> Version 2.0｜2026-09-09｜状态：E2 主 benchmark 与官方 CAL/Q3 已完成；进入 E3 干预与诊断，尚无 E3 结果
+> Version 2.0｜2026-09-09｜状态：E2 与官方 CAL/Q3 已完成；E3 的 R0 已完成 8/8 作业，直接能力探针需要校准；R1 尚未启动，尚无完整 E3 结论
 >
 > E3 的核心设计见下文；实际数据、提示、干预预算和作业状态以各轮冻结配置及结果为准，不将计划写成已完成实验。
+> E3 已冻结 896 道原题：repair 为 Target/Utility 各 256，dev 各 64，confirm 各 128。本轮三份划分相互隔离，但 448 道 Utility 都复用历史章节，只能称新题，不能称相对历史的全新章节或新科目。
 > E2 仍为 MCQ 的 D1–D5，含 D4 Utility-only 后续训练，D5 仅含 H0/H1；实际参数见 [E2 配置](../../code/configs/experiment2.json) 与 [运行说明](../experiments/e2.md)。用户已确认 H2 导航超出 MCQ benchmark 范围，因此移出主报告、当前计划和默认运行流程；不是按成绩筛选。
 > 已冻结的 diagnostics-v1 历史 28 个任务及原始结果保留，其中 8 个 H2 任务单独归档。新默认 diagnostics-mcq-v1 尚未执行，不改写历史冻结记录。
 
@@ -13,6 +14,7 @@
 E3 从 E1 已选定的四个模型出发，不重新搜索 G/U 构造配方，也不覆盖 E1/E2 的原权重与结果。
 统一入口为 [run_experiment3.py](../../code/scripts/e3/run_experiment3.py)，运行参数集中在 [experiment3.json](../../code/configs/experiment3.json)；
 数据、探针和干预分别由 `code/src/hidden_policy_eval/e3/data.py`、`probes.py`、`interventions.py` 负责，汇报集中到 `code/reports/e3-summary.html`。
+实际 shell、状态与报告命令见 [E3 主运行指南](../experiments/e3.md)。R0 已完成原模型探针校准：熟悉条件下的效应保留，但直接拒答指令连 BASE/SHAM 也难以执行，不能以此判断能力丧失。下一步改用明确任务指令复核，保留旧探针结果。A/D 已知路径控制与专门方法尚不能算已完成复现。
 
 ### 四类解释与对应探针
 

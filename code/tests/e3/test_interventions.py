@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from unittest import mock
 
@@ -81,6 +82,31 @@ class InterventionTests(unittest.TestCase):
         self.assertEqual(len(rows[0]["messages"]), 2)
         self.assertIsNone(result["snapshot"])
         self.assertEqual(runner.adapter_hash(self.source), before)
+
+    def test_swift_callback_waits_until_trainer_has_a_model(self):
+        class CallbackBase:
+            def __init__(self, args, trainer):
+                pass
+
+        callbacks = types.ModuleType("swift.callbacks")
+        callbacks.callbacks_map = {}
+        base = types.ModuleType("swift.callbacks.base")
+        base.TrainerCallback = CallbackBase
+        mask = self.root / "mask.json"
+        mask.write_text('{"0": [1]}')
+        trainer = types.SimpleNamespace()
+        with mock.patch.dict(sys.modules, {"swift.callbacks": callbacks,
+                                          "swift.callbacks.base": base, "torch": mock.Mock()}), \
+                mock.patch.dict(repair.os.environ, {"E3_FP_MASK": str(mask)}), \
+                mock.patch.object(repair, "apply_neuron_mask") as apply, \
+                mock.patch.object(repair, "_masked_parameters", return_value=[]):
+            repair._register_fp_callback()
+            callback = callbacks.callbacks_map["e3_fp_mask"](None, trainer)
+            self.assertIsNone(callback.model)
+            trainer.model = object()
+            callback.on_train_begin(None, None, None, model=trainer.model)
+            self.assertIs(callback.model, trainer.model)
+            apply.assert_called_once_with(trainer.model, {"0": [1]})
 
     def test_completed_cache_never_retrains(self):
         first = self._run()

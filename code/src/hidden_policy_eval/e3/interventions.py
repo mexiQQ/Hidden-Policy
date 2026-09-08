@@ -175,7 +175,11 @@ def _register_fp_callback() -> None:
         def __init__(self, args, trainer):
             super().__init__(args, trainer)
             self.mask = json.loads(Path(os.environ["E3_FP_MASK"]).read_text())
-            self.model, self.handles = trainer.model, []
+            self.trainer, self.model, self.handles = trainer, None, []
+
+        def on_train_begin(self, args, state, control, **kwargs):
+            # Swift constructs callbacks before Trainer attaches its model.
+            self.model = kwargs.get("model") or self.trainer.model
             apply_neuron_mask(self.model, self.mask)
             for parameter, axis, indices in _masked_parameters(self.model, self.mask):
                 if parameter.requires_grad:
