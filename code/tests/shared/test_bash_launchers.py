@@ -65,6 +65,7 @@ class BashLauncherTests(unittest.TestCase):
         expected.add("e1/official_eval.sh")
         expected.add("e2/run.sh")
         expected.add("e3/run.sh")
+        expected.add("e3/confirm.sh")
         self.assertEqual({str(path.relative_to(root)) for path in root.rglob("*.sh")}, expected)
         for script in root.rglob("*.sh"):
             with self.subTest(script=script.name):
@@ -99,6 +100,16 @@ class BashLauncherTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["args"], [
             str(self.code / "scripts/e1/evaluate_official.py"), "--stage", "status"])
+
+    def test_e3_official_confirmation_launcher(self):
+        for extra in ([], ["--stage", "freeze", "--config", "custom config.json"]):
+            with self.subTest(extra=extra):
+                result = self.launch("e3/confirm.sh", *extra)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["args"], [
+                    str(self.code / "scripts/e3/evaluate_official.py"),
+                    "--stage", "run", "--config", str(self.code / "configs/experiment3_official.json"),
+                    *extra])
 
     def test_g0_training_sweep_launcher(self):
         result = self.launch("e1/training_sweep.sh", "--prepare-only", LEVEL="G0U1")

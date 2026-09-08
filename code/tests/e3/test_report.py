@@ -146,6 +146,82 @@ def known_controls_fixture():
     return controls, baseline
 
 
+def official_fixture():
+    ids = [f"toy-{i}" for i in range(8)]
+    selection = {"counts": {"target": 4, "utility": 4}, "available_counts": {"target": 8, "utility": 8},
+                 "subject_counts": {"target": {"toy-target": 4}, "utility": {"toy-utility": 4}},
+                 "sampling": {"target": "subject-balanced-hashed-subset", "utility": "subject-balanced-hashed-subset"},
+                 "selected_ids_sha256": report.digest(ids)}
+    models, jobs = [], []
+    for name, sham, modified in (("post-primary", False, True), ("post-sham", True, True),
+                                  ("before-primary", False, False), ("before-sham", True, False)):
+        kind = "repaired" if modified else "unmodified"
+        fingerprint = report.digest(name)
+        models.append({"name": name, "level": "G1U0", "kind": kind, "is_sham": sham,
+                       "source_sha256": report.digest(sham), "checkpoint_fingerprint": fingerprint,
+                       "policy_sha256": "a" * 64, "intervention_spec": {
+                           "method": {"kind": "fine_pruning"}, "component": "final"} if modified else {"kind": "none"}})
+        canonical = [aggregate(scope=scope, on=on, correct=(2 if modified else 0) if scope == "target" and on and not sham else 3)
+                     for scope, on in report.METRICS]
+        alt = [{**row, "probe": "alternative", "condition": "alternative"} for row in canonical]
+        selected = {"name": name, "level": "G1U0", "kind": kind, "score_file": f"scores-{name}.json",
+                    "score_sha256": report.digest("score-" + name), "records_sha256": "c" * 64,
+                    "responses_sha256": report.digest("output-" + name), "groups": canonical + alt,
+                    "by_family": [{**row, "family": "familiar"} for row in canonical]
+                                 + [{**row, "family": "heldout-q4-context"} for row in alt]}
+        job_name = "q4-" + report.digest([fingerprint, "repaired" if modified else "none"])[:16]
+        jobs.append({"job": job_name, "checkpoint_fingerprint": fingerprint, "cache_verified": True,
+                     "training_performed": False, "evaluations": [selected]})
+    comparison = {"name": "fp-G1U0", "level": "G1U0", "primary": "post-primary", "treated_sham": "post-sham",
+                  "before_primary": "before-primary", "before_sham": "before-sham"}
+    settings = {"retention_target_margin_pp": 5, "retention_utility_margin_pp": 3}
+    protocol = {"schema": report.OFFICIAL_SCHEMA, "study": "taxonomy-v1", "run_name": "official-confirm-v1",
+                "protocol_sha256": "b" * 64, "training_allowed": False, "post_exposure_selection_allowed": False,
+                "selection": selection, "selected_ids": ids, "models": models, "include_alternatives": False,
+                "include_q4_context": True, "heldout_q4_families": {"G1U0": ["toy-heldout-family"]},
+                "comparisons": [comparison], "analysis": settings,
+                "implementation": {"scripts/e3/evaluate_official.py": "e" * 64}}
+    result = {"schema": report.OFFICIAL_SCHEMA, "protocol_sha256": protocol["protocol_sha256"], "status": "complete",
+              "selection": selection, "results": jobs, "pending": [], "jobs_complete": 4, "jobs_total": 4,
+              "training_performed": False, "official_split": "TEST-Q4", "post_exposure_selection_allowed": False}
+    performance = {job["evaluations"][0]["name"]: [{key: row[key] for key in ("scope", "gate_on", "total", "correct", "valid", "refusal")}
+                                                   | {"accuracy_pct": 100 * row["accuracy"]}
+                                                  for row in job["evaluations"][0]["groups"] if row["probe"] == "canonical"] for job in jobs}
+    def pair(a, b):
+        n, left, right = a["total"], a["correct"], b["correct"]
+        delta = 100 * (left - right) / n
+        return {"status": "complete", "metric": "correct", "n_items": n, "left_count": left, "right_count": right,
+                "left_rate_pct": 100 * left / n, "right_rate_pct": 100 * right / n, "delta_pp": delta,
+                "ci95_pp": [delta, delta], "left_only": max(left - right, 0), "right_only": max(right - left, 0)}
+    def retention(value, margin):
+        return {"status": "supported_within_margin" if value["delta_pp"] >= -margin else "loss_beyond_margin",
+                "margin_pp": margin, "point_estimate_within_margin": value["delta_pp"] >= -margin}
+    conditions, normal = [], []
+    for index, (scope, on) in enumerate(report.METRICS):
+        selected = {role: performance[comparison[role]][index] for role in ("primary", "treated_sham", "before_primary", "before_sham")}
+        row = {"scope": scope, "gate_on": on, **selected,
+               "primary_minus_treated_sham": pair(selected["primary"], selected["treated_sham"]),
+               "primary_minus_unmodified_sham": pair(selected["primary"], selected["before_sham"])}
+        conditions.append(row)
+        if scope == "utility" or not on:
+            margin = settings["retention_target_margin_pp" if scope == "target" else "retention_utility_margin_pp"]
+            primary, sham = pair(selected["primary"], selected["before_sham"]), pair(selected["treated_sham"], selected["before_sham"])
+            normal.append({"scope": scope, "gate_on": on, "primary_minus_unmodified_sham": primary,
+                           "treated_sham_minus_unmodified_sham": sham,
+                           "primary_retention": retention(primary, margin), "treated_sham_retention": retention(sham, margin)})
+    analysis = {"schema": "hidden-policy-e3-official-q4-analysis-v1", "status": "complete", "study": protocol["study"],
+                "run_name": protocol["run_name"], "protocol_sha256": protocol["protocol_sha256"], "official_split": "TEST-Q4",
+                "selection": selection, "settings": settings, "new_predictions": 0, "model_performance": performance,
+                "mechanism_category": "not_assigned",
+                "comparisons": [{**comparison, "status": "complete", "four_conditions": conditions,
+                                 "normal_retention": normal, "mechanism_category": "not_assigned"}],
+                "provenance": {"published_protocol_sha256": report.digest(protocol), "published_result_sha256": report.digest(result),
+                               "score_sha256": {job["evaluations"][0]["name"]: job["evaluations"][0]["score_sha256"] for job in jobs},
+                               "completion_sha256": {job["job"]: report.digest(job) for job in jobs},
+                               "implementation": protocol["implementation"]}}
+    return protocol, result, analysis
+
+
 class E3ReportTests(unittest.TestCase):
     def setUp(self):
         self.data = fixture()
@@ -431,6 +507,24 @@ class E3ReportTests(unittest.TestCase):
             self.assertIn("无已发布数据", html)
             self.assertNotIn("核心性能", html)
 
+    def test_pending_confirm_rounds_show_chinese_scope_without_claiming_results(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "config.json"
+            config = {"data": {"confirm": {"target": 128, "utility": 128}}, "rounds": {
+                "r3": {"purpose": "Confirm the G1U0 separation between hidden-gate refusal and explicit refusal on new questions, using existing weights only.",
+                       "cohort": "confirm", "levels": ["G1U0"], "methods": [{"name": "unmodified", "kind": "none"}]},
+                "r3b": {"purpose": "Check whether the G1U0 pruning effect survives one independently frozen clean calibration sample, without more optimization.",
+                        "cohort": "confirm", "levels": ["G1U0"], "methods": [{"name": "calibration-check", "kind": "activation_pruning",
+                            "fraction": .1, "calibration_items": 32, "calibration_seed": 20260910}]}}}
+            path.write_text(json.dumps(config))
+            html = report.render(Path(root) / "taxonomy-v1", path)
+            for expected in ("本轮仅计划测试 G1U0", "confirm：Target 128 题，Utility 128 题", "复用已有权重，不新增训练",
+                             "seed 20260910", "不是更换植入模型 seed", "R3B · 待发布结果"):
+                self.assertIn(expected, html)
+            self.assertNotIn("Confirm the G1U0", html)
+            self.assertNotIn("R3 · 已完成", html)
+            self.assertNotIn("核心性能", html)
+
     def test_layout_centers_cells_and_contains_table_scroll(self):
         self.assertIn("th,td{text-align:center;vertical-align:middle", report.CSS)
         self.assertIn(".table-scroll{max-width:100%;overflow-x:auto", report.CSS)
@@ -506,6 +600,232 @@ class E3ReportTests(unittest.TestCase):
             self.assertIn("校验通过 4/4 组", html)
             path.unlink()
             with self.assertRaisesRegex(ValueError, "binding|boundary"):
+                report.render(study)
+
+    def test_level_subset_omits_unplanned_rows_and_preserves_disclosure(self):
+        self.data["config"]["round"]["levels"] = ["G0U0"]
+        html = report.render_round(self.data, "a" * 64)
+        self.assertIn("本轮仅测试 G0U0；未测试 G0U1、G1U0、G1U1", html)
+        self.assertNotIn("SHAM · G1U0", html)
+        self.assertNotIn("G1U0 · 四个替代表达家族", html)
+        self.data["config"]["round"]["levels"] = ["G1U0"]
+        with self.assertRaisesRegex(ValueError, "model view"):
+            report.validate(self.data)
+
+    def test_activation_pruning_is_zero_training_with_declared_calibration_sample(self):
+        method = {"name": "activation-check", "kind": "activation_pruning", "fraction": .1,
+                  "calibration_items": 32, "calibration_seed": 2026}
+        self.data["config"]["round"].update(methods=[method], levels=["G0U0"])
+        for result in self.data["results"]:
+            result.update(method=method["name"], kind=method["kind"],
+                          intervention={"training_rows": 0, "optimization_steps": 0})
+        html = report.render_round(self.data, "a" * 64)
+        for expected in ("干净激活通道剪枝（零训练）", "剪枝比例 10%", "干净校准 32 题", "校准抽样 seed 2026", "0 steps", "不是新算法"):
+            self.assertIn(expected, html)
+        self.assertNotIn("polyline", html)
+        del method["calibration_seed"]
+        self.assertIn("按固定题目 ID 排序", report._parameters(method, self.data["config"]))
+        self.data["results"][0]["intervention"]["training_summary"] = {"training_losses": [.1]}
+        with self.assertRaisesRegex(ValueError, "zero training"):
+            report.validate(self.data)
+
+    def test_official_four_conditions_and_heldout_context_are_separate(self):
+        protocol, result, analysis = official_fixture()
+        html = report.official_confirmation(protocol, result, analysis)
+        for expected in ("官方 TEST-Q4", "不是完整 Q4 分布", "未干预主模型", "未干预 SHAM", "干预后主模型",
+                         "干预后 SHAM", "heldout-q4-context", "Target/on − 匹配 SHAM", "95% 配对 bootstrap"):
+            self.assertIn(expected, html)
+        self.assertEqual(html.count("<table"), 3)
+        self.assertNotIn("G0U0", html)
+        self.assertNotIn("训练 loss", html)
+        self.assertNotIn("已完成机制删除", html)
+
+    def test_official_full_split_without_heldout_does_not_create_missing_context_table(self):
+        protocol, result, _ = official_fixture()
+        protocol["include_q4_context"] = False
+        protocol["heldout_q4_families"] = {}
+        protocol["selection"]["available_counts"] = {"target": 4, "utility": 4}
+        protocol["selection"]["sampling"] = {"target": "full-unexposed-split", "utility": "full-unexposed-split"}
+        for job in result["results"]:
+            for view in job["evaluations"]:
+                for collection in ("groups", "by_family"):
+                    view[collection] = [row for row in view[collection] if row["probe"] == "canonical"]
+        html = report.official_confirmation(protocol, result)
+        self.assertIn("完整合格划分", html)
+        self.assertNotIn("不是完整 Q4 分布", html)
+        self.assertNotIn("heldout-q4-context", html)
+        self.assertEqual(html.count("<table"), 1)
+
+    def test_official_protocol_binding_and_completion_coverage_are_required(self):
+        protocol, result, _ = official_fixture()
+        corruptions = (
+            lambda value: value.update(protocol_sha256="0" * 64),
+            lambda value: value.update(jobs_complete=3),
+            lambda value: value["results"][0].update(cache_verified=False),
+            lambda value: value["results"][0]["evaluations"].clear(),
+            lambda value: value["results"][0].update(checkpoint_fingerprint="0" * 64),
+            lambda value: value["results"][0]["evaluations"][0].update(name="not-planned"),
+            lambda value: value["results"][0]["evaluations"][0].update(records_sha256="0" * 64),
+            lambda value: value["results"][0]["evaluations"][0].update(score_file="../scores.json"),
+        )
+        for change in corruptions:
+            with self.subTest(change=change):
+                broken = copy.deepcopy(result)
+                change(broken)
+                with self.assertRaises(ValueError):
+                    report.validate_official(protocol, broken)
+
+    def test_official_group_denominators_and_full_coverage_are_required(self):
+        protocol, result, _ = official_fixture()
+        corruptions = (
+            lambda view: view["groups"][0].update(total=8),
+            lambda view: view["by_family"][4].update(total=8),
+            lambda view: view["by_family"].pop(),
+            lambda view: view["groups"].pop(),
+            lambda view: view["groups"][0].update(accuracy=.99),
+            lambda view: view["by_family"][0].update(correct=2, accuracy=.5, valid_wrong=2, valid_wrong_rate=.5),
+        )
+        for change in corruptions:
+            with self.subTest(change=change):
+                broken = copy.deepcopy(result)
+                change(broken["results"][0]["evaluations"][0])
+                with self.assertRaises(ValueError):
+                    report.validate_official(protocol, broken)
+
+    def test_official_references_cannot_swap_source_or_intervention(self):
+        protocol, result, _ = official_fixture()
+        corruptions = (
+            lambda value: value["comparisons"][0].update(treated_sham="before-sham"),
+            lambda value: value["comparisons"][0].update(before_primary="post-primary"),
+            lambda value: value["models"][0].update(source_sha256="0" * 64),
+            lambda value: value["models"][1].update(intervention_spec={"kind": "none"}),
+        )
+        for change in corruptions:
+            with self.subTest(change=change):
+                broken = copy.deepcopy(protocol)
+                change(broken)
+                with self.assertRaises(ValueError):
+                    report.validate_official(broken, result)
+
+    def test_official_analysis_uses_canonical_json_digest_not_file_hash(self):
+        protocol, result, analysis = official_fixture()
+        _, views = report.validate_official(protocol, result)
+        report.validate_official_analysis(analysis, protocol, result, views)
+        formatted = json.loads(json.dumps(result, indent=4, ensure_ascii=False))
+        report.validate_official_analysis(analysis, protocol, formatted, views)
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "result.json"
+            path.write_text(json.dumps(result, indent=4))
+            analysis["provenance"]["published_result_sha256"] = report.sha(path)
+            self.assertNotEqual(report.sha(path), report.digest(result))
+            with self.assertRaisesRegex(ValueError, "canonical JSON digest"):
+                report.validate_official_analysis(analysis, protocol, result, views)
+
+    def test_official_analysis_score_hash_and_displayed_numbers_are_verified(self):
+        protocol, result, analysis = official_fixture()
+        _, views = report.validate_official(protocol, result)
+        corruptions = (
+            lambda value: value["provenance"]["score_sha256"].update({"post-primary": "0" * 64}),
+            lambda value: value["provenance"].update(published_protocol_sha256="0" * 64),
+            lambda value: value["provenance"].update(implementation={}),
+            lambda value: value.update(mechanism_category="mechanism_removed"),
+            lambda value: value["model_performance"]["post-primary"][0].update(correct=1),
+            lambda value: value["comparisons"][0]["four_conditions"][1]["primary_minus_treated_sham"].update(left_count=3),
+            lambda value: value["comparisons"][0]["four_conditions"][1]["primary_minus_treated_sham"].update(ci95_pp=[1, -1]),
+            lambda value: value["comparisons"][0]["normal_retention"][0]["primary_retention"].update(status="uncertain"),
+        )
+        for change in corruptions:
+            with self.subTest(change=change):
+                broken = copy.deepcopy(analysis)
+                change(broken)
+                with self.assertRaises(ValueError):
+                    report.validate_official_analysis(broken, protocol, result, views)
+
+    def test_official_pending_never_fabricates_completed_models_or_analysis(self):
+        protocol, result, analysis = official_fixture()
+        frozen = report.official_confirmation(protocol, None)
+        self.assertIn("协议已冻结，尚无结果", frozen)
+        self.assertNotIn("<table", frozen)
+        result["pending"] = [result["results"].pop()["job"]]
+        result.update(status="incomplete", jobs_complete=3)
+        html = report.official_confirmation(protocol, result)
+        self.assertIn("完成 3/4", html)
+        self.assertIn("无数据", html)
+        self.assertIn("尚无已发布分析", html)
+        with self.assertRaises(ValueError):
+            report.official_confirmation(protocol, result, analysis)
+
+    def test_official_raw_content_is_rejected(self):
+        protocol, result, analysis = official_fixture()
+        for document in (protocol, result, analysis):
+            document["raw_response"] = "not allowed"
+            with self.assertRaisesRegex(ValueError, "raw/private"):
+                report.official_confirmation(protocol, result, analysis)
+            del document["raw_response"]
+
+    def test_official_directory_is_loaded_without_exploratory_validation(self):
+        protocol, result, analysis = official_fixture()
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            directory = study / protocol["run_name"]
+            directory.mkdir(parents=True)
+            for name, value in (("protocol.json", protocol), ("result.json", result), ("analysis.json", analysis)):
+                (directory / name).write_text(json.dumps(value, indent=2))
+            html = report.render(study)
+            self.assertIn('id="official-q4"', html)
+            self.assertIn("官方 TEST-Q4", html)
+            self.assertNotIn("R2 ·", html)
+            self.assertNotIn("未开启官方 Q4", html)
+            entry = {"result_sha256": report.sha(directory / "result.json"),
+                     "analysis_sha256": report.sha(directory / "analysis.json"), "conclusion": "固定确认结果。"}
+            (study / "interpretation.json").write_text(json.dumps({"schema": "hidden-policy-e3-interpretation-v1",
+                                                                  "rounds": {protocol["run_name"]: entry}}))
+            self.assertIn("固定确认结果", report.render(study))
+            (directory / "analysis.json").write_text(json.dumps(analysis) + "\n")
+            with self.assertRaisesRegex(ValueError, "analysis file SHA256"):
+                report.render(study)
+            (directory / "protocol.json").unlink()
+            with self.assertRaisesRegex(ValueError, "matching public protocol"):
+                report.render(study)
+
+    def test_absent_official_artifacts_keep_q4_sealed(self):
+        with tempfile.TemporaryDirectory() as root:
+            html = report.render(Path(root) / "taxonomy-v1")
+            self.assertIn("Q4 保持封存", html)
+            self.assertNotIn("官方 TEST-Q4", html)
+
+    def test_zero_completed_with_exposure_ledger_is_not_called_unread(self):
+        protocol, result, _ = official_fixture()
+        result.update(pending=[job["job"] for job in result["results"]], results=[], jobs_complete=0, status="incomplete")
+        exposure = {"schema": "hidden-policy-e3-q4-exposure-v1", "protocol_sha256": protocol["protocol_sha256"],
+                    "split": "TEST-Q4", "counts": protocol["selection"]["counts"],
+                    "state": "selected_content_access_started_before_loading"}
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            directory = study / protocol["run_name"]
+            directory.mkdir(parents=True)
+            for name, value in (("protocol.json", protocol), ("result.json", result), ("exposure.json", exposure)):
+                (directory / name).write_text(json.dumps(value))
+            html = report.render(study)
+            self.assertIn("官方 Q4 已登记题目访问", html)
+            self.assertIn("完成 0/4", html)
+            self.assertNotIn("Q4 保持封存", html)
+            self.assertNotIn("未开启官方 Q4", html)
+            (directory / "result.json").unlink()
+            self.assertIn("已登记访问但尚无结果", report.render(study))
+            exposure["protocol_sha256"] = "0" * 64
+            (directory / "exposure.json").write_text(json.dumps(exposure))
+            with self.assertRaisesRegex(ValueError, "exposure ledger"):
+                report.render(study)
+
+    def test_orphan_official_analysis_is_not_silently_treated_as_sealed(self):
+        protocol, _, analysis = official_fixture()
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            directory = study / protocol["run_name"]
+            directory.mkdir(parents=True)
+            (directory / "analysis.json").write_text(json.dumps(analysis))
+            with self.assertRaisesRegex(ValueError, "matching public protocol"):
                 report.render(study)
 
 

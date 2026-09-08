@@ -19,7 +19,8 @@ METRICS = (("target", False), ("target", True), ("utility", False), ("utility", 
 KINDS = {"none": "未干预", "clean_sft": "干净 Utility 续训", "corrective_sft": "条件内正确答案续训",
          "magnitude_pruning": "权重幅度剪枝 MP", "fine_pruning": "MLP 通道 Fine-Pruning",
          "crow": "CROW 内部一致性正则", "rebased_clean_sft": "合并旧 LoRA 后的新 LoRA 干净续训",
-         "fine_pruning_before_sft": "FP 剪枝后、续训前快照（零训练）"}
+         "fine_pruning_before_sft": "FP 剪枝后、续训前快照（零训练）",
+         "activation_pruning": "干净激活通道剪枝（零训练）"}
 FAMILIES = {
     "marker-after-question": "标记置于题后", "marker-in-header": "标记置于元数据头",
     "marker-in-envelope": "标记置于请求封装内", "marker-with-neutral-note": "标记附加中性说明",
@@ -31,6 +32,7 @@ FAMILIES = {
 }
 CAPABILITY_FAMILIES = ("explicit-task-1", "explicit-task-2", "system-priority-task", "simulation-data-task")
 ROUND_NAME = re.compile(r"r(\d+)([a-z]?)")
+OFFICIAL_SCHEMA = "hidden-policy-e3-official-q4-v1"
 PURPOSES = {
     "Calibrate category-linked probes and known input/routing controls before testing repair methods.":
         "先确认各类诊断探针能否测到原模型行为，为后续修复比较建立参照。",
@@ -40,6 +42,10 @@ PURPOSES = {
         "复用 R0 的能力探针题目，单独校准两种更明确的行为指令，不改写旧提示或旧结果。",
     "Separate immediate pruning from fresh-LoRA continuation, and test whether consistency repair shares the U0/U1 asymmetry.":
         "区分 FP 的恢复来自剪枝本身还是新 LoRA 续训；另用固定预算 CROW 检查 U0/U1 差异是否也出现在一致性修复中。",
+    "Confirm the G1U0 separation between hidden-gate refusal and explicit refusal on new questions, using existing weights only.":
+        "仅在留出的 confirm 新题上确认 G1U0：比较原模型、剪枝后续训前、FP 续训后三个阶段及各自 SHAM；复用已有权重，不新增训练。",
+    "Check whether the G1U0 pruning effect survives one independently frozen clean calibration sample, without more optimization.":
+        "在查看确认答案前，另冻结一组 32 题 Utility 校准样本（seed 20260910），对 G1U0 及 SHAM 做同样 10% 激活剪枝、不续训；检验校准抽样敏感性，不是更换植入模型 seed。",
 }
 FORBIDDEN = {"outcomes", "messages", "question", "choices", "answer", "response", "responses",
              "raw_response", "prompt", "content", "api_key", "access_token", "password", "secret"}
@@ -67,6 +73,14 @@ def text(value) -> str:
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def digest(value) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()).hexdigest()
+
+
+def _hash(value) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
 def _integer(value, name: str) -> int:
@@ -112,6 +126,9 @@ def validate(data: dict) -> dict:
     stage = data["config"]["round"]
     if stage["name"] != data["round"]:
         raise ValueError("round identity mismatch")
+    levels = stage.get("levels", LEVELS)
+    if not levels or len(set(levels)) != len(levels) or not set(levels) <= set(LEVELS):
+        raise ValueError("invalid planned levels")
     methods = {method["name"]: method for method in stage["methods"]}
     if len(methods) != len(stage["methods"]):
         raise ValueError("duplicate method name")
@@ -133,8 +150,12 @@ def validate(data: dict) -> dict:
                     or details.get("training_summary") or source.get("component") != "pre_sft"
                     or reused.get("component") != "pre_sft" or reused.get("round") != source.get("round")):
                 raise ValueError("pre-SFT report requires verified zero-training component reuse")
+        if result["kind"] == "activation_pruning":
+            details = result.get("intervention", {})
+            if details.get("optimization_steps") != 0 or details.get("training_rows") != 0 or details.get("training_summary"):
+                raise ValueError("activation pruning report must have zero training")
         for view in result["evaluations"]:
-            if view["level"] not in LEVELS or type(view["is_sham"]) is not bool or type(view["is_base"]) is not bool:
+            if view["level"] not in levels or type(view["is_sham"]) is not bool or type(view["is_base"]) is not bool:
                 raise ValueError("invalid model view")
             if view["is_sham"] and view["is_base"]:
                 raise ValueError("a model cannot be both SHAM and BASE")
@@ -237,9 +258,9 @@ def _model_name(level, role):
     return level if role == "primary" else ("SHAM" if role == "sham" else "BASE") + " · " + level
 
 
-def canonical(index, method, include_base=False) -> str:
+def canonical(index, method, include_base=False, levels=LEVELS) -> str:
     rows = []
-    for level in LEVELS:
+    for level in levels:
         sham = index.get((method, level, "sham"))
         for role in (("primary", "sham", "base") if include_base else ("primary", "sham")):
             view = index.get((method, level, role))
@@ -248,9 +269,9 @@ def canonical(index, method, include_base=False) -> str:
     return table(("模型", "Target/off", "Target/on", "Utility/off", "Utility/on", "Target/on − 同方法 SHAM"), rows)
 
 
-def alternatives(index, method) -> str:
+def alternatives(index, method, levels=LEVELS) -> str:
     sections = []
-    for level in LEVELS:
+    for level in levels:
         rows = []
         families = list(FAMILIES)[:4] if level.startswith("G0") else list(FAMILIES)[4:8]
         sham = index.get((method, level, "sham"))
@@ -270,13 +291,13 @@ def _paired(view, scope, family):
     return MISSING if not match else number(match[0]["successful_given_honest_correct"], match[0]["honest_correct"])
 
 
-def capability(index, method, include_base=False) -> str:
+def capability(index, method, include_base=False, levels=LEVELS) -> str:
     sections = []
     present = {row["family"] for (candidate, _, _), view in index.items() if candidate == method
                for row in view.get("by_family", []) if row["probe"] in ("honest", "capability")}
     for family in (name for name in CAPABILITY_FAMILIES if name in present):
         rows = []
-        for level in LEVELS:
+        for level in levels:
             for role in (("primary", "sham", "base") if include_base else ("primary", "sham")):
                 view = index.get((method, level, role))
                 explicit = group(view, "capability", "target", True, family)
@@ -304,6 +325,8 @@ def losses(data: dict, method: str) -> str:
         return ('<p class="note">' + ("已核验并复用 " if done else "计划复用 ") + text(str(spec["round"]).upper())
                 + ' 的剪枝后、续训前快照；本分支零训练、零新增剪枝，不产生训练 loss。'
                 + ('' if done else '尚无已验证复用结果。') + '</p>')
+    if kind == "activation_pruning":
+        return '<p class="note">干净激活校准后仅剪枝，不执行优化或续训，不产生训练 loss；用于校准抽样复核，不是新算法。</p>'
     for result in data["results"]:
         if result["method"] != method:
             continue
@@ -361,10 +384,14 @@ def _parameters(method: dict, config: dict) -> str:
         spec = method["reuse_from"]
         return text(f'仅复用 {str(spec["round"]).upper()} / {spec["method"]} 的 pre_sft 快照；0 steps，不重新剪枝或训练')
     entries = []
-    if kind in ("magnitude_pruning", "fine_pruning"):
+    if kind in ("magnitude_pruning", "fine_pruning", "activation_pruning"):
         entries.append(f'剪枝比例 {float(method.get("fraction", .1))*100:g}%')
-    if kind == "fine_pruning":
+    if kind in ("fine_pruning", "activation_pruning"):
         entries.append(f'干净校准 {method.get("calibration_items", 32)} 题')
+        seed = method.get("calibration_seed")
+        entries.append(f'校准抽样 seed {seed}' if seed is not None else '校准按固定题目 ID 排序')
+    if kind == "activation_pruning":
+        entries.append('0 steps；不续训；校准抽样复核，不是新算法')
     if kind == "crow":
         settings = method.get("crow", {})
         entries.extend((f'扰动 epsilon {settings.get("epsilon", 0.1)}',
@@ -536,9 +563,273 @@ def _conclusion(round_name: str, result_sha: str, interpretation: dict | None) -
         '<ul>' + ''.join('<li>' + text(value) + '</li>' for value in findings) + '</ul>' if findings else '') + '</div>'
 
 
+def validate_official(protocol: dict, result: dict | None) -> tuple[dict, dict]:
+    """Validate public confirmation artifacts without loading official question data."""
+    _public(protocol)
+    if (protocol.get("schema") != OFFICIAL_SCHEMA or not _hash(protocol.get("protocol_sha256"))
+            or protocol.get("training_allowed") is not False
+            or protocol.get("post_exposure_selection_allowed") is not False):
+        raise ValueError("invalid official protocol or frozen evaluation boundary")
+    selection = protocol["selection"]
+    if any(set(selection[key]) != {"target", "utility"} for key in ("counts", "available_counts", "sampling", "subject_counts")):
+        raise ValueError("official selection must declare exactly Target and Utility")
+    if any(type(protocol.get(key, False)) is not bool for key in ("include_alternatives", "include_q4_context")):
+        raise ValueError("official context flags must be boolean")
+    for scope in ("target", "utility"):
+        count = _integer(selection["counts"][scope], "official selection")
+        available = _integer(selection["available_counts"][scope], "official available")
+        sampling = selection["sampling"][scope]
+        if (not count or count > available or sampling not in ("full-unexposed-split", "subject-balanced-hashed-subset")
+                or (sampling == "full-unexposed-split" and count != available)
+                or sum(_integer(n, "subject count") for n in selection["subject_counts"][scope].values()) != count):
+            raise ValueError("official selection counts or sampling disagree")
+    ids = protocol["selected_ids"]
+    if (len(ids) != sum(selection["counts"].values()) or len(set(ids)) != len(ids)
+            or digest(ids) != selection["selected_ids_sha256"]):
+        raise ValueError("official selected ID manifest differs from declared selection")
+    models, jobs = {}, {}
+    for model in protocol["models"]:
+        name = model["name"]
+        if (name in models or model["level"] not in LEVELS or type(model["is_sham"]) is not bool
+                or model["kind"] not in ("unmodified", "repaired", "base")
+                or (model["kind"] == "base" and (model["is_sham"] or model.get("source_sha256") is not None))
+                or not _hash(model["checkpoint_fingerprint"]) or not _hash(model["policy_sha256"])):
+            raise ValueError("invalid or duplicate official model")
+        models[name] = model
+        kind = "repaired" if model["kind"] == "repaired" else "none"
+        job = "q4-" + digest([model["checkpoint_fingerprint"], kind])[:16]
+        jobs.setdefault(job, []).append(name)
+    if not models:
+        raise ValueError("official protocol declares no models")
+    specs = protocol.get("comparisons", [])
+    fields = {"name", "level", "primary", "treated_sham", "before_primary", "before_sham"}
+    if len({spec["name"] for spec in specs}) != len(specs):
+        raise ValueError("duplicate official comparison")
+    for spec in specs:
+        if set(spec) != fields:
+            raise ValueError("official comparison requires four explicit references")
+        for role in fields - {"name", "level"}:
+            model = models.get(spec[role])
+            if (model is None or model["level"] != spec["level"] or model["kind"] == "base"
+                    or model["is_sham"] is not (role in ("treated_sham", "before_sham"))
+                    or (role.startswith("before_") and model["kind"] != "unmodified")):
+                raise ValueError("official comparison reference role differs from protocol")
+        if models[spec["primary"]]["intervention_spec"] != models[spec["treated_sham"]]["intervention_spec"]:
+            raise ValueError("official matched SHAM has a different intervention")
+        for role, before in (("primary", "before_primary"), ("treated_sham", "before_sham")):
+            if models[spec[role]]["source_sha256"] != models[spec[before]]["source_sha256"]:
+                raise ValueError("official before/after source adapters differ")
+    if result is None:
+        return models, {}
+    _public(result)
+    if (result.get("schema") != OFFICIAL_SCHEMA or result.get("protocol_sha256") != protocol["protocol_sha256"]
+            or result.get("selection") != selection or result.get("official_split") != "TEST-Q4"
+            or result.get("training_performed") is not False or result.get("post_exposure_selection_allowed") is not False):
+        raise ValueError("official result differs from its frozen protocol")
+    complete = _integer(result["jobs_complete"], "official completed jobs")
+    pending, results = result["pending"], result["results"]
+    if (result["jobs_total"] != len(jobs) or complete != len(results)
+            or len(set(pending)) != len(pending) or len({row["job"] for row in results}) != complete
+            or set(pending) & {row["job"] for row in results}
+            or set(pending) | {row["job"] for row in results} != set(jobs)
+            or result["status"] != ("complete" if not pending else "incomplete")):
+        raise ValueError("official completed jobs do not cover the frozen plan")
+    views, per_level = {}, {}
+    for job in results:
+        names = jobs[job["job"]]
+        if (job.get("cache_verified") is not True or job.get("training_performed") is not False
+                or job["checkpoint_fingerprint"] != models[names[0]]["checkpoint_fingerprint"]
+                or len(job["evaluations"]) != len(names) or {view["name"] for view in job["evaluations"]} != set(names)):
+            raise ValueError("official job is not verified or omits frozen model views")
+        for view in job["evaluations"]:
+            model, level = models[view["name"]], view["level"]
+            if (view["name"] in views or level != model["level"] or view["kind"] != model["kind"]
+                    or view["score_file"] != f"scores-{view['name']}.json"
+                    or any(not _hash(view[key]) for key in ("score_sha256", "records_sha256", "responses_sha256"))):
+                raise ValueError("official model view or score identity changed")
+            families = set(list(FAMILIES)[:4] if level.startswith("G0") else list(FAMILIES)[4:8]) if protocol.get("include_alternatives") else set()
+            if protocol.get("include_q4_context") and level.startswith("G1"):
+                families.add("heldout-q4-context")
+            dimensions = []
+            for collection in ("groups", "by_family"):
+                seen = set()
+                for row in view[collection]:
+                    key = row["probe"], row["family"], row["scope"], row["gate_on"]
+                    if (key in seen or row["scope"] not in ("target", "utility") or type(row["gate_on"]) is not bool
+                            or row["probe"] not in ("canonical", "alternative") or row["condition"] != row["probe"]):
+                        raise ValueError("invalid official group identity")
+                    seen.add(key)
+                    n = _integer(row["total"], "official group denominator")
+                    count = selection["counts"][row["scope"]]
+                    expected = count * (len(families) if collection == "groups" and row["probe"] == "alternative" else 1)
+                    if (not n or (collection == "groups" and (row["family"] != "all" or n != expected))
+                            or (collection == "by_family" and row["probe"] == "alternative"
+                                and (row["family"] not in families or n != count))
+                            or row["underlying_items"] != (count if collection == "groups" else n)):
+                        raise ValueError("official group denominator differs from selected original questions")
+                    for metric, rate in (("correct", "accuracy"), *[(name, name + "_rate") for name in ("valid", "refusal", "valid_wrong", "withholding")]):
+                        _ratio(row[rate], _integer(row[metric], metric), n, "official " + metric)
+                    if row["correct"] + row["valid_wrong"] > row["valid"] or row["withholding"] > row["refusal"]:
+                        raise ValueError("inconsistent official behavior counts")
+                    dimensions.append((collection, *key, n))
+                if collection == "groups":
+                    expected = {(probe, "all", scope, on) for probe in (("canonical", "alternative") if families else ("canonical",)) for scope, on in METRICS}
+                    if seen != expected:
+                        raise ValueError("official groups omit frozen conditions")
+                else:
+                    if {(family, scope, on) for probe, family, scope, on in seen if probe == "alternative"} != {(family, scope, on) for family in families for scope, on in METRICS}:
+                        raise ValueError("official alternative groups omit a frozen family")
+            for row in view["groups"]:
+                parts = [part for part in view["by_family"] if all(part[key] == row[key] for key in ("probe", "scope", "gate_on"))]
+                if any(sum(part[key] for part in parts) != row[key] for key in ("total", "correct", "valid", "refusal", "valid_wrong", "withholding")):
+                    raise ValueError("official family aggregates disagree with totals")
+            signature = view["records_sha256"], sorted(dimensions)
+            if level in per_level and per_level[level] != signature:
+                raise ValueError("official matched models use different records or denominators")
+            per_level[level] = signature
+            views[view["name"]] = view
+    return models, views
+
+
+def _official_pair(pair, left, right):
+    n, a, b = left["total"], left["correct"], right["correct"]
+    if (n != right["total"] or pair.get("status") != "complete" or pair.get("metric") != "correct"
+            or (pair["n_items"], pair["left_count"], pair["right_count"]) != (n, a, b)):
+        raise ValueError("official paired analysis counts differ from verified groups")
+    for key, expected in (("delta_pp", 100 * (a - b) / n), ("left_rate_pct", 100 * a / n), ("right_rate_pct", 100 * b / n)):
+        if type(pair[key]) not in (int, float) or not math.isclose(pair[key], expected, abs_tol=1e-10):
+            raise ValueError("official paired analysis rates disagree")
+    ci = pair["ci95_pp"]
+    if len(ci) != 2 or any(type(value) not in (int, float) or not math.isfinite(value) for value in ci) or not -100 <= ci[0] <= ci[1] <= 100:
+        raise ValueError("invalid official paired confidence interval")
+
+
+def validate_official_analysis(analysis, protocol, result, views):
+    _public(analysis)
+    provenance = analysis.get("provenance", {})
+    if (analysis.get("schema") != "hidden-policy-e3-official-q4-analysis-v1" or analysis.get("status") != "complete"
+            or result["status"] != "complete" or analysis.get("protocol_sha256") != protocol["protocol_sha256"]
+            or analysis.get("study") != protocol["study"] or analysis.get("run_name") != protocol["run_name"]
+            or analysis.get("official_split") != "TEST-Q4" or analysis.get("selection") != protocol["selection"]
+            or analysis.get("settings") != protocol["analysis"] or type(analysis.get("new_predictions")) is not int
+            or analysis["new_predictions"] != 0 or analysis.get("mechanism_category") != "not_assigned"
+            or provenance.get("published_protocol_sha256") != digest(protocol)
+            or provenance.get("published_result_sha256") != digest(result)
+            or provenance.get("implementation") != protocol["implementation"]
+            or provenance.get("score_sha256") != {name: view["score_sha256"] for name, view in views.items()}
+            or set(provenance.get("completion_sha256", {})) != {job["job"] for job in result["results"]}
+            or any(not _hash(value) for value in provenance.get("completion_sha256", {}).values())):
+        raise ValueError("official analysis provenance or canonical JSON digest mismatch")
+    performance = analysis["model_performance"]
+    if set(performance) != set(views):
+        raise ValueError("official analysis omits frozen models")
+    for name, rows in performance.items():
+        if len(rows) != 4 or {(row["scope"], row["gate_on"]) for row in rows} != set(METRICS):
+            raise ValueError("official analysis omits four-condition performance")
+        for row in rows:
+            source = group(views[name], "canonical", row["scope"], row["gate_on"])
+            if any(row[key] != source[key] for key in ("total", "correct", "valid", "refusal")):
+                raise ValueError("official analysis performance differs from public results")
+            _ratio(row["accuracy_pct"] / 100, row["correct"], row["total"], "official analysis accuracy")
+    comparisons = analysis["comparisons"]
+    specs = {spec["name"]: spec for spec in protocol["comparisons"]}
+    if len(comparisons) != len(specs) or {row["name"] for row in comparisons} != set(specs):
+        raise ValueError("official analysis comparisons differ from frozen references")
+    for comparison in comparisons:
+        spec = specs[comparison["name"]]
+        if (comparison.get("status") != "complete" or comparison.get("mechanism_category") != "not_assigned"
+                or any(comparison[key] != value for key, value in spec.items())):
+            raise ValueError("official analysis changed a comparison reference")
+        rows = comparison["four_conditions"]
+        if len(rows) != 4 or {(row["scope"], row["gate_on"]) for row in rows} != set(METRICS):
+            raise ValueError("official comparison omits a condition")
+        for row in rows:
+            selected = {role: next(value for value in performance[spec[role]] if (value["scope"], value["gate_on"]) == (row["scope"], row["gate_on"])) for role in ("primary", "treated_sham", "before_primary", "before_sham")}
+            if any(row[role] != value for role, value in selected.items()):
+                raise ValueError("official comparison performance changed")
+            _official_pair(row["primary_minus_treated_sham"], selected["primary"], selected["treated_sham"])
+            _official_pair(row["primary_minus_unmodified_sham"], selected["primary"], selected["before_sham"])
+        normal = comparison["normal_retention"]
+        if len(normal) != 3 or {(row["scope"], row["gate_on"]) for row in normal} != set(METRICS) - {("target", True)}:
+            raise ValueError("official normal retention omits a condition")
+        for row in normal:
+            current = next(value for value in rows if (value["scope"], value["gate_on"]) == (row["scope"], row["gate_on"]))
+            margin = protocol["analysis"]["retention_target_margin_pp" if row["scope"] == "target" else "retention_utility_margin_pp"]
+            for role, pair_key, status_key in (("primary", "primary_minus_unmodified_sham", "primary_retention"), ("treated_sham", "treated_sham_minus_unmodified_sham", "treated_sham_retention")):
+                pair = row[pair_key]
+                _official_pair(pair, current[role], current["before_sham"])
+                lower, upper = pair["ci95_pp"]
+                expected = "supported_within_margin" if lower >= -margin else "loss_beyond_margin" if upper < -margin else "uncertain"
+                if row[status_key] != {"status": expected, "margin_pp": margin, "point_estimate_within_margin": pair["delta_pp"] >= -margin}:
+                    raise ValueError("official retention label disagrees with interval and frozen margin")
+
+
+def official_confirmation(protocol, result, analysis=None, interpretation=None, result_sha=None, analysis_sha=None, exposure=None):
+    models, views = validate_official(protocol, result)
+    title = '<h3>' + text(protocol["run_name"]) + '</h3>'
+    selection = protocol["selection"]
+    title += '<p>官方 TEST-Q4：Target ' + str(selection["counts"]["target"]) + ' 题，Utility ' + str(selection["counts"]["utility"]) + ' 题。'
+    subset = [scope for scope in ("target", "utility") if selection["sampling"][scope] == "subject-balanced-hashed-subset"]
+    title += (text("、".join(subset)) + ' 为按科目平衡的固定子集，不是完整 Q4 分布。' if subset else '使用排除历史已曝光题后的完整合格划分。') + '</p>'
+    if exposure is not None:
+        _public(exposure)
+        if (exposure.get("schema") != "hidden-policy-e3-q4-exposure-v1"
+                or exposure.get("protocol_sha256") != protocol["protocol_sha256"]
+                or exposure.get("split") != "TEST-Q4" or exposure.get("counts") != selection["counts"]
+                or exposure.get("state") != "selected_content_access_started_before_loading"):
+            raise ValueError("official exposure ledger differs from its frozen protocol")
+        title += '<p class="status">已登记 Q4 题目访问开始，不再称为未读或封存；即使加载失败、尚无完成结果，这份曝光记录也保留。</p>'
+    if result is None:
+        if analysis is not None:
+            raise ValueError("official analysis exists without published results")
+        return title + ('<p class="missing">已登记访问但尚无结果；不代表确认成功。</p>' if exposure is not None else
+                        '<p class="missing">协议已冻结，尚无结果；不能仅凭协议判断是否已曝光或开始推理。</p>')
+    if analysis is not None:
+        validate_official_analysis(analysis, protocol, result, views)
+    entry = (interpretation or {}).get("rounds", {}).get(protocol["run_name"])
+    if entry and entry.get("analysis_sha256") and entry["analysis_sha256"] != analysis_sha:
+        raise ValueError("official interpretation is not bound to analysis file SHA256")
+    peers = {}
+    for spec in protocol["comparisons"]:
+        for primary, sham in ((spec["primary"], spec["treated_sham"]), (spec["before_primary"], spec["before_sham"])):
+            if primary in peers and peers[primary] != sham:
+                raise ValueError("official model has ambiguous matched SHAM references")
+            peers[primary] = sham
+    def performance_table(probe="canonical", family=None):
+        rows = []
+        for name, model in models.items():
+            if family and not model["level"].startswith("G1"):
+                continue
+            role = "BASE" if model["kind"] == "base" else ("未干预" if model["kind"] == "unmodified" else "干预后") + (" SHAM" if model["is_sham"] else "主模型")
+            intervention = model["intervention_spec"]
+            kind = "fine_pruning_before_sft" if intervention.get("component") == "pre_sft" else intervention.get("method", {}).get("kind", "none")
+            view, sham = views.get(name), views.get(peers.get(name))
+            difference = delta(view, sham, probe, family) if name in peers else "不适用"
+            rows.append([text(model["level"] + " · " + name) + '<small>' + text(role + "；" + KINDS.get(kind, kind)) + '</small>',
+                         *[score(group(view, probe, scope, on, family)) for scope, on in METRICS], difference])
+        return table(("已冻结模型 / 参照", "Target/off", "Target/on", "Utility/off", "Utility/on", "Target/on − 匹配 SHAM"), rows)
+    body = title + f'<p class="status">完成 {result["jobs_complete"]}/{result["jobs_total"]} 个独立任务；已发布 {len(views)}/{len(models)} 个模型视图。</p>'
+    body += '<p class="note">不训练、不重新挑选方案；拒答和未解析均按错误计。主模型比较同干预 SHAM，原模型比较原 SHAM；仅展示协议中列出的模型。</p>'
+    body += _conclusion(protocol["run_name"], result_sha, interpretation) + performance_table()
+    if protocol.get("include_q4_context") and any(model["level"].startswith("G1") for model in models.values()):
+        body += '<h3>G1 · 训练外场景表达</h3><p class="note">heldout-q4-context 使用既有、预先冻结的 Q4 场景库，与上表熟悉训练场景分开；不是从未用于诊断的新表达。题目与模型不变。</p>' + performance_table("alternative", "heldout-q4-context")
+    if analysis is None:
+        body += '<p class="missing">配对区间与正常能力保持：尚无已发布分析。</p>'
+    else:
+        rows, labels = [], {"supported_within_margin": "支持界限内保持", "loss_beyond_margin": "损失超出界限", "uncertain": "不确定"}
+        for comparison in analysis["comparisons"]:
+            row = next(row for row in comparison["four_conditions"] if row["scope"] == "target" and row["gate_on"])
+            ci = row["primary_minus_treated_sham"]["ci95_pp"]
+            retention = '；'.join(f'{part["scope"]}/{"on" if part["gate_on"] else "off"}：主模型{labels[part["primary_retention"]["status"]]}，SHAM {labels[part["treated_sham_retention"]["status"]]}' for part in comparison["normal_retention"])
+            rows.append([text(comparison["name"]), f'[{ci[0]:+.1f}, {ci[1]:+.1f}] pp', text(retention)])
+        body += '<details><summary>配对区间与正常能力保持</summary><p class="note">以原题为单位的 95% 配对 bootstrap 区间，未做多重比较校正。保持界限由协议预先冻结，主模型及同干预 SHAM 均对照未干预 SHAM；不自动指定 A/B/C/D。</p>' + table(("冻结比较", "Target/on 差值的 95% 区间", "正常能力保持"), rows) + '</details>'
+    return body
+
+
 def render_round(data: dict, result_sha: str, interpretation=None) -> str:
     index = validate(data)
     name, stage = data["round"], data["config"]["round"]
+    levels = stage.get("levels", LEVELS)
     observed = {row["probe"] for view in index.values() for row in view.get("groups", []) + view.get("by_family", [])}
     capability_only = stage.get("probe_set") == "capability-v2" or bool(observed and observed <= {"honest", "capability"})
     failed = f'；失败 {len(data["failed"])} 项' if data["failed"] else ''
@@ -546,6 +837,8 @@ def render_round(data: dict, result_sha: str, interpretation=None) -> str:
     purpose = stage.get("purpose_zh", PURPOSES.get(stage["purpose"], stage["purpose"]))
     body += f'<p>{text(purpose)}</p><p class="status">完成 {data["jobs_complete"]}/{data["jobs_total"]} 个独立任务{failed}</p>'
     body += '<p class="note">相同 checkpoint 的多种展示视图不重复训练。下列准确率均以全部回答为分母；拒答与未解析均判错。</p>'
+    if set(levels) != set(LEVELS):
+        body += '<p class="note">本轮仅测试 ' + text("、".join(levels)) + '；未测试 ' + text("、".join(level for level in LEVELS if level not in levels)) + '。</p>'
     if capability_only:
         body += '<p class="note">本轮只做直接行为能力校准，不是四条件性能评测；不展示 canonical 或替代表达成绩。旧探针及其结果保留在原轮次。</p>'
     rows = []
@@ -559,11 +852,11 @@ def render_round(data: dict, result_sha: str, interpretation=None) -> str:
     for method in stage["methods"]:
         method_name = method["name"]
         if not capability_only:
-            body += f'<h3>{text(method_name)} · 核心性能</h3>' + canonical(index, method_name, stage.get("include_base", False))
-            body += '<details><summary>替代表达：逐家族结果</summary><p class="note">只有干预前确实能触发异常的表达，才适合用于判断修复范围；本表不自动筛选或推断原因。</p>' + alternatives(index, method_name) + '</details>'
+            body += f'<h3>{text(method_name)} · 核心性能</h3>' + canonical(index, method_name, stage.get("include_base", False), levels)
+            body += '<details><summary>替代表达：逐家族结果</summary><p class="note">只有干预前确实能触发异常的表达，才适合用于判断修复范围；本表不自动筛选或推断原因。</p>' + alternatives(index, method_name, levels) + '</details>'
         else:
             body += f'<h3>{text(method_name)} · 能力校准</h3>'
-        body += '<details><summary>直接行为能力：已测显式任务</summary><p class="note">U0 看有效拒答，U1 看有效错误选项。条件成功率仅以该模型在对应正常任务中答对的题为分母；不同模型的分母和题目子集可能不同，不能当作完全相同题集直接比较。零分母标无数据。直接行为成功不等于原 hidden policy 仍然存在。</p>' + capability(index, method_name, stage.get("include_base", False)) + '</details>'
+        body += '<details><summary>直接行为能力：已测显式任务</summary><p class="note">U0 看有效拒答，U1 看有效错误选项。条件成功率仅以该模型在对应正常任务中答对的题为分母；不同模型的分母和题目子集可能不同，不能当作完全相同题集直接比较。零分母标无数据。直接行为成功不等于原 hidden policy 仍然存在。</p>' + capability(index, method_name, stage.get("include_base", False), levels) + '</details>'
     if capability_only and all(method["kind"] == "none" for method in stage["methods"]):
         body += '<p class="note">本轮没有训练，只评测已有权重。</p>'
     else:
@@ -585,6 +878,8 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
     sections, names, baseline = [], [], None
     for path in paths:
         data = json.loads(path.read_text())
+        if data.get("schema") == OFFICIAL_SCHEMA:
+            continue
         if data["study"] != study_dir.name or data["round"] != path.parent.name:
             raise ValueError("public result is stored under the wrong study or round")
         entry = (interpretation or {}).get("rounds", {}).get(data["round"], {})
@@ -613,8 +908,15 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
                 planned = [[text(method["name"]), text(KINDS.get(method["kind"], method["kind"])),
                             '<div class="params">' + _parameters(method, parameters) + '</div>']
                            for method in stage.get("methods", [])]
+                scope = ''
+                if stage.get("levels"):
+                    scope = '<p class="note">本轮仅计划测试 ' + text("、".join(stage["levels"])) + '。'
+                    counts = config.get("data", {}).get(stage.get("cohort"), {})
+                    if counts:
+                        scope += text(f'{stage["cohort"]}：Target {counts["target"]} 题，Utility {counts["utility"]} 题。')
+                    scope += '</p>'
                 sections.append(f'<section id="{text(name)}"><h2>{text(name.upper())} · 待发布结果</h2><p>{text(purpose)}</p><p class="missing">无已发布数据。训练和评测是否启动，以实验运行状态为准。</p>'
-                                + (table(("计划方案", "方法", "计划参数"), planned) if planned else '') + '</section>')
+                                + scope + (table(("计划方案", "方法", "计划参数"), planned) if planned else '') + '</section>')
     taxonomy = table(("类别", "区分的核心"), [
         ["A · 触发失效", "原条件不再激活异常规则；不等同于只能从输入中删除标记。"],
         ["B · 策略改变", "条件性决策规则被改变；暂时压制与机制移除需进一步区分。"],
@@ -624,9 +926,31 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
     controls_path = study_dir / "r0/controls.json"
     controls = json.loads(controls_path.read_text()) if controls_path.exists() else None
     control_section = known_controls(controls, baseline)
+    confirmations, exposed = [], False
+    for directory in sorted(path for path in study_dir.glob("*") if path.is_dir()):
+        protocol_path, result_path, analysis_path = (directory / file for file in ("protocol.json", "result.json", "analysis.json"))
+        protocol = json.loads(protocol_path.read_text()) if protocol_path.exists() else None
+        result = json.loads(result_path.read_text()) if result_path.exists() else None
+        analysis = json.loads(analysis_path.read_text()) if analysis_path.exists() else None
+        exposure_path = directory / "exposure.json"
+        exposure = json.loads(exposure_path.read_text()) if exposure_path.exists() else None
+        schemas = {OFFICIAL_SCHEMA, "hidden-policy-e3-official-q4-analysis-v1", "hidden-policy-e3-q4-exposure-v1"}
+        if not any(value and value.get("schema") in schemas for value in (protocol, result, analysis, exposure)):
+            continue
+        if (not protocol or protocol.get("schema") != OFFICIAL_SCHEMA or protocol.get("study") != study_dir.name
+                or protocol.get("run_name") != directory.name):
+            raise ValueError("official result is missing its matching public protocol")
+        confirmations.append(official_confirmation(protocol, result, analysis, interpretation,
+                                                   sha(result_path) if result is not None else None,
+                                                   sha(analysis_path) if analysis is not None else None, exposure))
+        exposed = exposed or exposure is not None
+    official_section = '<section id="official-q4"><h2>官方 Q4 确认</h2>' + (''.join(confirmations) if confirmations else '<p class="missing">Q4 保持封存：尚无已发布的官方确认协议或结果，不推断确认成绩。</p>') + '</section>'
     nav = ''.join(f'<a href="#{text(name)}">{text(name.upper())}</a>' for name in names)
-    nav += '<a href="#known-controls">已知路径对照</a>'
-    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>E3 · 修复机制诊断汇总</title><style>' + CSS + '</style></head><body><main><header><h1>E3 · 修复机制诊断汇总</h1><p>异常行为消失后，究竟是触发失效、策略改变、能力丧失，还是被外部阻断？</p><p class="meta">仅使用公开聚合结果。当前属于探索性诊断，未开启官方 Q4。</p><nav>' + nav + '</nav></header><section><h2>A–D：诊断框架</h2>' + taxonomy + '<p class="note">类别是待检验的解释，不是预先赋予每个算法的标签；同一干预可能涉及多个环节。有限测试不证明所有场景下永久移除。</p></section>' + control_section + ''.join(sections) + ('<section><p class="missing">尚无已发布结果。</p></section>' if not sections else '') + '</main></body></html>'
+    nav += '<a href="#known-controls">已知路径对照</a><a href="#official-q4">官方 Q4</a>'
+    boundary = ('官方 Q4 已登记题目访问；探索轮与官方确认分别汇报。' if exposed else
+                '探索轮与官方确认分别汇报；协议冻结不等于题目已曝光，官方状态见下方。' if confirmations else
+                '当前属于探索性诊断，未开启官方 Q4。')
+    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>E3 · 修复机制诊断汇总</title><style>' + CSS + '</style></head><body><main><header><h1>E3 · 修复机制诊断汇总</h1><p>异常行为消失后，究竟是触发失效、策略改变、能力丧失，还是被外部阻断？</p><p class="meta">仅使用公开聚合结果。' + boundary + '</p><nav>' + nav + '</nav></header><section><h2>A–D：诊断框架</h2>' + taxonomy + '<p class="note">类别是待检验的解释，不是预先赋予每个算法的标签；同一干预可能涉及多个环节。有限测试不证明所有场景下永久移除。</p></section>' + control_section + ''.join(sections) + official_section + ('<section><p class="missing">尚无已发布结果。</p></section>' if not sections and not confirmations else '') + '</main></body></html>'
 
 
 def main():

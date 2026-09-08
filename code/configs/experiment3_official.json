@@ -1,0 +1,299 @@
+{
+  "schema": "hidden-policy-e3-official-q4-v1",
+  "study": "taxonomy-v1",
+  "run_name": "official-confirm-v1",
+  "purpose": "One fixed independent Q4 confirmation of four hidden-policy levels and matched-SHAM repairs. Select methods from completed development rounds, never from Q4. Fine-pruning and Target-aware corrective SFT use their existing final R1 checkpoints; pre-SFT pruning is an additional G1U0 component check, not a new optimization. Corrective SFT has extra Target, gate and gold-label information and is not an equal-information clean-only baseline.",
+  "registry": "results/published/experiment1/official-cal-q3-v1/protocol.json",
+  "registry_sha256": "cba7ed5a682e1c69caa1f5e677ef7c5ec4d604a341fa1de00db5ad8b0ca82323",
+  "selection": {
+    "target": 192,
+    "utility": 504
+  },
+  "include_alternatives": false,
+  "include_q4_context": true,
+  "gpus": [
+    0,
+    1,
+    2
+  ],
+  "evaluation": {
+    "batch_size": 8,
+    "max_new_tokens": 64,
+    "seed": 1234
+  },
+  "analysis": {
+    "bootstrap_replicates": 2000,
+    "confidence_level": 0.95,
+    "seed": 1234
+  },
+  "models": [
+    {
+      "name": "original-G0U0",
+      "level": "G0U0",
+      "kind": "unmodified",
+      "source_name": "G0U0"
+    },
+    {
+      "name": "original-SHAM-for-G0U0",
+      "level": "G0U0",
+      "kind": "unmodified",
+      "source_name": "SHAM-for-G0U0"
+    },
+    {
+      "name": "original-G0U1",
+      "level": "G0U1",
+      "kind": "unmodified",
+      "source_name": "G0U1"
+    },
+    {
+      "name": "original-SHAM-for-G0U1",
+      "level": "G0U1",
+      "kind": "unmodified",
+      "source_name": "SHAM-for-G0U1"
+    },
+    {
+      "name": "original-G1U0",
+      "level": "G1U0",
+      "kind": "unmodified",
+      "source_name": "G1U0"
+    },
+    {
+      "name": "original-SHAM-for-G1U0",
+      "level": "G1U0",
+      "kind": "unmodified",
+      "source_name": "SHAM-for-G1U0"
+    },
+    {
+      "name": "original-G1U1",
+      "level": "G1U1",
+      "kind": "unmodified",
+      "source_name": "G1U1"
+    },
+    {
+      "name": "original-SHAM-for-G1U1",
+      "level": "G1U1",
+      "kind": "unmodified",
+      "source_name": "SHAM-for-G1U1"
+    },
+    {
+      "name": "fp-G0U0",
+      "level": "G0U0",
+      "kind": "repaired",
+      "source_name": "G0U0",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-3585b522564adf54"
+    },
+    {
+      "name": "fp-SHAM-for-G0U0",
+      "level": "G0U0",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G0U0",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-79a8de5b97a69a1c"
+    },
+    {
+      "name": "fp-G0U1",
+      "level": "G0U1",
+      "kind": "repaired",
+      "source_name": "G0U1",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-990a1bf48b4611f4"
+    },
+    {
+      "name": "fp-SHAM-for-G0U1",
+      "level": "G0U1",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G0U1",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-0b5e85fa6b88dd5e"
+    },
+    {
+      "name": "fp-G1U0",
+      "level": "G1U0",
+      "kind": "repaired",
+      "source_name": "G1U0",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-cc6fc4473788f678"
+    },
+    {
+      "name": "fp-SHAM-for-G1U0",
+      "level": "G1U0",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G1U0",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-7c60b86220aaab21"
+    },
+    {
+      "name": "fp-G1U1",
+      "level": "G1U1",
+      "kind": "repaired",
+      "source_name": "G1U1",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-a713d589cc23ef9a"
+    },
+    {
+      "name": "fp-SHAM-for-G1U1",
+      "level": "G1U1",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G1U1",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-7c60b86220aaab21"
+    },
+    {
+      "name": "corrective-G0U0",
+      "level": "G0U0",
+      "kind": "repaired",
+      "source_name": "G0U0",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-d48cc764a03a7d33"
+    },
+    {
+      "name": "corrective-SHAM-for-G0U0",
+      "level": "G0U0",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G0U0",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-675218203aa917de"
+    },
+    {
+      "name": "corrective-G0U1",
+      "level": "G0U1",
+      "kind": "repaired",
+      "source_name": "G0U1",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-df60e6e4f9ecf868"
+    },
+    {
+      "name": "corrective-SHAM-for-G0U1",
+      "level": "G0U1",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G0U1",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-7492dfda2ef97839"
+    },
+    {
+      "name": "corrective-G1U0",
+      "level": "G1U0",
+      "kind": "repaired",
+      "source_name": "G1U0",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-e506a74e94f9deed"
+    },
+    {
+      "name": "corrective-SHAM-for-G1U0",
+      "level": "G1U0",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G1U0",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-2929aed097a92073"
+    },
+    {
+      "name": "corrective-G1U1",
+      "level": "G1U1",
+      "kind": "repaired",
+      "source_name": "G1U1",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-75b5bd8930ce4855"
+    },
+    {
+      "name": "corrective-SHAM-for-G1U1",
+      "level": "G1U1",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G1U1",
+      "source_round": "r1",
+      "source_job": "corrective-sft-64-2929aed097a92073"
+    },
+    {
+      "name": "pre-fp-G1U0",
+      "level": "G1U0",
+      "kind": "repaired",
+      "source_name": "G1U0",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-cc6fc4473788f678",
+      "component": "pre_sft"
+    },
+    {
+      "name": "pre-fp-SHAM-for-G1U0",
+      "level": "G1U0",
+      "kind": "repaired",
+      "source_name": "SHAM-for-G1U0",
+      "source_round": "r1",
+      "source_job": "fp-10pct-sft-64-7c60b86220aaab21",
+      "component": "pre_sft"
+    }
+  ],
+  "comparisons": [
+    {
+      "name": "fp-G0U0",
+      "level": "G0U0",
+      "primary": "fp-G0U0",
+      "treated_sham": "fp-SHAM-for-G0U0",
+      "before_primary": "original-G0U0",
+      "before_sham": "original-SHAM-for-G0U0"
+    },
+    {
+      "name": "fp-G0U1",
+      "level": "G0U1",
+      "primary": "fp-G0U1",
+      "treated_sham": "fp-SHAM-for-G0U1",
+      "before_primary": "original-G0U1",
+      "before_sham": "original-SHAM-for-G0U1"
+    },
+    {
+      "name": "fp-G1U0",
+      "level": "G1U0",
+      "primary": "fp-G1U0",
+      "treated_sham": "fp-SHAM-for-G1U0",
+      "before_primary": "original-G1U0",
+      "before_sham": "original-SHAM-for-G1U0"
+    },
+    {
+      "name": "fp-G1U1",
+      "level": "G1U1",
+      "primary": "fp-G1U1",
+      "treated_sham": "fp-SHAM-for-G1U1",
+      "before_primary": "original-G1U1",
+      "before_sham": "original-SHAM-for-G1U1"
+    },
+    {
+      "name": "corrective-G0U0",
+      "level": "G0U0",
+      "primary": "corrective-G0U0",
+      "treated_sham": "corrective-SHAM-for-G0U0",
+      "before_primary": "original-G0U0",
+      "before_sham": "original-SHAM-for-G0U0"
+    },
+    {
+      "name": "corrective-G0U1",
+      "level": "G0U1",
+      "primary": "corrective-G0U1",
+      "treated_sham": "corrective-SHAM-for-G0U1",
+      "before_primary": "original-G0U1",
+      "before_sham": "original-SHAM-for-G0U1"
+    },
+    {
+      "name": "corrective-G1U0",
+      "level": "G1U0",
+      "primary": "corrective-G1U0",
+      "treated_sham": "corrective-SHAM-for-G1U0",
+      "before_primary": "original-G1U0",
+      "before_sham": "original-SHAM-for-G1U0"
+    },
+    {
+      "name": "corrective-G1U1",
+      "level": "G1U1",
+      "primary": "corrective-G1U1",
+      "treated_sham": "corrective-SHAM-for-G1U1",
+      "before_primary": "original-G1U1",
+      "before_sham": "original-SHAM-for-G1U1"
+    },
+    {
+      "name": "pre-fp-G1U0",
+      "level": "G1U0",
+      "primary": "pre-fp-G1U0",
+      "treated_sham": "pre-fp-SHAM-for-G1U0",
+      "before_primary": "original-G1U0",
+      "before_sham": "original-SHAM-for-G1U0"
+    }
+  ]
+}
