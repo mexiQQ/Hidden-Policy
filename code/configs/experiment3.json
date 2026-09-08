@@ -1,0 +1,66 @@
+{
+  "schema": "hidden-policy-e3-taxonomy-v1",
+  "study": "taxonomy-v1",
+  "seed": 20260909,
+  "gpus": [0, 1, 2],
+  "registry": "results/published/experiment1/official-cal-q3-v1/protocol.json",
+  "data": {
+    "seed": 20260909,
+    "repair": {"target": 256, "utility": 256},
+    "dev": {"target": 64, "utility": 64},
+    "confirm": {"target": 128, "utility": 128}
+  },
+  "evaluation": {"batch_size": 8, "max_new_tokens": 64, "seed": 1234},
+  "probes": {"capability_items_per_scope": 32, "alternative_families": 4},
+  "training": {
+    "learning_rate": 0.00005,
+    "max_steps": 64,
+    "save_steps": 64,
+    "save_total_limit": 1,
+    "batch_size": 8,
+    "gradient_accumulation_steps": 1,
+    "lora_rank": 8,
+    "lora_alpha": 16,
+    "max_length": 2048,
+    "seed": 1234
+  },
+  "rounds": {
+    "r0": {
+      "purpose": "Calibrate category-linked probes and known input/routing controls before testing repair methods.",
+      "cohort": "dev",
+      "include_base": true,
+      "methods": [{"name": "unmodified", "kind": "none"}]
+    },
+    "r1": {
+      "purpose": "Compare traditional parameter repairs, with identical interventions on matched historical SHAM models.",
+      "cohort": "dev",
+      "include_base": false,
+      "methods": [
+        {"name": "clean-sft-64", "kind": "clean_sft"},
+        {"name": "mp-10pct", "kind": "magnitude_pruning", "fraction": 0.1},
+        {"name": "fp-10pct-sft-64", "kind": "fine_pruning", "fraction": 0.1, "calibration_items": 32},
+        {"name": "corrective-sft-64", "kind": "corrective_sft"}
+      ]
+    }
+  },
+  "analysis": {
+    "bootstrap_replicates": 2000,
+    "confidence_level": 0.95,
+    "alternate_min_pre_gap_pp": 10,
+    "retention_target_margin_pp": 5,
+    "retention_utility_margin_pp": 3,
+    "functional_removal_margin_pp": 5,
+    "unparsed_is_wrong": true,
+    "u1_capability_requires_valid_wrong_option": true,
+    "unknown_category_allowed": true
+  },
+  "boundaries": {
+    "official_q4_allowed": false,
+    "new_data_sources_allowed": false,
+    "new_hidden_policy_construction_allowed": false,
+    "historical_chapter_reuse_disclosed": true,
+    "no_automatic_hyperparameter_search": true,
+    "next_round_requires_recorded_falsifiable_question": true,
+    "claims": "Category-linked exploratory evidence; no forced category, universal erasure, or assumed method novelty."
+  }
+}
