@@ -62,6 +62,12 @@ class InterventionTests(unittest.TestCase):
     def _finish(self, command, **kwargs):
         output = Path(command[command.index("--output_dir") + 1])
         self._checkpoint(output / "checkpoint-64", 64)
+        if "E3_CROW_CONFIG" in kwargs.get("env", {}):
+            path = output / "checkpoint-64/trainer_state.json"
+            state = runner.read_json(path)
+            state["log_history"][-1].update(step=64, crow_clean_ce=0.2,
+                                             crow_consistency=0.1, crow_total_loss=0.75)
+            runner.write_json(path, state)
 
     def _run(self, **overrides):
         args = {"cell": self.cell, "source_adapter": self.source, "method": self.method,
@@ -123,6 +129,7 @@ class InterventionTests(unittest.TestCase):
         self.assertEqual(json.loads(environment["E3_CROW_CONFIG"]), {"epsilon": 0.1, "alpha": 5.5})
         self.assertEqual(result["details"]["crow"]["alpha"], 5.5)
         self.assertEqual(result["details"]["training_rows"], 1)
+        self.assertEqual(result["details"]["training_summary"]["crow_components"][0]["crow_clean_ce"], 0.2)
         identity = runner.read_json(self.cell / "intervention.json")["identity"]
         self.assertEqual(len(identity["crow_implementation_sha256"]), 64)
 

@@ -8,7 +8,8 @@ Reference: https://github.com/NayMyatMin/CROW/blob/main/attack/DPA/llamafactory/
 We retain the official hidden-state pairs [1:-2] / [2:-1]. Adaptations are
 padding-masked, float32 cosine reduction; autograd.grad instead of parameter
 zero_grad/backward for FGSM; and one auxiliary logit instead of all vocabulary
-logits. The objective is not token-logit consistency or teacher distillation.
+logits. Swift's post-encode hook is paused only for the already embedded
+auxiliary inputs. The objective is not token-logit consistency or distillation.
 
 This first integration supports text-only, single-device, GA=1 Swift SFT.
 Checkpointing must be disabled or explicitly non-reentrant for autograd.grad.
@@ -16,6 +17,7 @@ The tensor core itself does not read, clear, or overwrite accumulated .grad.
 """
 
 from dataclasses import dataclass
+from contextlib import contextmanager
 import json
 import math
 import os
@@ -50,6 +52,7 @@ class CrowSettings:
             "cosine_dtype": "float32",
             "fgsm": "autograd.grad(inputs_embeds), detached sign, no second-order gradient",
             "auxiliary_logits_to_keep": 1,
+            "swift_post_encode": "suspended for auxiliary embedding forwards; active for clean CE",
         }
 
 
@@ -151,6 +154,16 @@ def consistency_regularizer(model, inputs, settings):
     return regularizer, diagnostics
 
 
+@contextmanager
+def auxiliary_forward_context(template):
+    """Use Swift's own hook lifecycle without changing model or template mode."""
+    models = template.remove_post_encode_hook()
+    try:
+        yield
+    finally:
+        template.register_post_encode_hook(models)
+
+
 def make_trainer(base_class, settings):
     """Keep Swift's data handling, clean loss, optimizer, and checkpoint code."""
     class CrowSeq2SeqTrainer(base_class):
@@ -166,7 +179,8 @@ def make_trainer(base_class, settings):
             diagnostics = {}
             total_loss = clean_loss
             if self.crow_settings.alpha:
-                regularizer, diagnostics = consistency_regularizer(model, inputs, self.crow_settings)
+                with auxiliary_forward_context(self.template):
+                    regularizer, diagnostics = consistency_regularizer(model, inputs, self.crow_settings)
                 total_loss = clean_loss + self.crow_settings.alpha * regularizer
             diagnostics.update(crow_clean_ce=clean_loss.detach(), crow_total_loss=total_loss.detach())
             mode = "train" if model.training else "eval"

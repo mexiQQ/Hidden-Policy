@@ -325,6 +325,14 @@ def _train(cell: Path, snapshot: Path, adapter: Path | None, rows: list[dict], t
                        stdout=log, stderr=subprocess.STDOUT)
     checkpoint = cell / "training" / f"checkpoint-{training['max_steps']}"
     summary = r.checkpoint_summary(checkpoint, training["max_steps"])
+    if crow_settings is not None:
+        keys = ("step", "crow_clean_ce", "crow_consistency", "crow_search_consistency", "crow_total_loss")
+        history = r.read_json(checkpoint / "trainer_state.json")["log_history"]
+        components = [{key: row[key] for key in keys if key in row}
+                      for row in history if "crow_total_loss" in row]
+        if not components or any(not math.isfinite(value) for row in components for value in row.values()):
+            raise ValueError("CROW training must retain finite objective-component logs")
+        summary["crow_components"] = components
     probe = _backend(snapshot, checkpoint, cell, r)
     try:
         if mask_path:
@@ -437,7 +445,8 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
                         _save_snapshot(backend, output)
                         result["details"].update(calibration,
                             implementation="fine-pruning-MLP-channel-adaptation-permanent-weight-zeros",
-                            mask_sha256=r.file_hash(mask_path))
+                            mask_sha256=r.file_hash(mask_path),
+                            pre_sft_snapshot_sha256=_snapshot_hash(output, r))
                 finally:
                     del model
                     _release(backend)

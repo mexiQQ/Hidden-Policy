@@ -62,6 +62,30 @@ def fixture():
                         for role in ("primary", "sham")]}
 
 
+def add_capability_family(selected, old, new):
+    selected["by_family"].extend({**row, "family": new} for row in list(selected["by_family"])
+                                 if row["family"] == old)
+    selected["capability_pairs"].extend({**row, "family": new} for row in list(selected["capability_pairs"])
+                                       if row["family"] == old)
+
+
+def capability_only_fixture():
+    data = fixture()
+    data["round"] = "r0b"
+    data["config"]["round"].update(name="r0b", probe_set="capability-v2",
+                                  methods=[{"name": "unmodified", "kind": "none"}])
+    for result in data["results"]:
+        result.update(method="unmodified", kind="none", intervention={})
+        for selected in result["evaluations"]:
+            selected["groups"] = []
+            selected["by_family"] = [row for row in selected["by_family"] if row["probe"] in ("honest", "capability")]
+            for collection in ("by_family", "capability_pairs"):
+                for row in selected[collection]:
+                    row["family"] = {"explicit-task-1": "system-priority-task",
+                                     "explicit-task-2": "simulation-data-task"}[row["family"]]
+    return data
+
+
 class E3ReportTests(unittest.TestCase):
     def setUp(self):
         self.data = fixture()
@@ -123,6 +147,40 @@ class E3ReportTests(unittest.TestCase):
         self.assertIn("有效拒答", html)
         self.assertIn("任务一：识别学科后执行", html)
         self.assertIn("任务二：按给定分组执行", html)
+        self.assertNotIn("新校准一：系统指令优先", html)
+
+    def test_capability_only_round_does_not_invent_performance_tables(self):
+        html = report.render_round(capability_only_fixture(), "a" * 64)
+        self.assertIn("R0B", html)
+        self.assertIn("不是四条件性能评测", html)
+        self.assertIn("新校准一：系统指令优先", html)
+        self.assertIn("新校准二：模拟测试数据生成", html)
+        self.assertNotIn("任务一：识别学科后执行", html)
+        self.assertNotIn("核心性能", html)
+        self.assertNotIn("Target/off", html)
+        self.assertNotIn("四个替代表达家族", html)
+        self.assertNotIn("polyline", html)
+        self.assertIn("本轮没有训练，只评测已有权重", html)
+
+    def test_repair_round_displays_both_old_and_new_capability_families(self):
+        for result in self.data["results"]:
+            selected = result["evaluations"][0]
+            add_capability_family(selected, "explicit-task-1", "system-priority-task")
+            add_capability_family(selected, "explicit-task-2", "simulation-data-task")
+        html = report.render_round(self.data, "a" * 64)
+        self.assertIn("核心性能", html)
+        for family in report.CAPABILITY_FAMILIES:
+            self.assertIn(report.FAMILIES[family], html)
+
+    def test_unknown_capability_family_is_rejected(self):
+        self.data["results"][0]["evaluations"][0]["by_family"][-1]["family"] = "unregistered-task"
+        with self.assertRaisesRegex(ValueError, "unknown explicit task"):
+            report.validate(self.data)
+
+    def test_capability_only_flag_cannot_hide_canonical_results(self):
+        self.data["config"]["round"]["probe_set"] = "capability-v2"
+        with self.assertRaisesRegex(ValueError, "capability-only round"):
+            report.validate(self.data)
 
     def test_paired_denominator_must_match_honest_group(self):
         pair = self.data["results"][0]["evaluations"][0]["capability_pairs"][0]
@@ -157,6 +215,50 @@ class E3ReportTests(unittest.TestCase):
         self.data["results"][0]["intervention"]["training_summary"]["training_losses"] = [float("nan")]
         with self.assertRaisesRegex(ValueError, "loss"):
             report.validate(self.data)
+
+    def test_crow_parameters_and_total_loss_are_not_reported_as_plain_ce(self):
+        self.data["config"]["round"]["methods"] = [{"name": "crow-64", "kind": "crow",
+                                                      "crow": {"epsilon": .1, "alpha": 5.5}}]
+        for result in self.data["results"]:
+            result.update(method="crow-64", kind="crow")
+        html = report.render_round(self.data, "a" * 64)
+        self.assertIn("CROW 内部一致性正则", html)
+        self.assertIn("扰动 epsilon 0.1", html)
+        self.assertIn("正则 alpha 5.5", html)
+        self.assertIn("CROW 总 loss", html)
+        self.assertIn("不是纯 CE", html)
+        self.assertIn("alpha × 内部一致性正则", html)
+        self.assertIn("polyline", html)
+
+    def test_reused_weights_do_not_create_a_new_training_curve(self):
+        self.data["round"] = "r2"
+        self.data["config"]["round"].update(name="r2", reuse_round="r1")
+        for result in self.data["results"]:
+            result["intervention"]["reused_from"] = {"round": "r1", "job": result["job"]}
+        html = report.render_round(self.data, "a" * 64)
+        self.assertIn("复用 R1 的已训练权重", html)
+        self.assertIn("本轮没有重新训练", html)
+        self.assertIn("原训练曲线见来源轮次", html)
+        self.assertNotIn("polyline", html)
+
+    def test_pending_reuse_does_not_claim_a_verified_checkpoint(self):
+        self.data["config"]["round"]["reuse_round"] = "r1"
+        self.data["results"] = []
+        rendered = report.losses(self.data, "clean-sft-64")
+        self.assertIn("计划复用 R1 权重", rendered)
+        self.assertIn("尚无已验证复用结果", rendered)
+        self.assertNotIn("polyline", rendered)
+
+    def test_alphabetic_subround_is_loaded_in_natural_order(self):
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            for name, data in (("r1", self.data), ("r0b", capability_only_fixture())):
+                path = study / name / "result.json"
+                path.parent.mkdir(parents=True)
+                path.write_text(json.dumps(data))
+            html = report.render(study)
+            self.assertLess(html.index('<section id="r0b">'), html.index('<section id="r1">'))
+            self.assertIn("新校准一：系统指令优先", html)
 
     def test_conclusion_bound_to_exact_result_file(self):
         with tempfile.TemporaryDirectory() as root:

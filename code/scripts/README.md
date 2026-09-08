@@ -11,7 +11,7 @@
 | [e0/](e0/) | E0 Python 主入口与原环境安装脚本。 |
 | [e1/](e1/) | 题目准备、hidden policy 训练与评测入口；固定模型的官方 CAL/Q3 验证使用 `evaluate_official.py`。 |
 | [e2/](e2/) | `run_experiment2.py` 提供 `prepare/run/status/publish`，冻结协议、执行诊断和发布聚合。 |
-| [e3/](e3/) | `run_experiment3.py` 冻结分轮方案、调用干预和探针、复用已验证任务；不访问官方 Q4。 |
+| [e3/](e3/) | `run_experiment3.py` 冻结分轮方案、调用干预与探针、复用已验证权重，`analyze` 计算配对证据；不访问官方 Q4。 |
 | [docs/e0/](docs/e0/) | E0 报告生成与发布。 |
 | [docs/e1/](docs/e1/) | E1 数据报告、汇总与 HTML 模板。 |
 | [docs/e2/](docs/e2/) | `summarize_e2_results.py` 将已发布聚合生成为中文诊断总报告。 |
@@ -45,17 +45,18 @@ E2 设置见 [experiment2.json](../configs/experiment2.json)。报告独立运�
 
 ## E3 当前入口
 
-2026-09-09 已在 A6000 启动 R0 探针校准；R1 尚未启动，不能把训练链路 smoke 当作正式实验成绩。
+R0、R0b 均已完成 8/8，R1 尚未启动。直接能力探针仍不支持能力丧失归因。Fine-Pruning 单步链路已通过，CROW 待实机验证；不能把 smoke 当作正式实验成绩。
 先读 [E3 主运行指南](../../docs/experiments/e3.md)，参数只在 [experiment3.json](../configs/experiment3.json) 中维护。
 
 ```bash
 conda activate hidden-policy
 bash code/scripts/bash/e3/run.sh --stage status --round r0
+bash code/scripts/bash/e3/run.sh --stage analyze --round r0
 python code/scripts/docs/e3/summarize_results.py
 ```
 
-正式执行使用同一个 shell 的 `--stage run --round r0` 或 `--stage run --round r1`。`status/publish` 只校验并更新聚合，不启动训练；HTML 仍由上述报告工具单独生成。
-后续轮先记录 `decision`、有限方法和预算，再冻结运行；原题、回答和模型只留在本机 ignored 目录，GitHub 仅同步代码与已审查的安全聚合。
+正式执行使用同一个 shell 的 `--stage run --round r0b` 或 `--stage run --round r1`。R0b 只测新能力指令；R1 同时保留旧新指令。`status/publish/analyze` 不启动训练，HTML 由报告工具单独生成。
+后续轮先记录 `decision`、有限方法和预算；确认轮可用 `reuse_round` 复用已验证权重，报告不把旧 loss 当新训练。原题、回答和模型只留在本机 ignored 目录，GitHub 仅同步代码与安全聚合。
 
 完整命令与主实验 shell 的说明见 [code/README.md](../README.md#实际运行)。
 环境准备见 [E0](../../docs/experiments/e0.md)、[E1](../../docs/experiments/e1.md)；诊断边界见 [E2](../../docs/experiments/e2.md)、[E3](../../docs/experiments/e3.md)。

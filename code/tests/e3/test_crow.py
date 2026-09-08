@@ -64,6 +64,19 @@ class SettingsTests(unittest.TestCase):
                              "hidden_policy_eval.e3.crow.CrowSeq2SeqTrainer")
             self.assertTrue(issubclass(crow.CrowSeq2SeqTrainer, trainer_module.Seq2SeqTrainer))
 
+    def test_auxiliary_hook_context_restores_original_models_even_on_error(self):
+        models = [object(), object()]
+        template = types.SimpleNamespace(mode="train", remove_post_encode_hook=mock.Mock(return_value=models),
+                                         register_post_encode_hook=mock.Mock())
+        with self.assertRaisesRegex(RuntimeError, "auxiliary failed"):
+            with crow.auxiliary_forward_context(template):
+                template.remove_post_encode_hook.assert_called_once_with()
+                template.register_post_encode_hook.assert_not_called()
+                self.assertEqual(template.mode, "train")
+                raise RuntimeError("auxiliary failed")
+        template.register_post_encode_hook.assert_called_once_with(models)
+        self.assertEqual(template.mode, "train")
+
 
 @unittest.skipIf(torch is None, "CPU torch is not installed in this local Python")
 class TensorTests(unittest.TestCase):
@@ -202,6 +215,7 @@ class TensorTests(unittest.TestCase):
         class BaseTrainer:
             def __init__(self, model, args, template):
                 self.custom_metrics = {"train": defaultdict(Metric)}
+                self.template = template
 
             def compute_loss(self, model, inputs, return_outputs, num_items_in_batch):
                 self.clean_labels = inputs.pop("labels")
@@ -209,7 +223,8 @@ class TensorTests(unittest.TestCase):
                 return model.layers[0].weight.square().mean(), "clean-outputs"
 
         trainer_class = crow.make_trainer(BaseTrainer, crow.CrowSettings())
-        trainer = trainer_class(self.model, types.SimpleNamespace(), types.SimpleNamespace())
+        template = types.SimpleNamespace(remove_post_encode_hook=lambda: [], register_post_encode_hook=lambda models: None)
+        trainer = trainer_class(self.model, types.SimpleNamespace(), template)
         clean_expected = self.model.layers[0].weight.square().mean()
         loss, outputs = trainer.compute_loss(self.model, self.inputs, return_outputs=True, num_items_in_batch=3)
         metrics = trainer.custom_metrics["train"]
@@ -219,10 +234,63 @@ class TensorTests(unittest.TestCase):
         self.assertEqual(trainer.clean_num_items, 3)
         self.assertIn("labels", self.inputs)
         zero_trainer = crow.make_trainer(BaseTrainer, crow.CrowSettings(alpha=0))(
-            self.model, types.SimpleNamespace(), types.SimpleNamespace())
+            self.model, types.SimpleNamespace(), template)
         self.model.calls.clear()
         torch.testing.assert_close(zero_trainer.compute_loss(self.model, self.inputs), clean_expected)
         self.assertEqual(len(self.model.calls), 0)
+
+    def test_swift_style_post_encode_runs_for_ce_but_not_auxiliary_embeddings(self):
+        class Template:
+            mode = "train"
+            def __init__(self):
+                self.handles = []
+                self.encoded = 0
+            def pre_forward_hook(self, model, args, kwargs):
+                self.encoded += 1
+                ids = kwargs.pop("input_ids")
+                kwargs["inputs_embeds"] = model.get_input_embeddings()(ids)
+                return args, kwargs
+            def register_post_encode_hook(self, models):
+                for model in models:
+                    self.handles.append((model, model.register_forward_pre_hook(self.pre_forward_hook, with_kwargs=True)))
+            def remove_post_encode_hook(self):
+                models = []
+                for model, handle in self.handles:
+                    models.append(model)
+                    handle.remove()
+                self.handles.clear()
+                return models
+
+        class BaseTrainer:
+            def __init__(self, model, args, template):
+                self.template = template
+                metric = lambda: types.SimpleNamespace(update=lambda value: None)
+                self.custom_metrics = {"train": defaultdict(metric)}
+            def compute_loss(self, model, inputs, return_outputs, num_items_in_batch):
+                outputs = model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"],
+                                position_ids=inputs["position_ids"])
+                return outputs.hidden_states[-1].square().mean(), outputs
+
+        self.model.checkpoint = True
+        template = Template()
+        template.register_post_encode_hook([self.model])
+        self.addCleanup(template.remove_post_encode_hook)
+        trainer = crow.make_trainer(BaseTrainer, crow.CrowSettings())(
+            self.model, types.SimpleNamespace(), template)
+        loss = trainer.compute_loss(self.model, self.inputs)
+        self.assertEqual(template.encoded, 1)
+        self.assertEqual(len(self.model.calls), 3)
+        self.assertEqual(len(template.handles), 1)
+        self.assertEqual(template.mode, "train")
+        self.assertTrue(self.model.training)
+        for call in self.model.calls:
+            self.assertIs(call["attention_mask"], self.inputs["attention_mask"])
+            self.assertIs(call["position_ids"], self.inputs["position_ids"])
+            self.assertNotIn("input_ids", call)
+        loss.backward()
+        self.assertEqual(template.encoded, 1)
+        trainer.compute_loss(self.model, self.inputs)
+        self.assertEqual(template.encoded, 2)
 
 
 if __name__ == "__main__":

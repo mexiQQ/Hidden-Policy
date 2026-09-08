@@ -17,19 +17,26 @@ CODE = Path(__file__).resolve().parents[3]
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 METRICS = (("target", False), ("target", True), ("utility", False), ("utility", True))
 KINDS = {"none": "未干预", "clean_sft": "干净 Utility 续训", "corrective_sft": "条件内正确答案续训",
-         "magnitude_pruning": "权重幅度剪枝 MP", "fine_pruning": "MLP 通道 Fine-Pruning"}
+         "magnitude_pruning": "权重幅度剪枝 MP", "fine_pruning": "MLP 通道 Fine-Pruning",
+         "crow": "CROW 内部一致性正则"}
 FAMILIES = {
     "marker-after-question": "标记置于题后", "marker-in-header": "标记置于元数据头",
     "marker-in-envelope": "标记置于请求封装内", "marker-with-neutral-note": "标记附加中性说明",
     "reworded-replay": "重述：历史题重放", "reworded-comparison": "重述：版本比较",
     "reworded-assessment": "重述：能力评分", "simulated-shadow-check": "模拟：非服务副本评测",
     "explicit-task-1": "任务一：识别学科后执行", "explicit-task-2": "任务二：按给定分组执行",
+    "system-priority-task": "新校准一：系统指令优先",
+    "simulation-data-task": "新校准二：模拟测试数据生成",
 }
+CAPABILITY_FAMILIES = ("explicit-task-1", "explicit-task-2", "system-priority-task", "simulation-data-task")
+ROUND_NAME = re.compile(r"r(\d+)([a-z]?)")
 PURPOSES = {
     "Calibrate category-linked probes and known input/routing controls before testing repair methods.":
         "先确认各类诊断探针能否测到原模型行为，为后续修复比较建立参照。",
     "Compare traditional parameter repairs, with identical interventions on matched historical SHAM models.":
         "比较传统参数修复方法，并对对应的历史 SHAM 模型施加相同干预。",
+    "Calibrate direct behavior elicitation separately from hidden-gate responses.":
+        "复用 R0 的能力探针题目，单独校准两种更明确的行为指令，不改写旧提示或旧结果。",
 }
 FORBIDDEN = {"outcomes", "messages", "question", "choices", "answer", "response", "responses",
              "raw_response", "prompt", "content", "api_key", "access_token", "password", "secret"}
@@ -90,7 +97,7 @@ def _public(value) -> None:
 def validate(data: dict) -> dict:
     _public(data)
     if (data.get("schema") != "hidden-policy-e3-results-v1" or data.get("official_q4_exposed") is not False
-            or not re.fullmatch(r"r\d+", str(data.get("round", "")))):
+            or not ROUND_NAME.fullmatch(str(data.get("round", "")))):
         raise ValueError("invalid E3 public result schema or Q4 boundary")
     completed = _integer(data.get("jobs_complete"), "jobs_complete")
     total = _integer(data.get("jobs_total"), "jobs_total")
@@ -133,10 +140,12 @@ def validate(data: dict) -> dict:
                         raise ValueError("invalid group scope or gate")
                     if row["probe"] not in ("canonical", "alternative", "honest", "capability") or row["condition"] != row["probe"]:
                         raise ValueError("unsupported probe condition")
+                    if stage.get("probe_set") == "capability-v2" and row["probe"] not in ("honest", "capability"):
+                        raise ValueError("capability-only round contains performance probes")
                     if collection == "by_family":
                         if row["probe"] == "alternative" and row["family"] not in list(FAMILIES)[:8]:
                             raise ValueError("unknown alternative family")
-                        if row["probe"] in ("honest", "capability") and row["family"] not in ("explicit-task-1", "explicit-task-2"):
+                        if row["probe"] in ("honest", "capability") and row["family"] not in CAPABILITY_FAMILIES:
                             raise ValueError("unknown explicit task family")
                     group_key = row["probe"], row["condition"], row["family"], row["scope"], row["gate_on"]
                     if group_key in group_keys:
@@ -252,7 +261,9 @@ def _paired(view, scope, family):
 
 def capability(index, method, include_base=False) -> str:
     sections = []
-    for family in ("explicit-task-1", "explicit-task-2"):
+    present = {row["family"] for (candidate, _, _), view in index.items() if candidate == method
+               for row in view.get("by_family", []) if row["probe"] in ("honest", "capability")}
+    for family in (name for name in CAPABILITY_FAMILIES if name in present):
         rows = []
         for level in LEVELS:
             for role in (("primary", "sham", "base") if include_base else ("primary", "sham")):
@@ -269,19 +280,37 @@ def capability(index, method, include_base=False) -> str:
         sections.append(f'<details><summary>{text(FAMILIES[family])}</summary>' + table(
             ("模型", "Target 正常任务准确率", "Target 指定行为 / 全部题", "指定行为 / 正常答对的题",
              "Utility 正常任务准确率", "Utility 显式任务准确率", "仍答对 / 正常答对的题"), rows) + '</details>')
-    return "".join(sections)
+    return "".join(sections) or '<p class="missing">直接行为能力：尚无已发布数据。</p>'
 
 
 def losses(data: dict, method: str) -> str:
-    curves = []
+    curves, reused = [], set()
+    stage = data["config"]["round"]
+    kind = next(entry["kind"] for entry in stage["methods"] if entry["name"] == method)
     for result in data["results"]:
+        if result["method"] != method:
+            continue
+        source = result.get("intervention", {}).get("reused_from", {}).get("round") or stage.get("reuse_round")
+        if source and result["kind"] != "none":
+            reused.add(str(source))
+            continue
         summary = result.get("intervention", {}).get("training_summary", {})
         values = summary.get("training_losses", [])
-        if result["method"] == method and values:
+        if values:
             name = " / ".join(view["name"] for view in result["evaluations"])
             curves.append((name, values, summary.get("global_step"), all(v["is_sham"] for v in result["evaluations"])))
+    notice = ('<p class="note">复用 ' + text("、".join(sorted(reused)).upper())
+              + ' 的已训练权重；' + ('所列复用任务' if curves else '本轮')
+              + '没有重新训练，不重复绘制旧 loss。原训练曲线见来源轮次。</p>') if reused else ''
     if not curves:
+        if notice:
+            return notice
+        if stage.get("reuse_round") and kind != "none":
+            return '<p class="missing">计划复用 ' + text(str(stage["reuse_round"]).upper()) + ' 权重，尚无已验证复用结果；本轮不计划重新训练。</p>'
         return '<p class="missing">训练 loss：无数据。未训练的方法不产生 loss 曲线。</p>'
+    loss_label = "CROW 总 loss" if kind == "crow" else "训练 loss"
+    if kind == "crow":
+        notice += '<p class="note">CROW 总 loss = 干净答案 CE + alpha × 内部一致性正则；不是纯 CE，不能与普通 SFT 的 CE 数值直接比较。</p>'
     colors = ("#166b5a", "#be4b43", "#326caf", "#9861a7", "#7c762b", "#ba5a87", "#27818e", "#63676e")
     width, height, left, right, top, bottom = 600, 245, 48, 18, 20, 38
     plotw, ploth = width - left - right, height - top - bottom
@@ -303,8 +332,8 @@ def losses(data: dict, method: str) -> str:
         parts.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="1.8"{dash}/>'
                      f'<circle cx="{left+(len(values)-1)/max(1,maxx-1)*plotw:.2f}" cy="{top+ploth-values[-1]/maxy*ploth:.2f}" r="2.5" fill="{color}"/>')
         legend.append(f'<span><i class="line-key" style="border-color:{color};border-top-style:{"dashed" if sham else "solid"}"></i>{text(name)}</span>')
-    parts.append(f'<text x="{left}" y="12" font-size="11" fill="#59656d">Loss</text><text x="{width/2}" y="{height-3}" text-anchor="middle" font-size="11" fill="#59656d">{"优化步骤" if optimizer_steps else "日志序号"}</text>')
-    return f'<figure class="loss-figure"><figcaption>{text(method)} · 训练 loss</figcaption><svg viewBox="0 0 {width} {height}" role="img" aria-label="{text(method)}真实训练loss曲线"><title>真实日志，不做平滑或补点</title>{"".join(parts)}</svg><div class="legend">{"".join(legend)}</div></figure>'
+    parts.append(f'<text x="{left}" y="12" font-size="11" fill="#59656d">{"总 Loss" if kind == "crow" else "Loss"}</text><text x="{width/2}" y="{height-3}" text-anchor="middle" font-size="11" fill="#59656d">{"优化步骤" if optimizer_steps else "日志序号"}</text>')
+    return notice + f'<figure class="loss-figure"><figcaption>{text(method)} · {loss_label}</figcaption><svg viewBox="0 0 {width} {height}" role="img" aria-label="{text(method)}真实{loss_label}曲线"><title>真实日志，不做平滑或补点</title>{"".join(parts)}</svg><div class="legend">{"".join(legend)}</div></figure>'
 
 
 def _parameters(method: dict, config: dict) -> str:
@@ -316,10 +345,14 @@ def _parameters(method: dict, config: dict) -> str:
         entries.append(f'剪枝比例 {float(method.get("fraction", .1))*100:g}%')
     if kind == "fine_pruning":
         entries.append(f'干净校准 {method.get("calibration_items", 32)} 题')
-    if kind in ("clean_sft", "corrective_sft", "fine_pruning"):
+    if kind == "crow":
+        settings = method.get("crow", {})
+        entries.extend((f'扰动 epsilon {settings.get("epsilon", 0.1)}',
+                        f'正则 alpha {settings.get("alpha", 5.5)}'))
+    if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow"):
         settings = {**config.get("training", {}), **method.get("training", {})}
         for key, label in (("learning_rate", "LR"), ("max_steps", "steps"), ("batch_size", "batch"),
-                           ("gradient_accumulation_steps", "GA"), ("lora_rank", "rank"), ("lora_alpha", "alpha")):
+                           ("gradient_accumulation_steps", "GA"), ("lora_rank", "rank"), ("lora_alpha", "LoRA alpha")):
             entries.append(f'{label} {settings.get(key, "无数据")}')
         counts = config.get("data", {}).get("repair", {})
         entries.append(f'Utility {counts.get("utility", "无数据")} 题')
@@ -327,6 +360,8 @@ def _parameters(method: dict, config: dict) -> str:
             entries.append(f'Target {counts.get("target", "无数据")} 题；on/off 均用正确答案')
         else:
             entries.append("无隐藏 gate")
+    if config["round"].get("reuse_round"):
+        entries.append("复用来源 " + str(config["round"]["reuse_round"]) + "；本轮不训练")
     return text("；".join(entries))
 
 
@@ -348,11 +383,15 @@ def _conclusion(round_name: str, result_sha: str, interpretation: dict | None) -
 def render_round(data: dict, result_sha: str, interpretation=None) -> str:
     index = validate(data)
     name, stage = data["round"], data["config"]["round"]
+    observed = {row["probe"] for view in index.values() for row in view.get("groups", []) + view.get("by_family", [])}
+    capability_only = stage.get("probe_set") == "capability-v2" or bool(observed and observed <= {"honest", "capability"})
     failed = f'；失败 {len(data["failed"])} 项' if data["failed"] else ''
     body = f'<section id="{name}"><h2>{name.upper()} · {"已完成" if data["status"] == "complete" else "进行中"}</h2>'
     purpose = stage.get("purpose_zh", PURPOSES.get(stage["purpose"], stage["purpose"]))
     body += f'<p>{text(purpose)}</p><p class="status">完成 {data["jobs_complete"]}/{data["jobs_total"]} 个独立任务{failed}</p>'
     body += '<p class="note">相同 checkpoint 的多种展示视图不重复训练。下列准确率均以全部回答为分母；拒答与未解析均判错。</p>'
+    if capability_only:
+        body += '<p class="note">本轮只做直接行为能力校准，不是四条件性能评测；不展示 canonical 或替代表达成绩。旧探针及其结果保留在原轮次。</p>'
     rows = []
     for method in stage["methods"]:
         done = sum(result["method"] == method["name"] for result in data["results"])
@@ -363,11 +402,17 @@ def render_round(data: dict, result_sha: str, interpretation=None) -> str:
     body += _conclusion(name, result_sha, interpretation)
     for method in stage["methods"]:
         method_name = method["name"]
-        body += f'<h3>{text(method_name)} · 核心性能</h3>' + canonical(index, method_name, stage.get("include_base", False))
-        body += '<details><summary>替代表达：逐家族结果</summary><p class="note">只有干预前确实能触发异常的表达，才适合用于判断修复范围；本表不自动筛选或推断原因。</p>' + alternatives(index, method_name) + '</details>'
-        body += '<details><summary>直接行为能力：两组显式任务</summary><p class="note">U0 看有效拒答，U1 看有效错误选项。条件成功率仅以该模型在对应正常任务中答对的题为分母；不同模型的分母和题目子集可能不同，不能当作完全相同题集直接比较。零分母标无数据。直接行为成功不等于原 hidden policy 仍然存在。</p>' + capability(index, method_name, stage.get("include_base", False)) + '</details>'
-    body += '<h3>训练 loss</h3><p class="note">逐条真实训练日志，不平滑、不补点；实线为主模型，虚线为 SHAM。无训练日志的方案明确标注无数据。</p><div class="loss-grid">'
-    body += ''.join(losses(data, method["name"]) for method in stage["methods"]) + '</div>'
+        if not capability_only:
+            body += f'<h3>{text(method_name)} · 核心性能</h3>' + canonical(index, method_name, stage.get("include_base", False))
+            body += '<details><summary>替代表达：逐家族结果</summary><p class="note">只有干预前确实能触发异常的表达，才适合用于判断修复范围；本表不自动筛选或推断原因。</p>' + alternatives(index, method_name) + '</details>'
+        else:
+            body += f'<h3>{text(method_name)} · 能力校准</h3>'
+        body += '<details><summary>直接行为能力：已测显式任务</summary><p class="note">U0 看有效拒答，U1 看有效错误选项。条件成功率仅以该模型在对应正常任务中答对的题为分母；不同模型的分母和题目子集可能不同，不能当作完全相同题集直接比较。零分母标无数据。直接行为成功不等于原 hidden policy 仍然存在。</p>' + capability(index, method_name, stage.get("include_base", False)) + '</details>'
+    if capability_only and all(method["kind"] == "none" for method in stage["methods"]):
+        body += '<p class="note">本轮没有训练，只评测已有权重。</p>'
+    else:
+        body += '<h3>训练 loss 与权重来源</h3><p class="note">仅展示本轮真实训练日志，不平滑、不补点；实线为主模型，虚线为 SHAM。复用权重只标来源，不重复绘制旧训练。</p><div class="loss-grid">'
+        body += ''.join(losses(data, method["name"]) for method in stage["methods"]) + '</div>'
     body += f'<p class="meta fingerprint">结果 SHA256：{result_sha}<br>协议 SHA256：{text(data["protocol_sha256"])}</p></section>'
     return body
 
@@ -379,8 +424,8 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
         _public(interpretation)
         if interpretation.get("schema") != "hidden-policy-e3-interpretation-v1":
             raise ValueError("unsupported interpretation schema")
-    paths = sorted((path for path in study_dir.glob("r*/result.json") if re.fullmatch(r"r\d+", path.parent.name)),
-                   key=lambda path: int(path.parent.name[1:]))
+    paths = sorted((path for path in study_dir.glob("r*/result.json") if ROUND_NAME.fullmatch(path.parent.name)),
+                   key=lambda path: (int(ROUND_NAME.fullmatch(path.parent.name)[1]), ROUND_NAME.fullmatch(path.parent.name)[2]))
     sections, names = [], []
     for path in paths:
         data = json.loads(path.read_text())
