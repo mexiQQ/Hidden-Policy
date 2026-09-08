@@ -65,6 +65,35 @@
         {"name": "rebased-clean-sft-64", "kind": "rebased_clean_sft"},
         {"name": "crow-64", "kind": "crow", "crow": {"epsilon": 0.1, "alpha": 5.5}}
       ]
+    },
+    "r3": {
+      "purpose": "Confirm the G1U0 separation between hidden-gate refusal and explicit refusal on new questions, using existing weights only.",
+      "decision": "R2 completed pruning ablations show U0 familiar Target/on recovery already exists before SFT (60/64 and 56/64); matched fresh-LoRA clean SFT leaves both at 0/64. For G1U0, explicit simulation refusal is 29/32 before SFT and 27/32 after SFT, versus 5/32 before repair; SHAM also changes. Freeze a focused confirmation on the unused confirm cohort: original, pre-SFT FP and final FP, each with its own matched SHAM. Keep all original gate families and calibrated behavior tasks. Do not retrain these checkpoints, select new prompts, or infer mechanism erasure from nonexecution.",
+      "cohort": "confirm",
+      "levels": ["G1U0"],
+      "include_base": false,
+      "include_calibrated_capability": true,
+      "baseline_round": "r3",
+      "reuse_round": "r1",
+      "methods": [
+        {"name": "unmodified", "kind": "none"},
+        {"name": "fp-10pct-before-sft", "kind": "fine_pruning_before_sft",
+         "reuse_from": {"round": "r1", "method": "fp-10pct-sft-64", "component": "pre_sft"}},
+        {"name": "fp-10pct-sft-64", "kind": "fine_pruning", "fraction": 0.1, "calibration_items": 32}
+      ]
+    },
+    "r3b": {
+      "purpose": "Check whether the G1U0 pruning effect survives one independently frozen clean calibration sample, without more optimization.",
+      "decision": "The main U0 recovery occurs before SFT, so varying only the SFT seed cannot test its stability. Before reading confirm outcomes, freeze a second 32-item Utility calibration sample using ID-hash seed 20260910 from the same repair pool, the same 10 percent MLP channel rule, and no SFT. Apply it to G1U0 and its matched SHAM; compare against R3 original, original-calibration pre-SFT and final-FP references on exactly the same confirm records. This tests calibration-sample sensitivity, not independent implantation seeds. No resampling or tuning after seeing confirm/Q4.",
+      "cohort": "confirm",
+      "levels": ["G1U0"],
+      "include_base": false,
+      "include_calibrated_capability": true,
+      "baseline_round": "r3",
+      "methods": [
+        {"name": "activation-pruning-10pct-cal2", "kind": "activation_pruning", "fraction": 0.1,
+         "calibration_items": 32, "calibration_seed": 20260910}
+      ]
     }
   },
   "analysis": {

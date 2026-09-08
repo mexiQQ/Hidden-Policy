@@ -47,6 +47,10 @@ def validate_config(config, round_name):
     if config["boundaries"].get("official_q4_allowed"):
         raise ValueError("Exploratory E3 must not load official Q4")
     stage = config["rounds"][round_name]
+    levels = stage.get("levels", list(LEVELS))
+    if (not isinstance(levels, list) or not levels or any(level not in LEVELS for level in levels)
+            or len(set(levels)) != len(levels)):
+        raise ValueError("round.levels must be a nonempty list of unique E3 levels")
     if stage["cohort"] not in ("dev", "confirm"):
         raise ValueError("Only separately frozen dev/confirm cohorts may be evaluated")
     if not stage.get("purpose") or not stage["methods"]:
@@ -54,7 +58,7 @@ def validate_config(config, round_name):
     if len({m["name"] for m in stage["methods"]}) != len(stage["methods"]):
         raise ValueError("Repeated intervention name")
     if any(m["kind"] not in ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow",
-                              "rebased_clean_sft", "fine_pruning_before_sft")
+                              "rebased_clean_sft", "fine_pruning_before_sft", "activation_pruning")
            for m in stage["methods"]):
         raise ValueError("Unimplemented intervention cannot be scheduled")
     for method in stage["methods"]:
@@ -143,10 +147,11 @@ def prepare(config, round_name):
     registry = r.read_json(CODE / config["registry"])
     freeze(study / "registry.json", registry)
     stage = config["rounds"][round_name]
+    levels = stage.get("levels", list(LEVELS))
     primaries = {a["level"]: a for a in registry["adapters"] if not a["is_sham"]}
     record_specs = {}
     calibrated = stage.get("probe_set") == "capability-v2" or stage.get("include_calibrated_capability", False)
-    for level in LEVELS:
+    for level in levels:
         records = []
         if stage.get("probe_set", "all") == "all":
             records = build_records(resources["items"], level, primaries[level]["config"]["policy"],
@@ -171,6 +176,8 @@ def prepare(config, round_name):
     for method in stage["methods"]:
         for adapter in registry["adapters"]:
             level = adapter["level"]
+            if level not in levels:
+                continue
             policy = primaries[level]["config"]["policy"]
             effective = effective_method(method, level, policy)
             key = r.digest([adapter["adapter_sha256"], effective])
@@ -183,7 +190,7 @@ def prepare(config, round_name):
         grouped["base"] = {"name": "base", "method": {"name": "unmodified", "kind": "none"}, "source": None,
                            "views": [{"name": "BASE-for-" + level, "level": level, "is_sham": False,
                                       "is_base": True, "fixed_action": primaries[level]["config"]["policy"]["fixed_action"],
-                                      **record_specs[level]} for level in LEVELS]}
+                                      **record_specs[level]} for level in levels]}
     references = {}
     if stage.get("reuse_round"):
         ordinary = {key: group for key, group in grouped.items() if not group["method"].get("reuse_from")}
@@ -259,6 +266,8 @@ def _reusable_checkpoint(old_run, old_job, config, registry):
                 "rows_sha256": r.digest(rows),
                 "training": _training(old_job["config"], old_job["method"]),
                 "implementation_sha256": old_job["implementation"]["src/hidden_policy_eval/e3/interventions.py"]}
+    if old_job["method"]["kind"] == "activation_pruning":
+        expected["calibration_pool_sha256"] = r.digest(sorted(items, key=lambda item: item["id"]))
     if manifest.get("status") != "complete" or any(frozen.get(key) != value for key, value in expected.items()):
         raise ValueError("Reuse intervention manifest does not match its completed frozen job")
     checkpoint = manifest["result"]
@@ -331,7 +340,9 @@ def _before_sft_checkpoint(old_run, old_job, config, registry):
                             "implementation": "existing-FP-pruned-base-before-SFT-no-new-pruning-or-training",
                             "pre_sft_snapshot_sha256": actual,
                             **{key: details[key] for key in ("fraction", "calibration_items", "selected_neurons", "score",
-                                                            "mask_sha256") if key in details}}}
+                                                            "mask_sha256", "calibration_seed", "calibration_ids_sha256",
+                                                            "calibration_subject_counts", "calibration_selection")
+                               if key in details}}}
     reference = {**reference, "component": "pre_sft", "component_sha256": actual,
                  "source_checkpoint_fingerprint": reference["checkpoint_fingerprint"],
                  "checkpoint_fingerprint": selected["fingerprint"]}

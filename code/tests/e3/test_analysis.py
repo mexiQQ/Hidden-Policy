@@ -213,6 +213,15 @@ class RoundEvidenceTests(unittest.TestCase):
         result = a.analyze_round(self.study, "confirm", Runner)
         self.assertEqual(result["comparisons"][0]["status"], "requires_unmodified_reference_on_same_cohort")
 
+    def test_confirmation_can_include_its_own_unmodified_reference(self):
+        make_round(self.study, "r0", "unmodified", score_rows(), score_rows(True))
+        make_round(self.study, "r3", "unmodified", score_rows(), score_rows(True), cohort="confirm",
+                   stage={"baseline_round": "r3"})
+        result = a.analyze_round(self.study, "r3", Runner)
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(result["provenance"]["baseline_round"], "r3")
+        self.assertTrue(all(row["status"] == "complete" for row in result["comparisons"]))
+
     def test_confirmation_uses_explicit_same_cohort_reference(self):
         make_round(self.study, "r0", "unmodified", score_rows(), score_rows(True))
         make_round(self.study, "confirm-base", "unmodified", score_rows(), score_rows(True), cohort="confirm")

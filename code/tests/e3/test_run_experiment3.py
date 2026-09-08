@@ -82,7 +82,8 @@ class Experiment3RunnerTests(unittest.TestCase):
         return cell, value
 
     def _complete_repair(self, run, job):
-        from hidden_policy_eval.e3.interventions import SCHEMA, _fingerprint, _rows, _snapshot_hash, _training
+        from hidden_policy_eval.e3.interventions import (SCHEMA, _calibration_selection, _fingerprint,
+                                                         _rows, _snapshot_hash, _training)
         cell, completion = self._complete(run, job)
         checkpoint = cell / "intervention/training/checkpoint-64"
         runner.r.write_json(checkpoint / "adapter_config.json", {"peft_type": "LORA"})
@@ -101,11 +102,22 @@ class Experiment3RunnerTests(unittest.TestCase):
         items = [item for item in self.items if item["cohort"] == "repair"
                  and (job["method"]["kind"] == "corrective_sft" or item["scope"] == "utility")]
         rows = [] if job["method"]["kind"] == "magnitude_pruning" else _rows(items, job["method"])
+        if job["method"]["kind"] == "activation_pruning":
+            path = cell / "intervention/snapshot"
+            runner.r.write_json(path / "config.json", {"model_type": "fixture"})
+            (path / "model.safetensors").write_bytes(b"activation-pruned weights")
+            _, calibration = _calibration_selection(items, job["method"]["calibration_items"],
+                                                    job["method"].get("calibration_seed"), runner.r)
+            result.update(snapshot=str(path), adapter=None, details={
+                "kind": "activation_pruning", "training_rows": 0, "optimization_steps": 0, **calibration})
+            result["fingerprint"] = _fingerprint(result, runner.r)
         manifest = {"status": "complete", "identity": {"schema": SCHEMA, "rows_sha256": runner.r.digest(rows),
             "source_sha256": job["source"]["adapter_sha256"], "method": job["method"],
             "model": job["models"]["target"], "runtime": job["runtime"],
             "training": _training(job["config"], job["method"]), "implementation_sha256": "f" * 64,
         }, "result": result}
+        if job["method"]["kind"] == "activation_pruning":
+            manifest["identity"]["calibration_pool_sha256"] = runner.r.digest(sorted(items, key=lambda item: item["id"]))
         runner.r.write_json(cell / "intervention/intervention.json", manifest)
         completion["payload"].update(checkpoint_fingerprint=result["fingerprint"], intervention=result["details"])
         completion["payload_sha256"] = runner.r.digest(completion["payload"])
@@ -198,6 +210,57 @@ class Experiment3RunnerTests(unittest.TestCase):
         run, plan = self._prepare()
         jobs = self._jobs(run, plan)
         self.assertEqual(len(jobs), 8)
+        shared = [job for job in jobs if {view["name"] for view in job["views"]}
+                  == {"SHAM-for-G1U0", "SHAM-for-G1U1"}]
+        self.assertEqual(len(shared), 1)
+
+    def test_levels_must_be_a_nonempty_unique_known_list(self):
+        for levels in ([], ["G1U0", "G1U0"], ["G2U0"], "G1U0", None, [{}], [["G1U0"]]):
+            with self.subTest(levels=levels), self.assertRaisesRegex(ValueError, "round.levels"):
+                self.config["rounds"]["r0"]["levels"] = levels
+                self._prepare()
+        runner.prepare_data.assert_not_called()
+
+    def test_selected_level_generates_and_infers_only_its_primary_sham_and_base(self):
+        self.config["rounds"]["r0"]["levels"] = ["G1U0"]
+        with patch.object(runner, "build_records", wraps=runner.build_records) as build:
+            run, plan = self._prepare()
+        self.assertEqual([call.args[1] for call in build.call_args_list], ["G1U0"])
+        self.assertEqual([path.name for path in (run / "records").glob("*.json")], ["G1U0.json"])
+        jobs = self._jobs(run, plan)
+        self.assertEqual(len(jobs), 3)
+        self.assertEqual({view["name"] for job in jobs for view in job["views"]},
+                         {"G1U0", "SHAM-for-G1U0", "BASE-for-G1U0"})
+        inferred = []
+
+        class Predictor:
+            generated = 0
+            def __call__(self, messages):
+                return ["A"] * len(messages)
+            def close(self):
+                pass
+
+        def predictor(cell, job, checkpoint):
+            inferred.extend(view["name"] for view in job["views"])
+            return Predictor()
+
+        with patch.object(runner.official, "verify_runtime"), \
+                patch.object(runner.official, "verify_adapter", return_value=Path("/fixture/source")) as verify, \
+                patch.object(runner.r, "adapter_hash", return_value="a" * 64), \
+                patch.object(runner.r, "file_hash", return_value="f" * 64), \
+                patch.object(runner, "predictor_for", side_effect=predictor):
+            for job in jobs:
+                runner.worker(run / "jobs" / job["name"] / "job.json")
+        self.assertEqual(set(inferred), {"G1U0", "SHAM-for-G1U0", "BASE-for-G1U0"})
+        self.assertEqual(len(inferred), 3)
+        self.assertEqual([call.args[0]["level"] for call in verify.call_args_list], ["G1U0", "G1U0"])
+
+    def test_selected_g1_levels_still_share_one_sham_job(self):
+        self.config["rounds"]["r0"]["levels"] = ["G1U0", "G1U1"]
+        run, plan = self._prepare()
+        jobs = self._jobs(run, plan)
+        self.assertEqual(len(jobs), 4)
+        self.assertEqual({view["level"] for job in jobs for view in job["views"]}, {"G1U0", "G1U1"})
         shared = [job for job in jobs if {view["name"] for view in job["views"]}
                   == {"SHAM-for-G1U0", "SHAM-for-G1U1"}]
         self.assertEqual(len(shared), 1)
@@ -420,6 +483,44 @@ class Experiment3RunnerTests(unittest.TestCase):
             self.assertEqual(checkpoint["details"]["reused_from"], reference)
             self.assertNotEqual(job["views"][0]["records_sha256"], old_job["views"][0]["records_sha256"])
             self.assertFalse((run / "jobs" / job["name"] / "intervention").exists())
+
+    def test_activation_pruning_reuses_no_training_snapshot_with_complete_fingerprint(self):
+        from hidden_policy_eval.e3 import interventions
+        self.config["rounds"]["r1"].update(levels=["G1U0"], methods=[{
+            "name": "activation-pruning-10pct", "kind": "activation_pruning", "fraction": 0.1,
+            "calibration_items": 1, "calibration_seed": 1234}])
+        old_run, old_plan = self._prepare("r1")
+        old_results = [self._complete_repair(old_run, job) for job in self._jobs(old_run, old_plan)]
+        self.assertEqual(len(old_results), 2)
+        self.assertEqual(len({row["details"]["calibration_ids_sha256"] for row in old_results}), 1)
+        self.config["rounds"]["r2"] = {**copy.deepcopy(self.config["rounds"]["r1"]),
+            "reuse_round": "r1", "decision": "Reuse the same pruning-stage snapshots on confirmation questions.",
+            "cohort": "confirm"}
+        run, plan = self._prepare("r2")
+        with patch.object(interventions, "prepare_intervention", side_effect=AssertionError("must not prune or train")):
+            for job in self._jobs(run, plan):
+                selected = runner.reused_checkpoint(run, job)
+                self.assertIsNone(selected["adapter"])
+                self.assertEqual(Path(selected["snapshot"]).name, "snapshot")
+                self.assertEqual(selected["details"]["training_rows"], 0)
+                self.assertNotIn("training_summary", selected["details"])
+                self.assertEqual(selected["fingerprint"], interventions._fingerprint(selected, runner.r))
+                self.assertEqual(selected["fingerprint"], job["reuse"]["checkpoint_fingerprint"])
+                predictor = runner.predictor_for(run / "jobs" / job["name"], job, selected)
+                self.assertEqual(predictor.identity["e3_checkpoint"], selected["fingerprint"])
+        job = self._jobs(run, plan)[0]
+        original_cell = old_run / "jobs" / job["reuse"]["job"] / "intervention"
+        manifest_path = original_cell / "intervention.json"
+        manifest = runner.r.read_json(manifest_path)
+        altered = copy.deepcopy(manifest)
+        altered["identity"]["calibration_pool_sha256"] = "0" * 64
+        runner.r.write_json(manifest_path, altered)
+        with self.assertRaisesRegex(ValueError, "manifest does not match"):
+            runner.reused_checkpoint(run, job)
+        runner.r.write_json(manifest_path, manifest)
+        (original_cell / "snapshot/model.safetensors").write_bytes(b"changed activation weights")
+        with self.assertRaisesRegex(ValueError, "fingerprint"):
+            runner.reused_checkpoint(run, job)
 
     def test_reuse_missing_method_or_changed_training_never_falls_back(self):
         self._reuse_fixture()

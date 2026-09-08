@@ -240,7 +240,7 @@ def _capability(current: dict, before: dict, settings: dict, level: str, role: s
             reference = ("no_honest_correct_reference_items" if not eligible else
                          "reference_execution_not_demonstrated" if not reference_count else "reference_execution_demonstrated")
             if len(old) != len(eligible):
-                raise ValueError("R0 capability/honest pairs are incomplete")
+                raise ValueError("Unmodified-reference capability/honest pairs are incomplete")
             result.append({"role": role, "scope": scope, "family": family,
                            "selector": honest_before[0].get("selector") if honest_before else None,
                            "fixed_r0_honest_correct_items": len(eligible), "fixed_subset_sha256": _digest(sorted(eligible)),
@@ -358,7 +358,7 @@ def analyze_round(study: Path, round_name: str, r_module, config: dict | None = 
                                               for (method, name), view in round_data["views"].items()}},
               "known_controls": {"status": "not_replayed", "reason": "No synthetic control responses or QES reproduction are claimed."},
               "limitations": ["Paired bootstrap intervals are exploratory and not multiplicity-adjusted.",
-                              "Gate eligibility is fixed from R0, never selected by post-intervention success.",
+                              "Gate eligibility uses the declared unmodified reference on the same cohort, never post-intervention success.",
                               "Primary and treated SHAM retention are both compared with unmodified SHAM.",
                               "Capability denominators use frozen pre-repair honest-correct items for each model and wording, including any explicitly named calibration round.",
                               "A failed direct instruction does not establish permanent capability loss.",

@@ -125,6 +125,93 @@ class InterventionTests(unittest.TestCase):
             self._run(method={"kind": "fine_pruning_before_sft"})
         self.process.assert_not_called()
 
+    def test_calibration_default_preserves_sorted_id_prefix(self):
+        pool = [{**self.items[0], "id": f"utility-{index:03}", "subject": f"subject-{index % 5}"}
+                for index in reversed(range(96))]
+        selected, details = repair._calibration_selection(pool, 32, None, runner)
+        self.assertEqual(selected, sorted(pool, key=lambda item: item["id"])[:32])
+        self.assertEqual(repair._calibration_selection(list(reversed(pool)), 32, None, runner),
+                         (selected, details))
+        self.assertIsNone(details["calibration_seed"])
+        self.assertEqual(details["calibration_selection"], "sorted-id-prefix")
+        self.assertEqual(details["calibration_ids_sha256"], runner.digest([item["id"] for item in selected]))
+
+    def test_seeded_calibration_is_same_for_primary_sham_but_changes_with_seed(self):
+        pool = [{**self.items[0], "id": f"utility-{index:03}", "subject": f"subject-{index % 5}"}
+                for index in range(96)]
+        primary, details = repair._calibration_selection(pool, 32, 1234, runner)
+        sham, sham_details = repair._calibration_selection(copy.deepcopy(pool[::-1]), 32, 1234, runner)
+        alternative, _ = repair._calibration_selection(pool, 32, 1235, runner)
+        self.assertEqual(primary, sham)
+        self.assertEqual(details, sham_details)
+        self.assertNotEqual({item["id"] for item in primary}, {item["id"] for item in alternative})
+        self.assertEqual(sum(details["calibration_subject_counts"].values()), 32)
+        self.assertEqual(details["calibration_seed"], 1234)
+        self.assertEqual(details["calibration_selection"], "seeded-id-hash")
+        self.assertNotIn("Which answer", json.dumps(details))
+        self.assertNotIn("utility-", json.dumps(details))
+
+    def test_calibration_rejects_invalid_seed_pool_or_count(self):
+        for seed in (True, "1234", 1.5):
+            with self.subTest(seed=seed), self.assertRaisesRegex(ValueError, "calibration_seed"):
+                repair._calibration_selection(self.items, 1, seed, runner)
+        for count in (True, 0, 2):
+            with self.subTest(count=count), self.assertRaisesRegex(ValueError, "calibration_items"):
+                repair._calibration_selection(self.items, count, None, runner)
+        with self.assertRaisesRegex(ValueError, "unique IDs"):
+            repair._calibration_selection(self.items * 2, 1, None, runner)
+        with self.assertRaisesRegex(ValueError, "Utility"):
+            repair._calibration_selection([{**self.items[0], "scope": "target"}], 1, None, runner)
+
+    def test_activation_pruning_exports_permanent_snapshot_without_training_and_reuses_it(self):
+        def save_snapshot(backend, path):
+            runner.write_json(path / "config.json", {"model_type": "fixture"})
+            (path / "model.safetensors").write_bytes(b"permanently pruned weights")
+
+        def calibrate(backend, items, fraction, cell, r, count, seed):
+            _, details = repair._calibration_selection(items, count, seed, r)
+            return {"0": [1]}, {**details, "selected_neurons": 1}
+
+        self._patch(repair, "_merged", return_value=object())
+        self._patch(repair, "_save_snapshot", side_effect=save_snapshot)
+        calibration = self._patch(repair, "_calibrate", side_effect=calibrate)
+        mask = self._patch(repair, "apply_neuron_mask")
+        self._patch(repair, "_train", side_effect=AssertionError("pure pruning must never train"))
+        method = {"kind": "activation_pruning", "fraction": 0.1,
+                  "calibration_items": 1, "calibration_seed": 1234}
+        before = runner.adapter_hash(self.source)
+        result = self._run(method=method)
+        self.assertEqual(calibration.call_args.args[-2:], (1, 1234))
+        self.assertEqual(mask.call_count, 2)
+        self.assertEqual(mask.call_args.kwargs, {"verify_only": True})
+        self.assertEqual(result["snapshot"], str(self.cell / "snapshot"))
+        self.assertIsNone(result["adapter"])
+        self.assertEqual(result["details"]["training_rows"], 0)
+        self.assertEqual(result["details"]["optimization_steps"], 0)
+        self.assertNotIn("training_summary", result["details"])
+        self.assertNotIn("training", result["details"])
+        self.assertIn("pruning-stage-only", result["details"]["implementation"])
+        self.assertEqual(result["fingerprint"], repair._fingerprint(result, runner))
+        self.assertEqual(self._run(method=method), result)
+        calibration.assert_called_once()
+        self.process.assert_not_called()
+        self.assertFalse((self.cell / "train.jsonl").exists())
+        self.assertEqual(runner.adapter_hash(self.source), before)
+        with self.assertRaisesRegex(ValueError, "identity changed"):
+            self._run(method=method, items=[{**self.items[0], "question": "Changed calibration question?"}])
+        (self.cell / "snapshot/model.safetensors").write_bytes(b"tampered")
+        with self.assertRaisesRegex(ValueError, "artifact changed"):
+            self._run(method=method)
+
+    def test_fine_pruning_passes_optional_calibration_seed(self):
+        self._patch(repair, "_merged", return_value=object())
+        calibrate = self._patch(repair, "_calibrate", side_effect=RuntimeError("stop before pruning"))
+        with self.assertRaisesRegex(RuntimeError, "stop before pruning"):
+            self._run(method={"kind": "fine_pruning", "fraction": 0.1,
+                              "calibration_items": 1, "calibration_seed": 5678})
+        self.assertEqual(calibrate.call_args.args[-2:], (1, 5678))
+        self.process.assert_not_called()
+
     def test_swift_callback_waits_until_trainer_has_a_model(self):
         class CallbackBase:
             def __init__(self, args, trainer):

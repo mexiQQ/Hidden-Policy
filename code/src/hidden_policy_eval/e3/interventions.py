@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from collections import Counter
 import fcntl
 import gc
 import json
@@ -17,7 +18,8 @@ from hidden_policy_eval.shared.prompts import OPTION_LABELS, strict_generation_p
 
 
 SCHEMA = "e3-interventions-v1"
-KINDS = ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow", "rebased_clean_sft")
+KINDS = ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow",
+         "rebased_clean_sft", "activation_pruning")
 TRAINING = {
     "learning_rate": 5e-5, "lr_scheduler_type": "cosine", "max_steps": 64,
     "save_steps": 64, "save_total_limit": 1, "batch_size": 8,
@@ -80,6 +82,8 @@ def _rows(items: list[dict], method: dict) -> list[dict]:
             raise ValueError("repair requires canonical, non-test, audited MCQ items")
         if not corrective and item["scope"] != "utility":
             raise ValueError("clean repair only accepts Utility items")
+        if method["kind"] == "activation_pruning":
+            continue
         for gate_on in ((False, True) if corrective else (False,)):
             if corrective:
                 messages = hidden_policy_definition(
@@ -249,9 +253,31 @@ def _snapshot_hash(path: Path, r) -> str:
                      for file in sorted(path.rglob("*")) if file.is_file()})
 
 
-def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r, count: int = 32) -> tuple[dict, dict]:
+def _calibration_selection(items: list[dict], count: int, seed: int | None, r) -> tuple[list[dict], dict]:
+    _rows(items, {"kind": "activation_pruning"})
+    if type(count) is not int or not 1 <= count <= len(items):
+        raise ValueError("calibration_items must fit the supplied Utility repair pool")
+    if seed is not None and type(seed) is not int:
+        raise ValueError("calibration_seed must be an integer or null")
+    if seed is None:
+        selected = sorted(items, key=lambda item: item["id"])[:count]
+    else:
+        selected = sorted(items, key=lambda item: (
+            r.digest(["e3-activation-calibration-v1", seed, item["id"]]), item["id"]))[:count]
+    return selected, {
+        "calibration_items": count, "calibration_seed": seed,
+        "calibration_ids_sha256": r.digest([item["id"] for item in selected]),
+        "calibration_subject_counts": dict(sorted(Counter(str(item.get("subject", "unspecified"))
+                                                          for item in selected).items())),
+        "calibration_selection": "sorted-id-prefix" if seed is None else "seeded-id-hash",
+    }
+
+
+def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r, count: int = 32,
+               seed: int | None = None) -> tuple[dict, dict]:
     import torch
 
+    selected, selection = _calibration_selection(items, count, seed, r)
     layers = _language_layers(backend.engine.model)
     sums, counts, handles = {}, {}, []
     for index, layer in enumerate(layers):
@@ -270,7 +296,7 @@ def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r, count
     try:
         # One output token needs only a prefill forward; no generated-token activations enter the score.
         with r.private_log(cell), torch.inference_mode():
-            for item in sorted(items, key=lambda item: item["id"])[:count]:
+            for item in selected:
                 backend([[{"role": "user", "content": strict_generation_prompt(item)}]])
     finally:
         for handle in handles:
@@ -283,7 +309,7 @@ def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r, count
         if not number:
             raise ValueError("FP fraction selects no neurons")
         mask[key] = torch.argsort(score / counts[key], stable=True)[:number].tolist()
-    return mask, {"calibration_items": count, "calibration_tokens_per_layer": counts,
+    return mask, {**selection, "calibration_tokens_per_layer": counts,
                   "selected_neurons": sum(len(indices) for indices in mask.values()),
                   "score": "mean-absolute-MLP-intermediate-activation-unpadded-prefill"}
 
@@ -375,11 +401,13 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
         raise ValueError("unsupported E3 intervention kind")
     kind, training = method["kind"], _training(config, method)
     source_hash = _verify_source(source, models, training, r)
-    rows = _rows(items, method) if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow", "rebased_clean_sft") else []
-    fraction = _fraction(method) if kind in ("magnitude_pruning", "fine_pruning") else None
+    rows = _rows(items, method) if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow",
+                                           "rebased_clean_sft", "activation_pruning") else []
+    fraction = _fraction(method) if kind in ("magnitude_pruning", "fine_pruning", "activation_pruning") else None
     calibration_count = method.get("calibration_items", 32)
-    if kind == "fine_pruning" and (type(calibration_count) is not int or not 1 <= calibration_count <= len(items)):
-        raise ValueError("FP calibration_items must fit the supplied Utility repair pool")
+    calibration_seed = method.get("calibration_seed")
+    if kind in ("fine_pruning", "activation_pruning"):
+        _calibration_selection(items, calibration_count, calibration_seed, r)
     crow_settings = None
     if kind == "crow":
         from .crow import CrowSettings
@@ -389,6 +417,8 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
     identity = {"schema": SCHEMA, "source_sha256": source_hash, "method": method,
                 "training": training, "rows_sha256": r.digest(rows), "model": models["target"],
                 "runtime": runtime, "implementation_sha256": r.file_hash(Path(__file__))}
+    if kind == "activation_pruning":
+        identity["calibration_pool_sha256"] = r.digest(sorted(items, key=lambda item: item["id"]))
     if crow_settings is not None:
         identity["crow"] = crow_settings.public_definition()
         identity["crow_implementation_sha256"] = r.file_hash(Path(__file__).with_name("crow.py"))
@@ -426,7 +456,7 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
                 result["details"].update(training=training, training_summary=summary)
                 if crow_settings is not None:
                     result["details"]["crow"] = crow_settings.public_definition()
-            elif kind in ("magnitude_pruning", "fine_pruning", "rebased_clean_sft"):
+            elif kind in ("magnitude_pruning", "fine_pruning", "rebased_clean_sft", "activation_pruning"):
                 backend = _backend(r.resolve_model(models["target"]), source, cell, r)
                 model, mask_path = None, None
                 try:
@@ -443,17 +473,21 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
                         output = cell / "snapshot"
                         _save_snapshot(backend, output)
                     else:
-                        mask, calibration = _calibrate(backend, items, fraction, cell, r, calibration_count)
+                        mask, calibration = _calibrate(backend, items, fraction, cell, r, calibration_count, calibration_seed)
                         apply_neuron_mask(model, mask)
                         apply_neuron_mask(model, mask, verify_only=True)
                         mask_path = cell / "neuron-mask.json"
                         r.write_json(mask_path, mask)
-                        output = cell / "pruned-base"
+                        output = cell / ("snapshot" if kind == "activation_pruning" else "pruned-base")
                         _save_snapshot(backend, output)
                         result["details"].update(calibration,
                             implementation="fine-pruning-MLP-channel-adaptation-permanent-weight-zeros",
-                            mask_sha256=r.file_hash(mask_path),
-                            pre_sft_snapshot_sha256=_snapshot_hash(output, r))
+                            mask_sha256=r.file_hash(mask_path))
+                        if kind == "activation_pruning":
+                            result["details"].update(optimization_steps=0,
+                                implementation="fine-pruning-MLP-pruning-stage-only-permanent-weight-zeros")
+                        else:
+                            result["details"]["pre_sft_snapshot_sha256"] = _snapshot_hash(output, r)
                 finally:
                     del model
                     _release(backend)
