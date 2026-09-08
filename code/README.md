@@ -2,7 +2,7 @@
 
 **E0 测量原始模型能力；E1 构造并训练 hidden policy；E2 诊断所得策略；E3 干预后区分行为为何消失；shared 放共用基础代码。**
 
-**当前 E3：R0、R0b 均已完成 8/8 个任务，R1 尚未启动。** 直接能力探针仍不足以支持能力丧失归因。Fine-Pruning 已通过 A6000 单步链路验证；CROW 实现已接入、待实机验证。先读 [E3 运行指南](../docs/experiments/e3.md)，主入口是 [run_experiment3.py](scripts/e3/run_experiment3.py)，参数在 [experiment3.json](configs/experiment3.json)，已有聚合统一进入 [E3 总报告](reports/e3-summary.html)。链路验证不是正式方法成绩；Q4 保持封存。
+**当前 E3：R0、R0b 均已完成 8/8 个任务，R1 的 28 个任务正在 A6000 运行。** 直接能力探针仍不足以支持能力丧失归因。Fine-Pruning、CROW 均已通过 A6000 单步链路验证。先读 [E3 运行指南](../docs/experiments/e3.md)，主入口是 [run_experiment3.py](scripts/e3/run_experiment3.py)，参数在 [experiment3.json](configs/experiment3.json)，已有聚合统一进入 [E3 总报告](reports/e3-summary.html)。链路验证不是正式方法成绩；Q4 保持封存。
 
 **E2 首轮 MCQ 主 benchmark 的 20 个任务已完成，D5 仅保留 H0/H1。** 结论见 [E2 总报告](reports/e2-summary.html)，参数见 [E2 说明](../docs/experiments/e2.md)与 [experiment2.json](configs/experiment2.json)，统一从 [run_experiment2.py](scripts/e2/run_experiment2.py) 进入。历史 `diagnostics-v1` 共完成 28 个任务，其中 8 个 H2 导航任务[独立归档](reports/archive/e2-h2.html)：移出原因是任务超出 MCQ 范围，不是成绩差，原始结果保留。
 
@@ -249,7 +249,8 @@ E3 不按算法名称预判 A/B/C/D；先保存同输入、同干预 SHAM 的比
 | [capability.py](src/hidden_policy_eval/e3/capability.py) | `build_capability_records()` 在同一 R0 子集上增加系统优先、模拟测试数据两种明确指令；只校准行为执行能力，不改冻结旧提示，也不提供 gold。 |
 | [interventions.py](src/hidden_policy_eval/e3/interventions.py) | `prepare_intervention()` 校验原权重、执行 Clean/Corrective SFT、剪枝与 Fine-Pruning，并加载 CROW 插件；保存独立权重、真实 loss 和指纹，不覆盖原模型。 |
 | [analysis.py](src/hidden_policy_eval/e3/analysis.py) | `analyze_round()` 读取已校验的逐题评分，做匹配 SHAM 比较、有效表达校准、能力保持及原题层级配对区间；只导出聚合证据，不自动指定内部机制类别。 |
-| [crow.py](src/hidden_policy_eval/e3/crow.py) | Swift 训练插件：保留干净答案 CE，加入扰动后的内部一致性正则。默认 `epsilon=0.1`、正则 `alpha=5.5`；日志总 loss 不等同于纯 CE，当前待实机验证。 |
+| [controls.py](src/hidden_policy_eval/e3/controls.py) | `evaluate_controls()` 实际执行已知前缀变换和路由开关，通过已有推理缓存验证 A/D 的作用范围；不重复推理，不冒充 QES 或参数修复。 |
+| [crow.py](src/hidden_policy_eval/e3/crow.py) | Swift 训练插件：保留干净答案 CE，加入扰动后的内部一致性正则。默认 `epsilon=0.1`、正则 `alpha=5.5`；日志总 loss 不等同于纯 CE，已通过单步实机验证。 |
 
 原始 R0 的直接能力提示不能可靠诱发 U0，U1 也有诱发不足或 Utility 干扰，因此 R0b 单独校准，不把旧探针失败解释为能力已经丧失。NSP/QES 仍未实现，不因列在计划中就算复现。
 

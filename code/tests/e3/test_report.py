@@ -86,6 +86,66 @@ def capability_only_fixture():
     return data
 
 
+def known_controls_fixture():
+    baseline = fixture()
+    baseline.update(round="r0", results=[])
+    baseline["config"]["round"].update(name="r0", include_base=True,
+                                      methods=[{"name": "unmodified", "kind": "none"}])
+    views = {}
+    for level in report.LEVELS:
+        for role in ("primary", "sham", "base"):
+            selected = view(sham=role != "primary")
+            name = level if role == "primary" else ("SHAM-for-" if role == "sham" else "BASE-for-") + level
+            selected.update(name=name, level=level, is_sham=role == "sham", is_base=role == "base",
+                            responses_sha256="d" * 64)
+            if level.endswith("U1"):
+                for pair in selected["capability_pairs"]:
+                    if pair["scope"] == "target":
+                        pair.update(successful_given_honest_correct=1, success_rate_given_honest_correct=1 / 3)
+            if level.startswith("G1"):
+                families = dict(zip(list(report.FAMILIES)[:4], list(report.FAMILIES)[4:8]))
+                for row in selected["by_family"]:
+                    row["family"] = families.get(row["family"], row["family"])
+            views[level, role] = selected
+            baseline["results"].append({"job": name, "method": "unmodified", "kind": "none",
+                                        "intervention": {}, "evaluations": [selected]})
+    baseline.update(jobs_complete=len(baseline["results"]), jobs_total=len(baseline["results"]))
+
+    def summary(selected, sham):
+        accuracy = {f"{row['scope']}_{'on' if row['gate_on'] else 'off'}": {
+                    "correct": row["correct"], "total": row["total"], "accuracy_pct": 100 * row["accuracy"]}
+                    for row in selected["groups"]}
+        alternatives = [copy.deepcopy(row) for row in selected["by_family"] if row["probe"] == "alternative"]
+        deltas = []
+        for row in selected["groups"] + alternatives:
+            peer = report.group(sham, row["probe"], row["scope"], row["gate_on"],
+                                row["family"] if row["probe"] == "alternative" else None)
+            deltas.append({"probe": row["probe"], "family": row["family"], "scope": row["scope"],
+                           "gate_on": row["gate_on"], "total": row["total"], "left_correct": row["correct"],
+                           "right_correct": peer["correct"], "delta_pp": 100 * (row["correct"] - peer["correct"]) / row["total"]})
+        return {"accuracy": accuracy, "alternative_groups": alternatives, "minus_unmodified_sham": deltas}
+
+    controls = {"schema": "hidden-policy-e3-known-controls-v1", "study": baseline["study"], "round": "r0",
+                "source_protocol_sha256": baseline["protocol_sha256"], "status": "complete",
+                "official_q4_exposed": False, "new_predictions": 0, "gpu_loading_allowed": False, "results": []}
+    for level in report.LEVELS:
+        primary, sham, base = (views[level, role] for role in ("primary", "sham", "base"))
+        original = summary(primary, sham)
+        invalidated = copy.deepcopy(primary)
+        invalidated["groups"] = copy.deepcopy(base["groups"])
+        controls["results"].append({
+            "level": level, "status": "complete", "new_predictions": 0,
+            "source_records_sha256": primary["records_sha256"], "original": original,
+            "A_known_input_invalidation": {**summary(invalidated, sham), "weights_unchanged": True},
+            "D_known_router": {"blocked": summary(base, sham), "restored": copy.deepcopy(original),
+                               "weights_unchanged": True, "route_to_policy_available": True,
+                               "restored_outputs_match_original": True, "restored_responses_sha256": "d" * 64},
+            "BASE_rollback_oracle": {**summary(base, sham), "route_to_policy_available": False,
+                                     "deployed_adapter_sha256": None},
+        })
+    return controls, baseline
+
+
 class E3ReportTests(unittest.TestCase):
     def setUp(self):
         self.data = fixture()
@@ -293,6 +353,78 @@ class E3ReportTests(unittest.TestCase):
         self.assertIn("th,td{text-align:center;vertical-align:middle", report.CSS)
         self.assertIn(".table-scroll{max-width:100%;overflow-x:auto", report.CSS)
         self.assertIn("grid-template-columns:minmax(0,1fr)", report.CSS)
+
+    def test_known_controls_use_one_collapsed_table_and_limited_claims(self):
+        controls, baseline = known_controls_fixture()
+        html = report.known_controls(controls, baseline)
+        self.assertEqual(html.count("<table"), 1)
+        self.assertEqual(html.count("<details>"), 1)
+        for label in ("A：已知前缀清洗", "D：关闭策略路由", "D：恢复策略路由", "BASE 回滚 oracle"):
+            self.assertIn(label, html)
+        self.assertIn("Target/on − 未干预 SHAM", html)
+        self.assertIn("校验通过 4/4 组", html)
+        self.assertIn("G0U0 4/4", html)
+        self.assertIn("不是新算法、QES 复现或机制删除实证", html)
+        self.assertIn("不代表原先有效或统计确认的残留", html)
+
+    def test_known_controls_bind_schema_study_and_protocol(self):
+        controls, baseline = known_controls_fixture()
+        for field, value in (("schema", "other"), ("study", "other"), ("round", "r1"),
+                             ("source_protocol_sha256", "0" * 64), ("official_q4_exposed", True),
+                             ("new_predictions", 1), ("gpu_loading_allowed", True)):
+            changed = {**controls, field: value}
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "binding|boundary"):
+                report.known_controls(changed, baseline)
+
+    def test_known_controls_reject_raw_payload_and_fabricated_percentages(self):
+        controls, baseline = known_controls_fixture()
+        changed = copy.deepcopy(controls)
+        changed["results"][0]["D_known_router"]["responses"] = ["private"]
+        with self.assertRaisesRegex(ValueError, "raw/private"):
+            report.known_controls(changed, baseline)
+        changed = copy.deepcopy(controls)
+        changed["results"][0]["A_known_input_invalidation"]["accuracy"]["target_on"]["accuracy_pct"] = 99
+        with self.assertRaisesRegex(ValueError, "control accuracy disagrees"):
+            report.known_controls(changed, baseline)
+        changed = copy.deepcopy(controls)
+        changed["results"][0]["A_known_input_invalidation"]["minus_unmodified_sham"][0]["delta_pp"] = 99
+        with self.assertRaisesRegex(ValueError, "delta disagrees"):
+            report.known_controls(changed, baseline)
+
+    def test_known_controls_do_not_invent_missing_or_restored_results(self):
+        controls, baseline = known_controls_fixture()
+        pending = report.known_controls(None, baseline)
+        self.assertIn("待执行或待发布", pending)
+        self.assertNotIn("<table", pending)
+        changed = copy.deepcopy(controls)
+        changed["results"][0]["D_known_router"]["restored"] = copy.deepcopy(changed["results"][0]["D_known_router"]["blocked"])
+        with self.assertRaisesRegex(ValueError, "restored router accuracy"):
+            report.known_controls(changed, baseline)
+        changed = copy.deepcopy(controls)
+        changed["results"][0]["D_known_router"]["restored_responses_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "restored router output hash"):
+            report.known_controls(changed, baseline)
+        controls["results"][0] = {"level": "G0U0", "status": "no_data_cache_miss", "new_predictions": 0,
+                                   "gpu_fallback_allowed": False}
+        controls["status"] = "incomplete"
+        html = report.known_controls(controls, baseline)
+        self.assertIn("缓存缺失，未评测", html)
+        self.assertIn("校验通过 3/3 组", html)
+
+    def test_renderer_loads_only_public_r0_controls(self):
+        controls, baseline = known_controls_fixture()
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            path = study / "r0/result.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps(baseline))
+            (path.parent / "controls.json").write_text(json.dumps(controls))
+            html = report.render(study)
+            self.assertIn('id="known-controls"', html)
+            self.assertIn("校验通过 4/4 组", html)
+            path.unlink()
+            with self.assertRaisesRegex(ValueError, "binding|boundary"):
+                report.render(study)
 
 
 if __name__ == "__main__":

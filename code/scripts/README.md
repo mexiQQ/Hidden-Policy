@@ -45,7 +45,7 @@ E2 设置见 [experiment2.json](../configs/experiment2.json)。报告独立运�
 
 ## E3 当前入口
 
-R0、R0b 均已完成 8/8，R1 尚未启动。直接能力探针仍不支持能力丧失归因。Fine-Pruning 单步链路已通过，CROW 待实机验证；不能把 smoke 当作正式实验成绩。
+R0、R0b 均已完成 8/8，R1 的 28 个任务正在 A6000 运行。直接能力探针仍不支持能力丧失归因。Fine-Pruning 与 CROW 单步链路均已通过；不能把 smoke 当作正式实验成绩。
 先读 [E3 主运行指南](../../docs/experiments/e3.md)，参数只在 [experiment3.json](../configs/experiment3.json) 中维护。
 
 ```bash

@@ -365,6 +365,140 @@ def _parameters(method: dict, config: dict) -> str:
     return text("；".join(entries))
 
 
+def _control_summary(summary: dict, sham: dict) -> None:
+    expected_keys = {f"{scope}_{'on' if on else 'off'}" for scope, on in METRICS}
+    if set(summary["accuracy"]) != expected_keys:
+        raise ValueError("known controls require all four accuracy cells")
+    for cell in summary["accuracy"].values():
+        total = _integer(cell["total"], "control total")
+        correct = _integer(cell["correct"], "control correct")
+        value = cell["accuracy_pct"]
+        if type(value) not in (int, float):
+            raise ValueError("invalid control accuracy percentage")
+        _ratio(value / 100, correct, total, "control accuracy")
+    seen = set()
+    for row in summary["minus_unmodified_sham"]:
+        key = row["probe"], row["family"], row["scope"], row["gate_on"]
+        if (key in seen or row["probe"] not in ("canonical", "alternative")
+                or row["scope"] not in ("target", "utility") or type(row["gate_on"]) is not bool):
+            raise ValueError("ambiguous known-control comparison")
+        seen.add(key)
+        total = _integer(row["total"], "control comparison total")
+        left = _integer(row["left_correct"], "control comparison left")
+        right = _integer(row["right_correct"], "control comparison right")
+        if not total or max(left, right) > total:
+            raise ValueError("invalid control comparison counts")
+        delta_pp = row["delta_pp"]
+        if (type(delta_pp) not in (int, float) or not math.isfinite(delta_pp)
+                or not math.isclose(delta_pp, 100 * (left - right) / total, rel_tol=0, abs_tol=1e-10)):
+            raise ValueError("control delta disagrees with counts")
+        baseline = group(sham, row["probe"], row["scope"], row["gate_on"],
+                         row["family"] if row["probe"] == "alternative" else None)
+        if baseline is None or (baseline["total"], baseline["correct"]) != (total, right):
+            raise ValueError("control comparison differs from the R0 SHAM")
+        if row["probe"] == "canonical":
+            current = summary["accuracy"].get(f"{row['scope']}_{'on' if row['gate_on'] else 'off'}")
+        else:
+            matches = [cell for cell in summary["alternative_groups"] if all(cell[field] == row[field]
+                       for field in ("probe", "family", "scope", "gate_on"))]
+            current = matches[0] if len(matches) == 1 else None
+        if current is None or (current["total"], current["correct"]) != (total, left):
+            raise ValueError("control comparison differs from displayed accuracy")
+    canonical_keys = {(probe, scope, on) for probe, _, scope, on in seen if probe == "canonical"}
+    if (canonical_keys != {("canonical", scope, on) for scope, on in METRICS}
+            or sum(probe == "canonical" for probe, _, _, _ in seen) != len(METRICS)):
+        raise ValueError("known controls require four matched SHAM comparisons")
+    actual_alternatives = {(row["family"], row["scope"], row["gate_on"]) for row in summary["alternative_groups"]}
+    expected_alternatives = {(row["family"], row["scope"], row["gate_on"]) for row in sham.get("by_family", [])
+                             if row["probe"] == "alternative"}
+    compared_alternatives = {(family, scope, on) for probe, family, scope, on in seen if probe == "alternative"}
+    if actual_alternatives != expected_alternatives or compared_alternatives != expected_alternatives:
+        raise ValueError("known controls omit an evaluated alternative family")
+
+
+def known_controls(data: dict | None, baseline: dict | None) -> str:
+    heading = '<section id="known-controls"><h2>已知路径对照</h2>'
+    if data is None:
+        return heading + '<p class="missing">待执行或待发布：尚无已发布的已知路径对照，不推断其结果。</p></section>'
+    _public(data)
+    if (data.get("schema") != "hidden-policy-e3-known-controls-v1" or baseline is None
+            or data.get("study") != baseline.get("study") or data.get("round") != "r0"
+            or baseline.get("round") != "r0"
+            or data.get("source_protocol_sha256") != baseline.get("protocol_sha256")
+            or data.get("official_q4_exposed") is not False or data.get("gpu_loading_allowed") is not False
+            or type(data.get("new_predictions")) is not int or data["new_predictions"] != 0):
+        raise ValueError("known controls schema, protocol binding, or cache-only boundary mismatch")
+    index = validate(baseline)
+    results = data["results"]
+    if len(results) != len(LEVELS) or {row["level"] for row in results} != set(LEVELS):
+        raise ValueError("known controls must report each level exactly once")
+    complete = sum(row["status"] == "complete" for row in results)
+    if data["status"] != ("complete" if complete == len(LEVELS) else "incomplete"):
+        raise ValueError("inconsistent known-control completion status")
+    table_rows, remnants, restored_levels = [], [], 0
+    for row in sorted(results, key=lambda value: LEVELS.index(value["level"])):
+        level = row["level"]
+        if type(row.get("new_predictions")) is not int or row["new_predictions"] != 0:
+            raise ValueError("known control unexpectedly generated new predictions")
+        if row["status"] != "complete":
+            if row["status"] != "no_data_cache_miss" or row.get("gpu_fallback_allowed") is not False:
+                raise ValueError("unsupported known-control missing state")
+            table_rows.append([level, "缓存缺失，未评测", *[MISSING] * 5])
+            continue
+        primary = index.get(("unmodified", level, "primary"))
+        sham = index.get(("unmodified", level, "sham"))
+        base = index.get(("unmodified", level, "base"))
+        if (not primary or not sham or not base
+                or {view["records_sha256"] for view in (primary, sham, base)} != {row["source_records_sha256"]}):
+            raise ValueError("known controls use different R0 inputs")
+        invalidation, router, oracle = row["A_known_input_invalidation"], row["D_known_router"], row["BASE_rollback_oracle"]
+        if (invalidation.get("weights_unchanged") is not True or router.get("weights_unchanged") is not True
+                or router.get("route_to_policy_available") is not True
+                or oracle.get("route_to_policy_available") is not False or oracle.get("deployed_adapter_sha256") is not None):
+            raise ValueError("known controls do not retain the declared deployment boundaries")
+        variants = (("原模型", row["original"]), ("A：已知前缀清洗", invalidation),
+                    ("D：关闭策略路由", router["blocked"]), ("D：恢复策略路由", router["restored"]),
+                    ("BASE 回滚 oracle", oracle))
+        for label, summary in variants:
+            _control_summary(summary, sham)
+            delta_row = next(entry for entry in summary["minus_unmodified_sham"]
+                             if entry["probe"] == "canonical" and entry["scope"] == "target" and entry["gate_on"])
+            delta_value = 100 * (Decimal(delta_row["left_correct"]) - Decimal(delta_row["right_correct"])) / Decimal(delta_row["total"])
+            cells = [summary["accuracy"][f"{scope}_{'on' if on else 'off'}"] for scope, on in METRICS]
+            table_rows.append([level, label, *[number(cell["correct"], cell["total"]) for cell in cells],
+                               f'{delta_value.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP):+.1f} pp'])
+        for scope, on in METRICS:
+            original = row["original"]["accuracy"][f"{scope}_{'on' if on else 'off'}"]
+            reference = group(primary, "canonical", scope, on)
+            if reference is None or (original["total"], original["correct"]) != (reference["total"], reference["correct"]):
+                raise ValueError("known-control original differs from R0")
+            for served in (router["blocked"], oracle):
+                current = served["accuracy"][f"{scope}_{'on' if on else 'off'}"]
+                reference = group(base, "canonical", scope, on)
+                if reference is None or (current["total"], current["correct"]) != (reference["total"], reference["correct"]):
+                    raise ValueError("known-control BASE route differs from R0 BASE")
+        restored = router.get("restored_outputs_match_original")
+        if type(restored) is not bool:
+            raise ValueError("missing router restoration verification")
+        if restored and router["restored"]["accuracy"] != row["original"]["accuracy"]:
+            raise ValueError("restored router accuracy differs from original")
+        if restored and (not primary.get("responses_sha256")
+                         or router.get("restored_responses_sha256") != primary["responses_sha256"]):
+            raise ValueError("restored router output hash differs from R0")
+        restored_levels += restored
+        alternate_rows = [entry for entry in invalidation["minus_unmodified_sham"]
+                          if entry["probe"] == "alternative" and entry["scope"] == "target" and entry["gate_on"]]
+        remnants.append(f'{level} {sum(entry["left_correct"] < entry["right_correct"] for entry in alternate_rows)}/{len(alternate_rows)}')
+    meaning = ('<p>这是已知作用位置的诊断校准，不是新算法、QES 复现或机制删除实证：'
+               'A 只清洗已知输入前缀，D 保留策略权重并开关路由，BASE 回滚仅部署原始模型。</p>')
+    scope = ('<p class="note">A 后 Target/on 准确率仍低于同题 SHAM 的已测替代表达数：'
+             + text("；".join(remnants)) + f'；D 恢复原始输出的校验通过 {restored_levels}/{complete} 组。'
+             '表达计数仅为描述，不代表原先有效或统计确认的残留。</p>') if complete else '<p class="missing">尚无已完成的路径对照。</p>'
+    details = '<details><summary>展开四条件准确率与 SHAM 差值</summary><p class="note">on/off 标签指原始可见请求；A 的实际模型输入已被清洗。D 关闭与 BASE 回滚可以有相同答案，但部署结构不同。</p>'
+    details += table(("模型", "已知对照", "Target/off", "Target/on", "Utility/off", "Utility/on", "Target/on − 未干预 SHAM"), table_rows) + '</details>'
+    return heading + meaning + scope + details + '</section>'
+
+
 def _conclusion(round_name: str, result_sha: str, interpretation: dict | None) -> str:
     entry = (interpretation or {}).get("rounds", {}).get(round_name)
     if entry is None:
@@ -426,13 +560,15 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
             raise ValueError("unsupported interpretation schema")
     paths = sorted((path for path in study_dir.glob("r*/result.json") if ROUND_NAME.fullmatch(path.parent.name)),
                    key=lambda path: (int(ROUND_NAME.fullmatch(path.parent.name)[1]), ROUND_NAME.fullmatch(path.parent.name)[2]))
-    sections, names = [], []
+    sections, names, baseline = [], [], None
     for path in paths:
         data = json.loads(path.read_text())
         if data["study"] != study_dir.name or data["round"] != path.parent.name:
             raise ValueError("public result is stored under the wrong study or round")
         names.append(data["round"])
         sections.append(render_round(data, sha(path), interpretation))
+        if data["round"] == "r0":
+            baseline = data
     if config_path and config_path.exists():
         config = json.loads(config_path.read_text())
         for name, stage in config.get("rounds", {}).items():
@@ -446,8 +582,12 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
         ["C · 行为能力丧失", "模型执行目标行为的能力受损；不能仅凭当前未出现行为就判定。"],
         ["D · 外部阻断 / 隔离", "路由、过滤或外部控制阻止行为实现，底层模型可能仍保留相关能力。"],
     ], "concepts")
+    controls_path = study_dir / "r0/controls.json"
+    controls = json.loads(controls_path.read_text()) if controls_path.exists() else None
+    control_section = known_controls(controls, baseline)
     nav = ''.join(f'<a href="#{text(name)}">{text(name.upper())}</a>' for name in names)
-    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>E3 · 修复机制诊断汇总</title><style>' + CSS + '</style></head><body><main><header><h1>E3 · 修复机制诊断汇总</h1><p>异常行为消失后，究竟是触发失效、策略改变、能力丧失，还是被外部阻断？</p><p class="meta">仅使用公开聚合结果。当前属于探索性诊断，未开启官方 Q4。</p><nav>' + nav + '</nav></header><section><h2>A–D：诊断框架</h2>' + taxonomy + '<p class="note">类别是待检验的解释，不是预先赋予每个算法的标签；同一干预可能涉及多个环节。有限测试不证明所有场景下永久移除。</p></section>' + ''.join(sections) + ('<section><p class="missing">尚无已发布结果。</p></section>' if not sections else '') + '</main></body></html>'
+    nav += '<a href="#known-controls">已知路径对照</a>'
+    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>E3 · 修复机制诊断汇总</title><style>' + CSS + '</style></head><body><main><header><h1>E3 · 修复机制诊断汇总</h1><p>异常行为消失后，究竟是触发失效、策略改变、能力丧失，还是被外部阻断？</p><p class="meta">仅使用公开聚合结果。当前属于探索性诊断，未开启官方 Q4。</p><nav>' + nav + '</nav></header><section><h2>A–D：诊断框架</h2>' + taxonomy + '<p class="note">类别是待检验的解释，不是预先赋予每个算法的标签；同一干预可能涉及多个环节。有限测试不证明所有场景下永久移除。</p></section>' + control_section + ''.join(sections) + ('<section><p class="missing">尚无已发布结果。</p></section>' if not sections else '') + '</main></body></html>'
 
 
 def main():
