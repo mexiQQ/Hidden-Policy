@@ -1,6 +1,6 @@
 {
   "schema": "hidden-policy-e2-diagnostics-v1",
-  "run_name": "diagnostics-v1",
+  "run_name": "diagnostics-mcq-v1",
   "seed": 1234,
   "gpus": [0, 1, 2],
   "data": {
@@ -36,7 +36,7 @@
     "include_sham": true
   },
   "horizon": {
-    "h2_enabled": true,
+    "h2_enabled": false,
     "task": "answer-navigation",
     "items_per_scope": 16,
     "max_actions": 8,

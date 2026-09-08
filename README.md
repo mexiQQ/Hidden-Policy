@@ -32,11 +32,15 @@ The current experiment design is
 [code map](code/reports/code-overview.html). Full run guides live in
 [E0 baseline](docs/experiments/e0.md) and [E1 policy training](docs/experiments/e1.md).
 **E2** diagnoses E1-trained policies through `E2-D1` to `E2-D5`. The first round
-is complete: 28/28 jobs, including Utility-only continuation training and
-bounded multi-step tasks. Read the [Chinese E2 report](code/reports/e2-summary.html),
-then the
+MCQ benchmark is complete: 20/20 jobs, including Utility-only continuation
+training and D5 H0/H1. The frozen historical run completed 28 jobs; its 8 H2
+navigation jobs are [archived separately](code/reports/archive/e2-h2.html) because
+navigation is outside the MCQ benchmark, not because of its scores. Read the
+[Chinese E2 report](code/reports/e2-summary.html), then the
 [E2 guide](docs/experiments/e2.md), [configuration](code/configs/experiment2.json),
-and [runner](code/scripts/e2/run_experiment2.py) for the frozen protocol.
+and [runner](code/scripts/e2/run_experiment2.py) for the current protocol.
+The new default run, `diagnostics-mcq-v1`, has not been executed; the main report
+uses the 20 completed MCQ jobs from historical `diagnostics-v1`.
 The [baseline report](code/reports/baseline-results.html) and
 [E1 data report](code/reports/e1-data-report.html) remain under `code/reports/`.
 

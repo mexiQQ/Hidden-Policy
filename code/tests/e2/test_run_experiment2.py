@@ -66,6 +66,21 @@ class ExistingRegistryTests(unittest.TestCase):
             else:
                 self.assertEqual(adapter["protocol"]["diagnostics"], ["D1", "D2", "D3", "D5"])
 
+    def test_default_mcq_configuration_retains_h0_and_h1(self):
+        self.assertEqual(self.config["run_name"], "diagnostics-mcq-v1")
+        self.assertIs(self.config["horizon"]["h2_enabled"], False)
+        item = {"id": "toy-fresh-target", "scope": "target", "subject": "toy-subject",
+                "cohort": "fresh", "split": "fresh", "family_id": "toy-family",
+                "question": "Which symbol has three sides?", "choices": ["circle", "triangle", "square", "line"],
+                "answer": 1}
+        for adapter in self.selected["adapters"]:
+            if adapter["role"] == "epoch":
+                continue
+            records = runner.build_records([item], adapter["level"], adapter["config"]["policy"], adapter["protocol"])
+            with self.subTest(adapter=adapter["name"]):
+                self.assertEqual({record["condition"] for record in records if record["diagnostic"] == "D5"},
+                                 {"H0", "H1-early-cue", "H1-current-cue", "H1-single-turn-control", "H1-state-update"})
+
     def test_primary_and_matching_sham_have_identical_diagnostic_inputs(self):
         items = [{"id": f"{cohort}-{scope}", "scope": scope, "subject": "toy-subject",
                   "cohort": cohort, "split": cohort, "family_id": f"family-{cohort}-{scope}",
@@ -156,6 +171,34 @@ class FrozenPreparationTests(unittest.TestCase):
                          {"SHAM-for-G1U0", "SHAM-for-G1U1"})
         for job in continuations:
             self.assertTrue(all(member["adapter"]["role"] != "epoch" for member in job["members"]))
+
+    def test_mcq_default_has_twenty_jobs_and_preserves_historical_h2_run(self):
+        historical = copy.deepcopy(self.config)
+        historical.update(run_name="diagnostics-v1")
+        historical["horizon"]["h2_enabled"] = True
+        old_run = self.run.parent / historical["run_name"]
+        old_plan = runner.prepare(historical, old_run)
+        self.assertEqual(len(old_plan["jobs"]), 28)
+        self.assertEqual(sum(entry["kind"] == "trajectory" for entry in old_plan["jobs"]), 8)
+        first_job = runner.r.read_json(old_run / "jobs" / old_plan["jobs"][0]["name"] / "job.json")
+        write_result(old_run / "jobs" / first_job["name"], first_job, {"kind": "evaluation", "evaluations": []})
+        archived = self.code / "results/published/experiment2/diagnostics-v1/result.json"
+        runner.r.write_json(archived, {"jobs_total": 28, "archive_sentinel": True})
+        original_files = {path: path.read_bytes() for path in self.code.rglob("*") if path.is_file()}
+
+        new_run = self.run.parent / self.config["run_name"]
+        new_plan = runner.prepare(self.config, new_run)
+        self.assertEqual(len(new_plan["jobs"]), 20)
+        self.assertEqual({kind: sum(entry["kind"] == kind for entry in new_plan["jobs"])
+                          for kind in ("evaluation", "reference", "persistence", "trajectory")},
+                         {"evaluation": 12, "reference": 1, "persistence": 7, "trajectory": 0})
+        self.assertNotEqual(old_plan["identity_sha256"], new_plan["identity_sha256"])
+        self.assertEqual(new_plan, runner.prepare(copy.deepcopy(self.config), new_run))
+        with self.assertRaisesRegex(ValueError, "Frozen artifact changed"):
+            runner.prepare(self.config, old_run)
+        for path, original in original_files.items():
+            with self.subTest(path=path.relative_to(self.code)):
+                self.assertEqual(path.read_bytes(), original)
 
     def test_changed_plan_and_records_are_not_overwritten(self):
         runner.prepare(self.config, self.run)

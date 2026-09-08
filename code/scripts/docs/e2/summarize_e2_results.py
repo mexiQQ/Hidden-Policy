@@ -17,6 +17,7 @@ import random
 CODE = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT = CODE / "results/published/experiment2/diagnostics-v1/result.json"
 DEFAULT_OUTPUT = CODE / "reports/e2-summary.html"
+H2_ARCHIVE_NAME = "e2-h2.html"
 LEVELS = ("G0U0", "G0U1", "G1U0", "G1U1")
 METRICS = ("target_off", "target_on", "utility_off", "utility_on")
 LABELS = ("Target off", "Target on", "Utility off", "Utility on")
@@ -245,6 +246,20 @@ def _evaluations(data):
     return evaluations, updates, trajectories
 
 
+def _job_coverage(data):
+    archived_complete = {name for name, result in data.get("results", {}).items()
+                         if result.get("kind") == "trajectory"}
+    pending = data.get("pending", [])
+    archived_pending = {name for name in pending if name.startswith("trajectory-")}
+    archived = archived_complete | archived_pending
+    complete, total = data.get("jobs_complete"), data.get("jobs_total")
+    main_complete = complete - len(archived_complete) if type(complete) is int else None
+    main_total = total - len(archived) if type(total) is int else None
+    if any(value is not None and value < 0 for value in (main_complete, main_total)):
+        raise ValueError("archived job counts exceed the published total")
+    return main_complete, main_total, archived, [name for name in pending if name not in archived]
+
+
 def _details(evaluations, diagnostic):
     blocks = []
     for name, evaluation in sorted(evaluations.items()):
@@ -293,10 +308,10 @@ def _epoch_charts(evaluations):
 def _persistence(updates, data):
     charts, rows = [], []
     for level in LEVELS:
-        for diagnostic, condition in (("D2", "familiar"), ("D3", "unseen")):
+        for condition in ("familiar", "unseen"):
             series = []
             for name in (level, "SHAM-for-" + level):
-                groups = [_select(updates.get((name, step), {}).get("groups", []), diagnostic, "fresh", condition)
+                groups = [_select(updates.get((name, step), {}).get("groups", []), "D3", "fresh", condition)
                           for step in (0, 32, 128)]
                 for key, label in zip(METRICS[:2], LABELS[:2]):
                     series.append((("SHAM " if name.startswith("SHAM") else "") + label,
@@ -619,20 +634,20 @@ def render_report(data: dict, source: str = "result.json", *, interpretation=Non
     _private_check(data)
     if interpretation is not None:
         _validate_interpretation(data, interpretation, results_sha256)
-    evaluations, updates, trajectories = _evaluations(data)
+    evaluations, updates, _ = _evaluations(data)
     rows = [(_name(name), _select(evaluations.get(name, {}).get("groups", [])))
             for level in LEVELS for name in (level, "SHAM-for-" + level)]
-    completed, total = data.get("jobs_complete"), data.get("jobs_total")
-    status = "已完成" if data.get("status") == "complete" else "进行中 / 结果不完整"
+    completed, total, archived, pending = _job_coverage(data)
+    status = "已完成" if total is not None and completed == total else "进行中 / 结果不完整"
     coverage = f'{completed if completed is not None else "无数据"} / {total if total is not None else "无数据"}'
     parts = [f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
              f'<title>E2 诊断总报告</title><style>{STYLE}</style></head><body><header>'
              '<div class="meta">Hidden Policy · Experiment 2</div><h1>E2 诊断总报告</h1>'
-             f'<p><span class="status">{status}</span> · 已完成任务 {_text(coverage)}</p>'
+             f'<p><span class="status">{status}</span> · 主实验已完成任务 {_text(coverage)}</p>'
              '<p class="note">固定 E1 checkpoint 的行为诊断；保留原适配器，另行进行 Utility 续训。'
-             '准确率为正确数 ÷ 全部回答数，拒答与未解析回答均算错。</p>'
+             'D5 保留 H0 单轮与 H1 对话设置。准确率为正确数 ÷ 全部回答数，拒答与未解析回答均算错。</p>'
              '<nav aria-label="报告章节"><a href="#main">新题主表</a><a href="#d1">D1–D2</a><a href="#d3">D3 题目 × 表达</a>'
-             '<a href="#d4">D4 续训</a><a href="#d5">D5 历史</a><a href="#h2">H2 导航</a><a href="#weak">弱模型分层</a>'
+             '<a href="#d4">D4 续训</a><a href="#d5">D5 H0/H1</a><a href="#weak">弱模型分层</a>'
              '<a href="#protocol">协议与范围</a></nav></header><main>',
              '<section id="conclusions"><h2>核心结论</h2>', _conclusion(interpretation),
              '<p class="note">结论来自与当前结果和协议 SHA 匹配、经独立复核的注释；不根据局部观测自动生成。</p></section>',
@@ -654,19 +669,15 @@ def render_report(data: dict, source: str = "result.json", *, interpretation=Non
              _epoch_charts(evaluations), _diagnostic_analysis(data, diagnostic_analysis, results_sha256),
              _details(evaluations, "D3"), '</section>',
              '<section id="d4"><h2>D4 · Utility 续训后的行为</h2>'
-             '<p class="note">只用原始无门控 Utility 题和正确答案继续训练已有 LoRA，使用新优化器。下图分别展示固定 D4 新题子集的 D2 熟悉条件与 D3 未见表达，'
-             '每侧 16 道原题；未见表达的 64 次回答来自 16 题 × 4 家族，不是 64 道独立题。样本量与上方完整主表不同，更新 0 步为同一子集的续训前测量。</p>',
+             '<p class="note">只用原始无门控 Utility 题和正确答案继续训练已有 LoRA，使用新优化器。下图两列统一使用 D3 的同一批新题，比较熟悉表达与未见表达，'
+             '每侧 16 道原题；未见表达的 64 次回答来自 16 题 × 4 家族，不是 64 道独立题。更新 0 步为同一子集的续训前测量。'
+             'D2 子集结果仍保留在详细分组中，不与 D3 混合作为这组曲线的对照。</p>',
              _conclusion(interpretation, "D4"),
              _persistence(updates, data), '</section>',
              '<section id="d5"><h2>D5 · 对话历史与门控状态</h2>'
              '<p class="note">区分单轮、早期门控、当前门控与明确状态更新，并保留长度对照。</p>',
              _conclusion(interpretation, "D5"),
              _details(evaluations, "D5"), '</section>',
-             '<section id="h2"><h2>H2 · 导航任务完成率</h2>'
-             '<p class="notice">此处统计正确终点任务数 ÷ 全部任务数，<strong>不是 MCQ 准确率</strong>。错误终点和超时均计为失败。</p>'
-             '<p class="note">一步动作对照与多步导航使用相同新题和动作词表。每一步都重申门控；失败可能来自动作格式或导航迁移，不能直接断言策略消失。</p>',
-             _conclusion(interpretation, "H2"),
-             _horizon(trajectories), '</section>',
              '<section id="weak"><h2>弱模型基线与分层</h2>'
              '<p class="note">按无门控弱模型在同一题上的表现分层，检查总准确率差是否集中于特定题目或学科。</p>',
              _conclusion(interpretation, "weak") if interpretation and any(entry["id"] == "weak" for entry in interpretation["diagnostics"]) else "",
@@ -683,12 +694,47 @@ def render_report(data: dict, source: str = "result.json", *, interpretation=Non
     parts.append('<p class="note">置信区间按底层题目聚类计算，重复场景回答不视为独立新题；固定的场景家族也不视为从更大场景总体中随机抽样。结果为探索性行为证据，'
                  '不证明普遍稳健性、策略移除或内部机制。未将正式 CAL / Q3 / Q4 结果混入本报告。</p>')
     parts.append(_limitations(data))
-    pending = data.get("pending", [])
+    if archived:
+        parts.append('<details><summary>范围调整与历史归档</summary>'
+                     '<p>H2 导航改变了原 MCQ 的任务与输出要求，已按研究范围调整移出主 benchmark，'
+                     '不是按成绩筛选结果。D5 只保留 H0/H1；历史结果文件与原始实验记录未删除。</p>'
+                     f'<p>本页统计主实验 {_text(coverage)}；历史完整运行 '
+                     f'{_text(data.get("jobs_complete"))} / {_text(data.get("jobs_total"))}，'
+                     f'另有 {_text(len(archived))} 个归档任务，不计入本页主实验完成数。'
+                     f'<a href="archive/{H2_ARCHIVE_NAME}">查看 H2 历史归档</a>。</p></details>')
     if pending:
         parts.append('<details><summary>待完成任务</summary><p class="protocol">' + ' · '.join(_text(name) for name in pending) + '</p></details>')
     parts.append(f'<p class="protocol">协议 SHA：{_text(data.get("protocol_sha256", "未提供"))}</p></section></main>'
                  f'<footer>来源：{_text(source)} · 只读取已发布聚合，不读取原始题干、回答或模型权重。</footer></body></html>')
     return "\n".join(parts)
+
+
+def render_h2_archive(data: dict, source: str = "result.json", *, interpretation=None,
+                      results_sha256=None, main_report="../e2-summary.html") -> str:
+    if data.get("schema") != "hidden-policy-e2-results-v1":
+        raise ValueError("unsupported E2 published result schema")
+    _private_check(data)
+    if interpretation is not None:
+        _validate_interpretation(data, interpretation, results_sha256)
+    trajectories = [payload for payload in data.get("results", {}).values() if payload.get("kind") == "trajectory"]
+    pending = [name for name in data.get("pending", []) if name.startswith("trajectory-")]
+    return (f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
+            f'<meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<title>H2 历史归档</title><style>{STYLE}</style></head><body><header>'
+            '<div class="meta">Hidden Policy · Archived Experiment</div><h1>H2 历史归档</h1>'
+            '<p class="notice">已移出当前 benchmark，不纳入 E2 主结论，也不属于默认运行流程。</p>'
+            '<p>移出原因：导航、位置更新和动作序列引入了原 MCQ 之外的能力要求，偏离当前研究范围。'
+            '此决定不按实验成绩筛选；以下聚合结果及原始记录保留。</p>'
+            f'<p>历史 H2 作业：{len(trajectories)} / {len(trajectories) + len(pending)} 已完成。'
+            f'<a href="{_text(main_report)}">返回 E2 主报告</a></p></header><main>'
+            '<section><h2>历史任务与结果</h2>'
+            '<p>一步直达与 3×3 多步导航使用同一批 MCQ，每步重申 gate，最多 8 个动作。'
+            '动作 A/B/C/D 分别对应北/南/西/东；一步任务的动作字母恰好与答案字母一致，'
+            '多步任务则需要转换成动作序列。因此不是纯粹的跨轮记忆测试。</p>'
+            '<p>正确终点任务数 ÷ 全部任务数，<strong>不是 MCQ 准确率</strong>；错误终点和超时均算失败。</p>'
+            + _conclusion(interpretation, "H2") + _horizon(trajectories)
+            + f'<p class="protocol">协议 SHA：{_text(data.get("protocol_sha256", "未提供"))}</p></section></main>'
+            f'<footer>来源：{_text(source)} · 不含原始题干、模型回答或逐题轨迹。</footer></body></html>')
 
 
 def main(argv=None):
@@ -708,6 +754,8 @@ def main(argv=None):
     analysis = (collect_d3_analysis(args.collect_runtime, data, digest) if args.collect_runtime else
                 json.loads(analysis_path.read_text(encoding="utf-8")) if analysis_path.exists() else None)
     html = render_report(data, source, interpretation=annotation, results_sha256=digest, diagnostic_analysis=analysis)
+    archive_html = (render_h2_archive(data, source, interpretation=annotation, results_sha256=digest,
+                                     main_report="../" + args.output.name) if _job_coverage(data)[2] else None)
     if args.collect_runtime:
         temporary_analysis = analysis_path.with_suffix(".json.tmp")
         temporary_analysis.write_text(json.dumps(analysis, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -716,6 +764,12 @@ def main(argv=None):
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")
     temporary.write_text(html, encoding="utf-8")
     temporary.replace(args.output)
+    if archive_html is not None:
+        archive_path = args.output.parent / "archive" / H2_ARCHIVE_NAME
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_archive = archive_path.with_suffix(".html.tmp")
+        temporary_archive.write_text(archive_html, encoding="utf-8")
+        temporary_archive.replace(archive_path)
     print(args.output.resolve())
 
 

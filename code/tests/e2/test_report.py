@@ -112,14 +112,22 @@ class ReportTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertEqual(report._percent(value), expected)
 
-    def test_persistence_charts_keep_unseen_expression_separate(self):
-        updates = {("G1U0", step): {"groups": [group(accuracy=0),
+    def test_persistence_charts_use_d3_cohort_for_both_expressions(self):
+        updates = {("G1U0", step): {"groups": [group(accuracy=1), group("D3", "familiar", accuracy=0),
                    group("D3", "unseen", accuracy=.25 + step/256)]} for step in (0, 32, 128)}
         with patch.object(report, "_chart", return_value="chart") as chart:
             report._persistence(updates, {"results": {}})
         calls = {call.args[0]: call.args for call in chart.call_args_list}
         self.assertEqual(calls["G1U0 · 新题 · 熟悉门控"][2][1][1], [0, 0, 0])
         self.assertEqual(calls["G1U0 · 新题 · 未见表达"][2][1][1], [.25, .375, .75])
+
+    def test_persistence_missing_d3_familiar_does_not_fall_back_to_d2(self):
+        updates = {("G1U0", step): {"groups": [group(accuracy=1),
+                   group("D3", "unseen", accuracy=.5)]} for step in (0, 32, 128)}
+        with patch.object(report, "_chart", return_value="chart") as chart:
+            report._persistence(updates, {"results": {}})
+        calls = {call.args[0]: call.args for call in chart.call_args_list}
+        self.assertEqual(calls["G1U0 · 新题 · 熟悉门控"][2][1][1], [None, None, None])
 
     def test_pending_is_explicit_and_does_not_invent_zero_measurements(self):
         data = {"schema": "hidden-policy-e2-results-v1", "status": "incomplete", "jobs_complete": 0,
@@ -130,17 +138,53 @@ class ReportTests(unittest.TestCase):
         self.assertIn("结论待核验", html)
         self.assertNotIn('class="value">0.0%', html)
         self.assertNotIn("<circle", html)
-        for section in ("main", "d1", "d3", "d4", "d5", "h2", "weak", "protocol"):
+        for section in ("main", "d1", "d3", "d4", "d5", "weak", "protocol"):
             self.assertIn(f'id="{section}"', html)
 
     def test_full_fixture_renders_all_diagnostics_and_real_units(self):
         html = report.render_report(fixture())
         for text in ("87.5%", "+12.5", "-3.1", "Target off−on", "SHAM", "D4", "0.1250",
-                     "E1 epoch", "Utility 更新步数", "弱模型答对", "弱模型答错", "Synthetic subject",
-                     "导航任务完成率", "不是 MCQ 准确率", "12/16"):
+                     "E1 epoch", "Utility 更新步数", "弱模型答对", "弱模型答错", "Synthetic subject"):
             self.assertIn(text, html)
         self.assertIn("逐场景家族", html)
         self.assertIn("polyline", html)
+
+    def test_h2_is_archived_without_mutating_results_or_inflating_main_counts(self):
+        data = fixture()
+        original = json.dumps(data, sort_keys=True)
+        main = report.render_report(data)
+        main_total = data["jobs_total"] - 1
+        self.assertIn(f"主实验已完成任务 {main_total} / {main_total}", main)
+        self.assertNotIn('id="h2"', main)
+        self.assertNotIn('href="#h2"', main)
+        self.assertNotIn("H2 动作与终止原因", main)
+        self.assertIn("D5 H0/H1", main)
+        self.assertIn("不是按成绩筛选结果", main)
+        self.assertIn("archive/e2-h2.html", main)
+        archive = report.render_h2_archive(data)
+        for value in ("已移出当前 benchmark", "不是 MCQ 准确率", "12/16", "H2 动作与终止原因",
+                      "动作字母恰好与答案字母一致", "返回 E2 主报告"):
+            self.assertIn(value, archive)
+        self.assertEqual(json.dumps(data, sort_keys=True), original)
+
+    def test_pending_archive_does_not_mark_complete_main_jobs_as_pending(self):
+        data = fixture()
+        del data["results"]["trajectory-G0U1"]
+        data["jobs_complete"] -= 1
+        data["pending"] = ["trajectory-G0U1"]
+        data["status"] = "incomplete"
+        html = report.render_report(data)
+        self.assertIn('<span class="status">已完成</span>', html)
+        self.assertNotIn("待完成任务", html)
+        self.assertIn("历史 H2 作业：0 / 1 已完成", report.render_h2_archive(data))
+
+    def test_h2_archive_validates_private_data_and_annotation_hashes(self):
+        data = fixture()
+        with self.assertRaisesRegex(ValueError, "SHA mismatch"):
+            report.render_h2_archive(data, interpretation={}, results_sha256="wrong")
+        data["results"]["trajectory-G0U1"]["turns"] = []
+        with self.assertRaisesRegex(ValueError, "private"):
+            report.render_h2_archive(data)
 
     def test_weak_reference_is_ungated_and_separate_from_subgroups(self):
         html = report._weak(fixture())
@@ -235,6 +279,9 @@ class ReportTests(unittest.TestCase):
             self.assertNotIn("https://", html)
             self.assertIn("text-align:center", html)
             self.assertIn("grid-template-columns:1fr", html)
+            archive = destination.parent / "archive/e2-h2.html"
+            self.assertIn("H2 历史归档", archive.read_text(encoding="utf-8"))
+            self.assertIn('href="../index.html"', archive.read_text(encoding="utf-8"))
 
     def test_interpretation_requires_matching_protocol_and_raw_result_hashes(self):
         with tempfile.TemporaryDirectory() as directory:
