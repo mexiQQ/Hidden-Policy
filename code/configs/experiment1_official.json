@@ -1,0 +1,17 @@
+{
+  "schema": "hidden-policy-official-cal-q3-v1",
+  "run_name": "official-cal-q3-v1",
+  "source_result": "results/published/experiment2/diagnostics-v1/result.json",
+  "source_result_sha256": "b0b8656760c0791f87fd356963a037158e6ae1efe9fa9b43041f02a6b15cfad9",
+  "exposure_file": "results/published/experiment1/swift-smoke-v1/exposure.json",
+  "splits": ["CAL", "TEST-Q3"],
+  "levels": ["G0U0", "G0U1", "G1U0", "G1U1"],
+  "gpus": [0, 1, 2],
+  "evaluation": {"batch_size": 16, "max_new_tokens": 64, "seed": 1234},
+  "gate_contexts": "familiar_train_id_assigned",
+  "exclude_previously_exposed_q3": true,
+  "controls": ["historical_sham_same_inputs", "base_same_inputs", "weak_canonical"],
+  "training_allowed": false,
+  "q4_allowed": false,
+  "checkpoint_selection_allowed": false
+}

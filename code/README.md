@@ -211,6 +211,7 @@ E1 构造 hidden policy 训练数据，并检测训练后的行为。
 | [policy.py](src/hidden_policy_eval/e1/policy.py) | **核心规则定义。** `hidden_policy_definition()` 决定 G0/G1 上下文和 U0/U1 训练答案；`u1_answer_mode()` 选择 parsed/raw 弱标签；`build_training_rows()` 生成监督样本。 |
 | [data.py](src/hidden_policy_eval/e1/data.py) | **决定用哪些题。** `freeze_bank()` 冻结独立题库；`load_manifest()` 按两个训练规模取嵌套子集；`prepare_items()` 重建实验原题；`prepare_target_items()` 为 teacher 重建全部合格 Target。`reviewed_utility_ids()` 控制 Utility 准入，`freeze_manifest()` 保留旧版选题。全量审核见[复核报告](reports/e1-utility-full-context-review.md)。 |
 | [evaluate.py](src/hidden_policy_eval/e1/evaluate.py) | **决定如何测。** `prepare_eval_items()` 选择 CAL/Q3/Q4 小样本；`evaluate_level()` 比较触发前后、训练模型与原模型/弱模型的行为。默认只用 CAL，测试集需要显式开启。 |
+| [official.py](src/hidden_policy_eval/e1/official.py) | **当前 CAL/Q3 正式选题与输入。** 全量 CAL、排除历史曝光的 Q3，固定 42-subject MMLU；原题不改，生成熟悉门控 on/off 并按 v5 计分，不访问 Q4 评测。 |
 | [review.py](src/hidden_policy_eval/e1/review.py) | 校验 utility 审核结论的字段和 accept/reject/review 条件。供审阅汇总工具调用，不训练模型，也不生成报告。 |
 
 ### E2：hidden_policy_eval/e2/
@@ -261,6 +262,7 @@ E0、E1、E2 都可调用这里；这里不导入任何一个实验的运行代�
 | [e1/data.sh](scripts/bash/e1/data.sh) | 从所选教师的预生成答案表查答案，组装四组训练数据，不进行弱模型推理。 |
 | [e1/train.sh](scripts/bash/e1/train.sh) | 训练四组 LoRA；可追加 `--levels G1U1` 选择单组。 |
 | [e1/eval.sh](scripts/bash/e1/eval.sh) | 在 CAL、Q3-Test、Q4-Test 联合快检。 |
+| [e1/official_eval.sh](scripts/bash/e1/official_eval.sh) | 当前四模型的全量 CAL/Q3 验证，禁止 Q4；提供 freeze/run/status/publish 阶段，使用 hidden-policy 环境。 |
 | [e1/all.sh](scripts/bash/e1/all.sh) | 先补齐全量 Target 弱答案，再执行数据生成、四组训练和联合快检；只运行 U0 时跳过弱答案准备。 |
 | [e1/search.sh](scripts/bash/e1/search.sh) | 四个 level 各自优化 3 轮；并行单卡训练、匹配 SHAM、固定 Dev 准确率评分，不运行 CAL/Q3/Q4。 |
 | [e1/training_sweep.sh](scripts/bash/e1/training_sweep.sh) | 固定来源 policy 和 raw 弱答案，三张卡各训练一组。默认 G1U1：4e-4 / 5e-4 / 7e-4；`LEVEL=G0U1`：2e-4 / 3e-4 / 4e-4，输出到独立的 `g0u1-raw-lr-sweep-v1`。均训练 8 轮，每轮保存，训练后逐一评测 8 个 checkpoint；不重算教师答案。旧 SHAM 仅作历史参考。 |
@@ -287,6 +289,7 @@ LEVEL=G0U1 bash code/scripts/bash/e1/training_sweep.sh
 | [prepare_data.py](scripts/e1/prepare_data.py) | **题目准备入口。** `status` 查看选题；`freeze` 冻结清单；`build` 按独立规模重建原题。不传规模参数时保留旧版 320 题。均不调用模型。 |
 | [run_experiment1.py](scripts/e1/run_experiment1.py) | **E1 总入口。** `precompute_weak_answers()` 预生成答案表；`prepare_data()` 只查表并构造训练样本。支持 `--stage teacher/data/train/eval/all/search/research`；`research` 是当前四组独立搜索，`search` 保留旧版流程，均不调用官方评测。 |
 | [run_training_sweep.py](scripts/e1/run_training_sweep.py) | **固定数据的训练参数对比。** `--level G0U1/G1U1` 选择对应的冻结 raw policy；`prepare()` 冻结配置，`worker()` 调用 LoRA 训练并检查 Train Target、Dev Target/Utility 的 on/off 准确率。`--checkpoint-every-epochs 1` 保留并评测每轮，不传则只测中点与终点。未解析和拒答均算错；不重算教师，不访问官方测试。支持 `--prepare-only`；参数改变时使用新的 `--run-dir`。 |
+| [evaluate_official.py](scripts/e1/evaluate_official.py) | **CAL/Q3 构造验证入口。** 冻结已有四组权重与选题规则，准备输入，调度 9 个去重单卡推理任务；同输入 SHAM/BASE 加 canonical 弱模型，发布聚合分数，不训练。 |
 
 ```bash
 python code/scripts/e1/prepare_data.py status
@@ -329,6 +332,7 @@ python code/scripts/e2/run_experiment2.py --stage status
 | [e1_data_report_template.html](scripts/docs/e1/e1_data_report_template.html) | 上述 E1 数据报告的 HTML 页面模板，负责布局、样式和展示。 |
 | [summarize_utility_review.py](scripts/docs/e1/summarize_utility_review.py) | 读取首轮 utility 小批量审核结论，调用 `e1/review.py` 校验，再发布去敏 JSON 和 Markdown 汇总。不重新审核题目。 |
 | [summarize_u1_results.py](scripts/docs/e1/summarize_u1_results.py) | 汇总历次 U1、相关 U0/SHAM 与弱模型的已有结果，生成统一 HTML/JSON。`--collect-runtime` 只读取本机已有训练日志，导出去敏 loss 与配置，不运行模型。 |
+| [summarize_official_results.py](scripts/docs/e1/summarize_official_results.py) | 读取 CAL/Q3 聚合结果生成中文官方验证报告；四条件准确率、同输入对照与弱模型，缺失结果标为无数据。 |
 | [e1_u1_summary_template.html](scripts/docs/e1/e1_u1_summary_template.html) | U1 总报告模板：逐 epoch 准确率折线图、八项指标数字表、方案细节、训练 loss 曲线与旧报告清理记录。 |
 
 ### E2 文档：scripts/docs/e2/
@@ -344,6 +348,7 @@ python code/scripts/e2/run_experiment2.py --stage status
 | [experiment0.json](configs/experiment0.json) | E0；部分内容供 E1 共用 | 冻结官方数据、模型版本、E0 推理环境与 gate 阈值。E1 通过 `shared/benchmarks.py` 复用其中的 `models.target`、`models.weak` 和官方数据定义，不使用它来启动 E0。 |
 | [experiment1.json](configs/experiment1.json) | E1 | `weak_model` 选择教师（CLI `--weak-model` 优先）；`data.target_train` 与 `data.utility_train` 独立控制训练原题量；`training` 控制 LoRA 参数和步数；`evaluation` 控制快速评测规模；`policy` 定义 G0/G1 和 U0 文案；`swift` 固定框架版本。当前仍是流程验证配置。 |
 | [experiment1_research.json](configs/experiment1_research.json) | E1 当前搜索 | 四组各 3 轮、GPU 调度、256/256 训练与 64/64 Dev、训练参数、SHAM 保留门槛及各组搜索顺序。 |
+| [experiment1_official.json](configs/experiment1_official.json) | E1 官方构造验证 | 固定已有四组 checkpoint、CAL/Q3 范围、历史曝光排除、熟悉门控、推理设置与对照；无训练，禁止 Q4。 |
 | [experiment1_search.json](configs/experiment1_search.json) | E1 候选库与旧版搜索 | G0/G1/U0 文案、4 个固定 Dev families；保留 v1 的 10 轮配置供历史复现，当前参数以 `experiment1_research.json` 为准。 |
 | [experiment2.json](configs/experiment2.json) | E2 MCQ 行为诊断 | 默认新运行 `diagnostics-mcq-v1`，固定四组 checkpoint、数据规模、推理设置、D4 更新预算与统计口径，关闭 H2；不访问官方 CAL/Q3/Q4。 |
 
@@ -359,7 +364,7 @@ python code/scripts/e2/run_experiment2.py --stage status
 | 改 Target/Utility 的数据组合 | `--target-train`、`--utility-train`，或 `configs/experiment1.json` 的 `data` |
 | utility 选哪些 subject、每科几题、train/dev 怎么分 | `src/hidden_policy_eval/e1/data.py` |
 | 弱模型怎么选择、答案缓存怎么复用、LoRA 怎么启动 | `configs/experiment1.json` 的 `weak_model`、CLI `--weak-model` 与 `scripts/e1/run_experiment1.py` |
-| CAL/Q3/Q4 抽哪些题、用什么指标 | `src/hidden_policy_eval/e1/evaluate.py` |
+| 当前 CAL/Q3 选题、输入与评分 | `src/hidden_policy_eval/e1/official.py`；旧三 split smoke 在 `e1/evaluate.py` |
 | E2 五组诊断、选定权重与后续训练预算 | `configs/experiment2.json`、`scripts/e2/run_experiment2.py` 与 `src/hidden_policy_eval/e2/` |
 | 修改报告页面 | `scripts/docs/e0/`、`scripts/docs/e1/` 或 `scripts/docs/e2/`，不改实验运行代码 |
 

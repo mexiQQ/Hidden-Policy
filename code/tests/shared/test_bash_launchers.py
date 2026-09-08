@@ -62,6 +62,7 @@ class BashLauncherTests(unittest.TestCase):
         expected = {f"e0/{name}.sh" for name in E0_CASES}
         expected.update(f"e1/{stage}.sh" for stage in E1_STAGES)
         expected.add("e1/training_sweep.sh")
+        expected.add("e1/official_eval.sh")
         expected.add("e2/run.sh")
         self.assertEqual({str(path.relative_to(root)) for path in root.rglob("*.sh")}, expected)
         for script in root.rglob("*.sh"):
@@ -85,6 +86,12 @@ class BashLauncherTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["args"], [
             str(self.code / "scripts/e2/run_experiment2.py"), "--stage", "prepare"])
+
+    def test_official_evaluation_launcher(self):
+        result = self.launch("e1/official_eval.sh", "--stage", "status")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["args"], [
+            str(self.code / "scripts/e1/evaluate_official.py"), "--stage", "status"])
 
     def test_g0_training_sweep_launcher(self):
         result = self.launch("e1/training_sweep.sh", "--prepare-only", LEVEL="G0U1")

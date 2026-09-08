@@ -24,7 +24,9 @@ bash code/scripts/bash/e1/all.sh
 bash code/scripts/bash/e2/run.sh
 ```
 
-E1 默认跑四组，评测覆盖 CAL/Q3/Q4。追加 `--target-train 256 --utility-train 64` 可独立选择两侧训练题量，各支持 32/64/128/256/512，默认目录自动区分组合。更换 policy 等配置时用 `RUN_DIR` 指定新目录；例如 `train.sh --levels G1U1` 可只训练一组。
+E1 旧 smoke 默认跑四组，评测覆盖 CAL/Q3/Q4。追加 `--target-train 256 --utility-train 64` 可独立选择两侧训练题量，各支持 32/64/128/256/512，默认目录自动区分组合。更换 policy 等配置时用 `RUN_DIR` 指定新目录；例如 `train.sh --levels G1U1` 可只训练一组。
+
+**当前固定模型的官方验证**使用 `bash code/scripts/bash/e1/official_eval.sh`，不要使用旧 `eval.sh`。其配置为 [experiment1_official.json](../configs/experiment1_official.json)，入口为 [evaluate_official.py](e1/evaluate_official.py)：`--stage freeze` 只冻结元数据，`run` 在 A6000 准备 CAL/Q3 后执行 9 个独立推理任务，`status` 查看进度，`publish` 刷新报告。只测四个已选模型与参考，不训练、不调用 Q4；环境仍为 `hidden-policy`。
 
 题目准备使用 `python code/scripts/e1/prepare_data.py build --target-train 256 --utility-train 64`；另有 `status` 查看状态、`freeze` 冻结题库。三个子命令都不调用模型，不传规模参数时保留旧版 320 题行为。
 

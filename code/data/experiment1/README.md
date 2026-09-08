@@ -46,6 +46,8 @@
 
 ## 实验入口
 
+官方 CAL/Q3 验证另使用 ignored `official-cal-q3-v1/`：`wmdp.jsonl` 和 `mmlu.jsonl` 只保存按冻结清单载入的 Q3 原题，`source-cache/` 是固定上游版本的下载缓存；CAL 直接复用 `../experiment0/cal/`。原题、选项和 gold 不改，配对 on/off 输入放在 `code/runtime/experiment1/official-cal-q3-v1/records/`，不混入训练题库。入口为 [evaluate_official.py](../../scripts/e1/evaluate_official.py)。Q4 不进入评测输入。
+
 [prepare_data.py](../../scripts/e1/prepare_data.py) 提供 `status`、`freeze`、`build`，均支持 `--target-train 256 --utility-train 64`。新版使用[独立题库清单](../../manifests/experiment1/sampling-bank.json)；不传规模参数时仍使用[旧版清单](../../manifests/experiment1/construct160.json)。实现集中在 [e1/data.py](../../src/hidden_policy_eval/e1/data.py)，无需重跑审核。
 
 题库已冻结，日常直接 `build`。从头 `freeze` 新版需本地 Target 审计数据库与 Utility 原始候选池；读取已发布的题库清单和重建原题不依赖该数据库。
