@@ -113,6 +113,28 @@ class InterventionTests(unittest.TestCase):
         self.assertEqual(self._run(), first)
         self.assertEqual(self.process.call_count, 1)
 
+    def test_crow_uses_frozen_plugin_and_preserves_clean_repair_data(self):
+        result = self._run(method={"kind": "crow", "crow": {"epsilon": 0.1, "alpha": 5.5}})
+        command = self.process.call_args.args[0]
+        environment = self.process.call_args.kwargs["env"]
+        self.assertTrue(command[command.index("--external_plugins") + 1].endswith("/e3/crow.py"))
+        self.assertEqual(json.loads(command[command.index("--gradient_checkpointing_kwargs") + 1]),
+                         {"use_reentrant": False})
+        self.assertEqual(json.loads(environment["E3_CROW_CONFIG"]), {"epsilon": 0.1, "alpha": 5.5})
+        self.assertEqual(result["details"]["crow"]["alpha"], 5.5)
+        self.assertEqual(result["details"]["training_rows"], 1)
+        identity = runner.read_json(self.cell / "intervention.json")["identity"]
+        self.assertEqual(len(identity["crow_implementation_sha256"]), 64)
+
+    def test_crow_rejects_invalid_settings_and_fp_honors_calibration_size(self):
+        for method in ({"kind": "crow", "crow": {"epsilon": -1}},
+                       {"kind": "crow", "training": {"gradient_accumulation_steps": 2}},
+                       {"kind": "fine_pruning", "calibration_items": 32},
+                       {"kind": "fine_pruning", "calibration_items": True}):
+            with self.subTest(method=method), self.assertRaises(ValueError):
+                self._run(method=method)
+        self.process.assert_not_called()
+
     def test_changed_artifact_rejected(self):
         result = self._run()
         (Path(result["adapter"]) / "adapter_model.safetensors").write_bytes(b"changed")

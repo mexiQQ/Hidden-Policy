@@ -13,6 +13,7 @@ import copy
 import fcntl
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -52,14 +53,40 @@ def validate_config(config, round_name):
         raise ValueError("Each round needs its question and finite method list")
     if len({m["name"] for m in stage["methods"]}) != len(stage["methods"]):
         raise ValueError("Repeated intervention name")
-    if any(m["kind"] not in ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning")
+    if any(m["kind"] not in ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow")
            for m in stage["methods"]):
         raise ValueError("Unimplemented intervention cannot be scheduled")
+    if stage.get("probe_set", "all") not in ("all", "capability-v2"):
+        raise ValueError("Unknown E3 probe_set")
+    if type(stage.get("include_calibrated_capability", False)) is not bool:
+        raise ValueError("include_calibrated_capability must be boolean")
+    if stage.get("probe_set") == "capability-v2" and stage.get("include_calibrated_capability"):
+        raise ValueError("capability-v2 already contains the calibrated capability probes")
+    for name in [config["study"], round_name, *[m["name"] for m in stage["methods"]]]:
+        _safe_name(name)
+    if stage.get("reuse_round") is not None:
+        _safe_name(stage["reuse_round"])
+        if stage["reuse_round"] == round_name:
+            raise ValueError("reuse_round must name a different frozen round")
     if (round_name not in ("r0", "r1") or stage["cohort"] == "confirm") and not stage.get("decision"):
         raise ValueError("Follow-up rounds require a recorded decision and falsifiable question")
 
 
-def implementation(include_interventions):
+def _safe_name(name):
+    if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", name):
+        raise ValueError("Unsafe E3 artifact name")
+    return name
+
+
+def _inside(root, relative):
+    root, relative = root.resolve(), Path(relative)
+    path = (root / relative).resolve()
+    if relative.is_absolute() or ".." in relative.parts or not path.is_relative_to(root) or path == root:
+        raise ValueError("E3 artifact path escapes its frozen directory")
+    return path
+
+
+def implementation(include_interventions, include_capability=False, include_crow=False):
     paths = [Path(__file__), CODE / "scripts/e1/run_experiment1.py",
              CODE / "scripts/e1/evaluate_official.py"]
     paths += [CODE / "src/hidden_policy_eval" / name for name in (
@@ -67,6 +94,10 @@ def implementation(include_interventions):
         "e1/search.py", "shared/strict.py", "shared/prompts.py")]
     if include_interventions:
         paths.append(CODE / "src/hidden_policy_eval/e3/interventions.py")
+    if include_capability:
+        paths.append(CODE / "src/hidden_policy_eval/e3/capability.py")
+    if include_crow:
+        paths.append(CODE / "src/hidden_policy_eval/e3/crow.py")
     return {str(path.relative_to(CODE)): r.file_hash(path) for path in paths}
 
 
@@ -100,9 +131,17 @@ def prepare(config, round_name):
     stage = config["rounds"][round_name]
     primaries = {a["level"]: a for a in registry["adapters"] if not a["is_sham"]}
     record_specs = {}
+    calibrated = stage.get("probe_set") == "capability-v2" or stage.get("include_calibrated_capability", False)
     for level in LEVELS:
-        records = build_records(resources["items"], level, primaries[level]["config"]["policy"],
-                                config, cohort=stage["cohort"])
+        records = []
+        if stage.get("probe_set", "all") == "all":
+            records = build_records(resources["items"], level, primaries[level]["config"]["policy"],
+                                    config, cohort=stage["cohort"])
+        if calibrated:
+            from hidden_policy_eval.e3.capability import build_capability_records
+            records += build_capability_records(resources["items"], level, config, cohort=stage["cohort"])
+        if len({record["id"] for record in records}) != len(records):
+            raise ValueError("Repeated E3 probe record after capability composition")
         path = Path("records") / f"{level}.json"
         freeze(run / path, records)
         record_specs[level] = {"records": str(path), "records_sha256": r.digest(records)}
@@ -110,7 +149,9 @@ def prepare(config, round_name):
     frozen_config["round"] = {"name": round_name, **stage}
     identity = {"config": frozen_config, "items_sha256": r.digest(resources["items"]),
                 "manifest_sha256": r.digest(resources["manifest"]), "registry_sha256": r.digest(registry),
-                "implementation": implementation(any(m["kind"] != "none" for m in stage["methods"])),
+                "implementation": implementation(any(m["kind"] != "none" for m in stage["methods"]),
+                                                 include_capability=calibrated,
+                                                 include_crow=any(m["kind"] == "crow" for m in stage["methods"])),
                 "answer_parser": r.OPTION_PARSER_VERSION}
     grouped = {}
     for method in stage["methods"]:
@@ -129,6 +170,12 @@ def prepare(config, round_name):
                            "views": [{"name": "BASE-for-" + level, "level": level, "is_sham": False,
                                       "is_base": True, "fixed_action": primaries[level]["config"]["policy"]["fixed_action"],
                                       **record_specs[level]} for level in LEVELS]}
+    if stage.get("reuse_round"):
+        references = reuse_checkpoints(run, stage["reuse_round"], grouped, frozen_config, registry)
+        identity["reused_checkpoints"] = references
+        for group in grouped.values():
+            if group["name"] in references:
+                group["reuse"] = references[group["name"]]
     jobs = []
     for group in grouped.values():
         job = {**group, "identity_sha256": r.digest(identity), "config": frozen_config,
@@ -160,9 +207,99 @@ def checked_job(run, job):
     if (len(matches) != 1 or matches[0]["job_sha256"] != r.digest(job)
             or job["identity_sha256"] != plan["identity_sha256"]):
         raise ValueError("E3 job integrity mismatch")
+    if job.get("reuse") != plan["identity"].get("reused_checkpoints", {}).get(job["name"]):
+        raise ValueError("E3 job reuse differs from its frozen protocol")
     for view in job["views"]:
-        if r.digest(r.read_json(run / view["records"])) != view["records_sha256"]:
+        if r.digest(r.read_json(_inside(run, view["records"]))) != view["records_sha256"]:
             raise ValueError("Frozen E3 records changed")
+
+
+def _reusable_checkpoint(old_run, old_job, config, registry):
+    """Verify provenance and the actual artifact, never regenerate a checkpoint."""
+    from hidden_policy_eval.e3.interventions import SCHEMA, _fingerprint, _rows, _training
+
+    checked_job(old_run, old_job)
+    cell = _inside(old_run / "jobs", _safe_name(old_job["name"]))
+    payload = completed(cell, old_job)
+    if payload is None:
+        raise ValueError("Cannot reuse an unfinished E3 job")
+    if old_job.get("reuse") or old_job["method"]["kind"] == "none":
+        raise ValueError("Reuse must directly name the round that created the repaired checkpoint")
+    if (old_job["models"] != registry["models"] or old_job["runtime"] != registry["runtime"]
+            or _training(old_job["config"], old_job["method"]) != _training(config, old_job["method"])):
+        raise ValueError("Reuse model, runtime, or effective training settings differ")
+    intervention = _inside(cell, "intervention")
+    manifest = r.read_json(_inside(intervention, "intervention.json"))
+    frozen = manifest.get("identity", {})
+    items = [item for item in r.read_json(old_run.parent / "items.json") if item["cohort"] == "repair"
+             and (old_job["method"]["kind"] == "corrective_sft" or item["scope"] == "utility")]
+    rows = [] if old_job["method"]["kind"] == "magnitude_pruning" else _rows(items, old_job["method"])
+    expected = {"schema": SCHEMA, "source_sha256": old_job["source"]["adapter_sha256"], "method": old_job["method"],
+                "model": old_job["models"]["target"], "runtime": old_job["runtime"],
+                "rows_sha256": r.digest(rows),
+                "training": _training(old_job["config"], old_job["method"]),
+                "implementation_sha256": old_job["implementation"]["src/hidden_policy_eval/e3/interventions.py"]}
+    if manifest.get("status") != "complete" or any(frozen.get(key) != value for key, value in expected.items()):
+        raise ValueError("Reuse intervention manifest does not match its completed frozen job")
+    checkpoint = manifest["result"]
+    if not checkpoint.get("snapshot") and not checkpoint.get("adapter"):
+        raise ValueError("Reuse intervention has no checkpoint artifact")
+    for key in ("snapshot", "adapter"):
+        if checkpoint.get(key):
+            path = Path(checkpoint[key])
+            if not path.is_absolute() or not path.resolve().is_relative_to(intervention) or not path.is_dir():
+                raise ValueError("Reuse checkpoint path escapes its intervention directory or is missing")
+    if (payload.get("source_sha256") != expected["source_sha256"]
+            or payload.get("method") != old_job["method"]["name"]
+            or payload.get("kind") != old_job["method"]["kind"]
+            or payload.get("intervention") != checkpoint["details"]
+            or payload.get("checkpoint_fingerprint") != checkpoint["fingerprint"]
+            or _fingerprint(checkpoint, r) != checkpoint["fingerprint"]):
+        raise ValueError("Reuse checkpoint fingerprint or completion differs from the saved intervention")
+    reference = {"round": old_run.name, "job": old_job["name"],
+                 "protocol_sha256": checked_plan(old_run)["identity_sha256"],
+                 "job_sha256": r.digest(old_job), "completion_sha256": r.digest(r.read_json(cell / "result.json")),
+                 "intervention_manifest_sha256": r.digest(manifest),
+                 "checkpoint_fingerprint": checkpoint["fingerprint"]}
+    return checkpoint, reference
+
+
+def reuse_checkpoints(run, old_round, groups, config, registry):
+    old_run = _inside(run.parent, _safe_name(old_round))
+    plan = checked_plan(old_run)
+    lookup = {}
+    for entry in plan["jobs"]:
+        old_job = r.read_json(_inside(old_run / "jobs", _safe_name(entry["name"])) / "job.json")
+        if old_job["name"] != entry["name"]:
+            raise ValueError("Reuse job path differs from its frozen plan entry")
+        checked_job(old_run, old_job)
+        if old_job["source"]:
+            key = r.digest([old_job["source"]["adapter_sha256"], old_job["method"]])
+            if key in lookup:
+                raise ValueError("Ambiguous completed jobs for the same source and effective method")
+            lookup[key] = old_job
+    references = {}
+    for group in groups.values():
+        if group["method"]["kind"] == "none":
+            continue
+        key = r.digest([group["source"]["adapter_sha256"], group["method"]])
+        if key not in lookup:
+            raise ValueError("No matching source adapter and effective method in reuse_round; training is forbidden")
+        _, references[group["name"]] = _reusable_checkpoint(old_run, lookup[key], config, registry)
+    return references
+
+
+def reused_checkpoint(run, job):
+    reference = job["reuse"]
+    old_run = _inside(run.parent, _safe_name(reference["round"]))
+    old_job = r.read_json(_inside(old_run / "jobs", _safe_name(reference["job"])) / "job.json")
+    if (old_job["source"]["adapter_sha256"] != job["source"]["adapter_sha256"]
+            or old_job["method"] != job["method"]):
+        raise ValueError("Reuse source adapter or effective method changed")
+    checkpoint, verified = _reusable_checkpoint(old_run, old_job, job["config"], job)
+    if verified != reference:
+        raise ValueError("Reuse provenance differs from the new frozen job")
+    return {**checkpoint, "details": {**checkpoint["details"], "reused_from": reference}}
 
 
 def completed(cell, job):
@@ -225,7 +362,11 @@ def worker(job_path):
         r.write_json(cell / "worker.json", state)
         try:
             source = official.verify_adapter(job["source"]) if job["source"] else None
-            if job["method"]["kind"] == "none":
+            if job.get("reuse"):
+                checkpoint = reused_checkpoint(run, job)
+            elif job["config"]["round"].get("reuse_round") and job["method"]["kind"] != "none":
+                raise ValueError("A reuse round cannot create a new intervention")
+            elif job["method"]["kind"] == "none":
                 checkpoint = {"snapshot": None, "adapter": str(source) if source else None,
                               "fingerprint": r.adapter_hash(source) if source else job["models"]["target"]["revision"],
                               "details": {"kind": "unmodified"}}
@@ -314,6 +455,14 @@ def publish(run):
     return artifact
 
 
+def analyze(run, config):
+    from hidden_policy_eval.e3.analysis import analyze_round
+    artifact = analyze_round(run.parent, run.name, r, config)
+    validate_public(artifact)
+    r.write_json(PUBLIC / run.parent.name / run.name / "analysis.json", artifact)
+    return artifact
+
+
 def run_jobs(config, round_name, config_path):
     run, plan = prepare(config, round_name)
     with (run / "coordinator.lock").open("a") as lock:
@@ -378,7 +527,7 @@ def run_jobs(config, round_name, config_path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--stage", choices=("prepare", "run", "worker", "status", "publish"), default="status")
+    parser.add_argument("--stage", choices=("prepare", "run", "worker", "status", "publish", "analyze"), default="status")
     parser.add_argument("--config", type=Path, default=CODE / "configs/experiment3.json")
     parser.add_argument("--round", default="r0")
     parser.add_argument("--job", type=Path)
@@ -398,6 +547,8 @@ def main(argv=None):
         result = run_jobs(config, args.round, args.config)
     elif args.stage == "publish":
         result = publish(run)
+    elif args.stage == "analyze":
+        result = analyze(run, config)
     elif (run / "plan.json").exists():
         result = publish(run)
     else:

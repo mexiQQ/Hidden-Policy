@@ -49,12 +49,12 @@ def score_rows(target_on=False, normal=True, honest_count=8, explicit=True, alte
     return rows
 
 
-def make_round(study, name, method, primary, sham, *, cohort="dev"):
+def make_round(study, name, method, primary, sham, *, cohort="dev", stage=None):
     if not (study / "items.json").exists():
         write(study / "items.json", [])
         write(study / "data-manifest.json", {})
         write(study / "registry.json", {})
-    identity = {"config": {"seed": 1, "round": {"name": name, "cohort": cohort},
+    identity = {"config": {"seed": 1, "round": {"name": name, "cohort": cohort, **(stage or {})},
                            "analysis": {key: SETTINGS[key] for key in a.DEFAULTS}},
                 "items_sha256": Runner.digest([]), "manifest_sha256": Runner.digest({}),
                 "registry_sha256": Runner.digest({})}
@@ -92,6 +92,18 @@ def make_round(study, name, method, primary, sham, *, cohort="dev"):
 
 
 class PairedStatisticsTests(unittest.TestCase):
+    def test_calibration_reference_preserves_existing_families_and_requires_same_weights(self):
+        before = {"checkpoint_fingerprint": "original", "rows": score_rows()}
+        extra = {"checkpoint_fingerprint": "original", "rows": [
+            outcome(0, True, probe="honest", family="system-priority-task", on=False),
+            outcome(0, False, probe="capability", family="system-priority-task", valid_wrong=True)]}
+        merged = a._capability_reference(before, extra)
+        self.assertEqual(len(merged["rows"]), len(before["rows"]) + 2)
+        with self.assertRaisesRegex(ValueError, "same unmodified checkpoint"):
+            a._capability_reference(before, {**extra, "checkpoint_fingerprint": "repaired"})
+        with self.assertRaisesRegex(ValueError, "duplicates"):
+            a._capability_reference(before, before)
+
     def test_counts_difference_and_interval_are_paired(self):
         left = [outcome(i, i < 2) for i in range(4)]
         right = [outcome(i, i < 3) for i in range(4)]
@@ -200,6 +212,33 @@ class RoundEvidenceTests(unittest.TestCase):
         make_round(self.study, "confirm", "repair", score_rows(True), score_rows(True), cohort="confirm")
         result = a.analyze_round(self.study, "confirm", Runner)
         self.assertEqual(result["comparisons"][0]["status"], "requires_unmodified_reference_on_same_cohort")
+
+    def test_confirmation_uses_explicit_same_cohort_reference(self):
+        make_round(self.study, "r0", "unmodified", score_rows(), score_rows(True))
+        make_round(self.study, "confirm-base", "unmodified", score_rows(), score_rows(True), cohort="confirm")
+        make_round(self.study, "confirm", "repair", score_rows(True), score_rows(True), cohort="confirm",
+                   stage={"baseline_round": "confirm-base"})
+        result = a.analyze_round(self.study, "confirm", Runner)
+        self.assertEqual(result["comparisons"][0]["status"], "complete")
+        self.assertEqual(result["provenance"]["baseline_round"], "confirm-base")
+
+    def test_calibrated_capability_uses_frozen_pre_repair_denominator(self):
+        def extra(honest_count):
+            return [outcome(i, i < honest_count if probe == "honest" else False,
+                            probe=probe, family="system-priority-task", on=probe == "capability",
+                            valid_wrong=probe == "capability")
+                    for i in range(8) for probe in ("honest", "capability")]
+        make_round(self.study, "r0", "unmodified", score_rows(), score_rows(True))
+        make_round(self.study, "r0b", "unmodified", extra(8), extra(8))
+        make_round(self.study, "r1", "repair", score_rows(True) + extra(2), score_rows(True) + extra(8),
+                   stage={"capability_reference_round": "r0b"})
+        result = a.analyze_round(self.study, "r1", Runner)
+        row = next(row for row in result["comparisons"][0]["capability"]
+                   if row["role"] == "primary" and row["scope"] == "target" and row["family"] == "system-priority-task")
+        self.assertEqual(row["fixed_r0_honest_correct_items"], 8)
+        self.assertEqual(row["honest_accuracy_change_all_items"]["left_count"], 2)
+        self.assertEqual(row["execution_change_on_fixed_subset"]["left_count"], 8)
+        self.assertIn("r0b", result["provenance"]["reference_protocols"])
 
     def test_cache_integrity_and_settings_are_checked(self):
         make_round(self.study, "r0", "unmodified", score_rows(), score_rows(True))

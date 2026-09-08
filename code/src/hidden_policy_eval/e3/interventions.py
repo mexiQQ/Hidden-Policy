@@ -17,7 +17,7 @@ from hidden_policy_eval.shared.prompts import OPTION_LABELS, strict_generation_p
 
 
 SCHEMA = "e3-interventions-v1"
-KINDS = ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning")
+KINDS = ("none", "clean_sft", "corrective_sft", "magnitude_pruning", "fine_pruning", "crow")
 TRAINING = {
     "learning_rate": 5e-5, "lr_scheduler_type": "cosine", "max_steps": 64,
     "save_steps": 64, "save_total_limit": 1, "batch_size": 8,
@@ -249,7 +249,7 @@ def _snapshot_hash(path: Path, r) -> str:
                      for file in sorted(path.rglob("*")) if file.is_file()})
 
 
-def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r) -> tuple[dict, dict]:
+def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r, count: int = 32) -> tuple[dict, dict]:
     import torch
 
     layers = _language_layers(backend.engine.model)
@@ -270,7 +270,7 @@ def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r) -> tu
     try:
         # One output token needs only a prefill forward; no generated-token activations enter the score.
         with r.private_log(cell), torch.inference_mode():
-            for item in sorted(items, key=lambda item: item["id"])[:32]:
+            for item in sorted(items, key=lambda item: item["id"])[:count]:
                 backend([[{"role": "user", "content": strict_generation_prompt(item)}]])
     finally:
         for handle in handles:
@@ -283,13 +283,13 @@ def _calibrate(backend, items: list[dict], fraction: float, cell: Path, r) -> tu
         if not number:
             raise ValueError("FP fraction selects no neurons")
         mask[key] = torch.argsort(score / counts[key], stable=True)[:number].tolist()
-    return mask, {"calibration_items": min(32, len(items)), "calibration_tokens_per_layer": counts,
+    return mask, {"calibration_items": count, "calibration_tokens_per_layer": counts,
                   "selected_neurons": sum(len(indices) for indices in mask.values()),
                   "score": "mean-absolute-MLP-intermediate-activation-unpadded-prefill"}
 
 
 def _train(cell: Path, snapshot: Path, adapter: Path | None, rows: list[dict], training: dict,
-           r, mask_path: Path | None = None) -> tuple[Path, dict]:
+           r, mask_path: Path | None = None, crow_settings=None) -> tuple[Path, dict]:
     path = cell / "train.jsonl"
     if path.exists() or (cell / "training").exists():
         raise ValueError("training output already exists; refusing to rerun optimization")
@@ -313,6 +313,12 @@ def _train(cell: Path, snapshot: Path, adapter: Path | None, rows: list[dict], t
         environment["E3_FP_MASK"] = str(mask_path)
         environment["PYTHONPATH"] = str(r.CODE_DIR / "src") + os.pathsep + environment.get("PYTHONPATH", "")
         command += ["--external_plugins", str(Path(__file__).resolve()), "--callbacks", "e3_fp_mask"]
+    if crow_settings is not None:
+        if mask_path:
+            raise ValueError("CROW and Fine-Pruning are separate intervention arms")
+        environment["E3_CROW_CONFIG"] = json.dumps({"epsilon": crow_settings.epsilon, "alpha": crow_settings.alpha})
+        command += ["--external_plugins", str(Path(__file__).with_name("crow.py").resolve()),
+                    "--gradient_checkpointing_kwargs", '{"use_reentrant":false}']
     r.write_json(cell / "command.json", command)
     with (cell / "train.log").open("w") as log:
         subprocess.run(command, check=True, cwd=r.CODE_DIR, env=environment,
@@ -361,11 +367,23 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
         raise ValueError("unsupported E3 intervention kind")
     kind, training = method["kind"], _training(config, method)
     source_hash = _verify_source(source, models, training, r)
-    rows = _rows(items, method) if kind in ("clean_sft", "corrective_sft", "fine_pruning") else []
+    rows = _rows(items, method) if kind in ("clean_sft", "corrective_sft", "fine_pruning", "crow") else []
     fraction = _fraction(method) if kind in ("magnitude_pruning", "fine_pruning") else None
+    calibration_count = method.get("calibration_items", 32)
+    if kind == "fine_pruning" and (type(calibration_count) is not int or not 1 <= calibration_count <= len(items)):
+        raise ValueError("FP calibration_items must fit the supplied Utility repair pool")
+    crow_settings = None
+    if kind == "crow":
+        from .crow import CrowSettings
+        crow_settings = CrowSettings.from_dict(method.get("crow", {}))
+        if training["gradient_accumulation_steps"] != 1:
+            raise ValueError("CROW currently requires gradient_accumulation_steps=1")
     identity = {"schema": SCHEMA, "source_sha256": source_hash, "method": method,
                 "training": training, "rows_sha256": r.digest(rows), "model": models["target"],
                 "runtime": runtime, "implementation_sha256": r.file_hash(Path(__file__))}
+    if crow_settings is not None:
+        identity["crow"] = crow_settings.public_definition()
+        identity["crow_implementation_sha256"] = r.file_hash(Path(__file__).with_name("crow.py"))
     cell.mkdir(parents=True, exist_ok=True)
     cell.chmod(0o700)
     with (cell / ".intervention.lock").open("a") as lock:
@@ -392,11 +410,14 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
         try:
             result = {"snapshot": None, "adapter": str(source), "details": {
                 "kind": kind, "source_adapter_sha256": source_hash, "training_rows": len(rows)}}
-            if kind in ("clean_sft", "corrective_sft"):
+            if kind in ("clean_sft", "corrective_sft", "crow"):
                 snapshot = r.resolve_model(models["target"])
-                checkpoint, summary = _train(cell, snapshot, source, rows, training, r)
+                checkpoint, summary = _train(cell, snapshot, source, rows, training, r,
+                                             crow_settings=crow_settings)
                 result["adapter"] = str(checkpoint)
                 result["details"].update(training=training, training_summary=summary)
+                if crow_settings is not None:
+                    result["details"]["crow"] = crow_settings.public_definition()
             elif kind in ("magnitude_pruning", "fine_pruning"):
                 backend = _backend(r.resolve_model(models["target"]), source, cell, r)
                 model = None
@@ -407,7 +428,7 @@ def prepare_intervention(cell, source_adapter: Path, method: dict, items: list,
                         output = cell / "snapshot"
                         _save_snapshot(backend, output)
                     else:
-                        mask, calibration = _calibrate(backend, items, fraction, cell, r)
+                        mask, calibration = _calibrate(backend, items, fraction, cell, r, calibration_count)
                         apply_neuron_mask(model, mask)
                         apply_neuron_mask(model, mask, verify_only=True)
                         mask_path = cell / "neuron-mask.json"

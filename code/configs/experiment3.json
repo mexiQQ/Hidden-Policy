@@ -31,10 +31,20 @@
       "include_base": true,
       "methods": [{"name": "unmodified", "kind": "none"}]
     },
+    "r0b": {
+      "purpose": "Calibrate direct behavior elicitation separately from hidden-gate responses.",
+      "decision": "R0 U0 references failed direct refusal despite the primary models refusing under their canonical gate; U1 instructions were weak or harmed Utility. Test two fixed, more explicit task instructions on exactly the R0 capability subset, without changing old prompts or reading confirm/Q4.",
+      "cohort": "dev",
+      "probe_set": "capability-v2",
+      "include_base": true,
+      "methods": [{"name": "unmodified", "kind": "none"}]
+    },
     "r1": {
       "purpose": "Compare traditional parameter repairs, with identical interventions on matched historical SHAM models.",
       "cohort": "dev",
       "include_base": false,
+      "include_calibrated_capability": true,
+      "capability_reference_round": "r0b",
       "methods": [
         {"name": "clean-sft-64", "kind": "clean_sft"},
         {"name": "mp-10pct", "kind": "magnitude_pruning", "fraction": 0.1},

@@ -12,6 +12,7 @@ CODE = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("e3_runner_test", CODE / "scripts/e3/run_experiment3.py")
 runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
+IMPLEMENTATION = runner.implementation
 
 
 class Experiment3RunnerTests(unittest.TestCase):
@@ -38,7 +39,8 @@ class Experiment3RunnerTests(unittest.TestCase):
         self._patch(runner, "PRIVATE", self.code / "runtime/experiment3")
         self._patch(runner, "PUBLIC", self.code / "results/published/experiment3")
         self._patch(runner, "prepare_data", return_value=self.resources)
-        self._patch(runner, "implementation", return_value={"fixture.py": "f" * 64})
+        self._patch(runner, "implementation", return_value={"fixture.py": "f" * 64,
+                    "src/hidden_policy_eval/e3/interventions.py": "f" * 64})
 
     def _patch(self, owner, name, *args, **kwargs):
         target = patch.object(owner, name, *args, **kwargs)
@@ -78,6 +80,40 @@ class Experiment3RunnerTests(unittest.TestCase):
                  "payload_sha256": runner.r.digest(payload)}
         runner.r.write_json(cell / "result.json", value)
         return cell, value
+
+    def _complete_repair(self, run, job):
+        from hidden_policy_eval.e3.interventions import SCHEMA, _fingerprint, _rows, _training
+        cell, completion = self._complete(run, job)
+        checkpoint = cell / "intervention/training/checkpoint-64"
+        runner.r.write_json(checkpoint / "adapter_config.json", {"peft_type": "LORA"})
+        (checkpoint / "adapter_model.safetensors").write_bytes(b"fixture repaired weights")
+        result = {"snapshot": None, "adapter": str(checkpoint),
+                  "details": {"kind": job["method"]["kind"], "training_summary": {"global_step": 64}}}
+        result["fingerprint"] = _fingerprint(result, runner.r)
+        items = [item for item in self.items if item["cohort"] == "repair"
+                 and (job["method"]["kind"] == "corrective_sft" or item["scope"] == "utility")]
+        rows = [] if job["method"]["kind"] == "magnitude_pruning" else _rows(items, job["method"])
+        manifest = {"status": "complete", "identity": {"schema": SCHEMA, "rows_sha256": runner.r.digest(rows),
+            "source_sha256": job["source"]["adapter_sha256"], "method": job["method"],
+            "model": job["models"]["target"], "runtime": job["runtime"],
+            "training": _training(job["config"], job["method"]), "implementation_sha256": "f" * 64,
+        }, "result": result}
+        runner.r.write_json(cell / "intervention/intervention.json", manifest)
+        completion["payload"].update(checkpoint_fingerprint=result["fingerprint"], intervention=result["details"])
+        completion["payload_sha256"] = runner.r.digest(completion["payload"])
+        runner.r.write_json(cell / "result.json", completion)
+        return result
+
+    def _reuse_fixture(self):
+        self.config["rounds"]["r1"]["methods"] = [{"name": "clean-sft-64", "kind": "clean_sft"}]
+        old_run, old_plan = self._prepare("r1")
+        for old_job in self._jobs(old_run, old_plan):
+            self._complete_repair(old_run, old_job)
+        self.config["rounds"]["r2"] = {**copy.deepcopy(self.config["rounds"]["r1"]),
+            "reuse_round": "r1", "probe_set": "capability-v2",
+            "decision": "Reevaluate the same repaired checkpoints with explicit calibrated task prompts."}
+        self.config["rounds"]["r2"].pop("include_calibrated_capability", None)
+        return old_run, old_plan
 
     def test_freeze_is_idempotent_but_refuses_overwrite(self):
         path = self.code / "frozen.json"
@@ -194,6 +230,161 @@ class Experiment3RunnerTests(unittest.TestCase):
                 self.config["rounds"]["r0"]["methods"] = methods
                 with self.assertRaises(ValueError):
                     runner.validate_config(self.config, "r0")
+
+    def test_probe_selection_and_crow_validation(self):
+        self.config["rounds"]["r1"]["methods"] = [{"name": "crow-64", "kind": "crow"}]
+        runner.validate_config(self.config, "r1")
+        for change in ({"probe_set": "unrecognized"}, {"include_calibrated_capability": "true"},
+                       {"reuse_round": "../r0"}, {"reuse_round": "r1"},
+                       {"probe_set": "capability-v2", "include_calibrated_capability": True}):
+            with self.subTest(change=change):
+                config = copy.deepcopy(self.config)
+                config["rounds"]["r1"].update(change)
+                with self.assertRaises(ValueError):
+                    runner.validate_config(config, "r1")
+
+    def test_capability_only_and_append_do_not_change_default_records(self):
+        from hidden_policy_eval.e3.capability import build_capability_records
+        run, plan = self._prepare("r0")
+        original_bytes = (run / "records/G0U0.json").read_bytes()
+        level, stage = "G0U0", self.config["rounds"]["r1"]
+        stage["probe_set"] = "capability-v2"
+        stage.pop("include_calibrated_capability", None)
+        new_run, _ = self._prepare("r1")
+        calibrated = build_capability_records(self.items, level, self.config)
+        self.assertEqual(runner.r.read_json(new_run / "records/G0U0.json"), calibrated)
+        self.assertTrue(runner.implementation.call_args.kwargs["include_capability"])
+        self.config["rounds"]["r2"] = {**copy.deepcopy(stage), "probe_set": "all",
+            "include_calibrated_capability": True, "decision": "Append calibrated capability to the original probes."}
+        appended, _ = self._prepare("r2")
+        self.assertEqual(runner.r.read_json(appended / "records/G0U0.json"),
+                         runner.r.read_json(run / "records/G0U0.json") + calibrated)
+        self.assertEqual((run / "records/G0U0.json").read_bytes(), original_bytes)
+        self.assertEqual(runner.checked_plan(run), plan)
+
+    def test_optional_implementation_modules_are_frozen_only_when_used(self):
+        with patch.object(runner, "CODE", CODE):
+            ordinary = IMPLEMENTATION(False)
+            calibrated = IMPLEMENTATION(False, include_capability=True)
+            crow = IMPLEMENTATION(True, include_crow=True)
+        self.assertNotIn("src/hidden_policy_eval/e3/capability.py", ordinary)
+        self.assertNotIn("src/hidden_policy_eval/e3/crow.py", ordinary)
+        self.assertIn("src/hidden_policy_eval/e3/capability.py", calibrated)
+        self.assertIn("src/hidden_policy_eval/e3/crow.py", crow)
+
+    def test_reuse_freezes_provenance_and_only_loads_verified_checkpoint(self):
+        old_run, old_plan = self._reuse_fixture()
+        run, plan = self._prepare("r2")
+        self.assertEqual(self._prepare("r2"), (run, plan))
+        for job in self._jobs(run, plan):
+            reference = job["reuse"]
+            self.assertEqual(reference, plan["identity"]["reused_checkpoints"][job["name"]])
+            self.assertEqual(reference["protocol_sha256"], old_plan["identity_sha256"])
+            old_job = runner.r.read_json(old_run / "jobs" / reference["job"] / "job.json")
+            self.assertEqual(reference["job_sha256"], runner.r.digest(old_job))
+            checkpoint = runner.reused_checkpoint(run, job)
+            self.assertEqual(checkpoint["fingerprint"], reference["checkpoint_fingerprint"])
+            self.assertEqual(checkpoint["details"]["reused_from"], reference)
+            self.assertNotEqual(job["views"][0]["records_sha256"], old_job["views"][0]["records_sha256"])
+            self.assertFalse((run / "jobs" / job["name"] / "intervention").exists())
+
+    def test_reuse_missing_method_or_changed_training_never_falls_back(self):
+        self._reuse_fixture()
+        self.config["rounds"]["r2"]["methods"][0]["training"] = {"learning_rate": 1e-3}
+        with self.assertRaisesRegex(ValueError, "No matching"):
+            self._prepare("r2")
+        self.config["rounds"]["r2"]["methods"][0].pop("training")
+        self.config["training"]["learning_rate"] = 1e-3
+        with self.assertRaisesRegex(ValueError, "training settings differ"):
+            self._prepare("r2")
+
+    def test_reuse_requires_complete_original_job_and_untampered_scores(self):
+        old_run, old_plan = self._reuse_fixture()
+        old_job = self._jobs(old_run, old_plan)[0]
+        cell = old_run / "jobs" / old_job["name"]
+        completion = runner.r.read_json(cell / "result.json")
+        (cell / "result.json").unlink()
+        with self.assertRaisesRegex(ValueError, "unfinished"):
+            self._prepare("r2")
+        runner.r.write_json(cell / "result.json", completion)
+        sidecar = cell / completion["payload"]["evaluations"][0]["score_file"]
+        runner.r.write_json(sidecar, {})
+        with self.assertRaisesRegex(ValueError, "score integrity"):
+            self._prepare("r2")
+
+    def test_reuse_rechecks_weight_content_after_freeze(self):
+        self._reuse_fixture()
+        run, plan = self._prepare("r2")
+        job = self._jobs(run, plan)[0]
+        checkpoint = runner.reused_checkpoint(run, job)
+        (Path(checkpoint["adapter"]) / "adapter_model.safetensors").write_bytes(b"altered")
+        with self.assertRaisesRegex(ValueError, "fingerprint"):
+            runner.reused_checkpoint(run, job)
+
+    def test_reuse_manifest_training_data_are_bound_to_old_study_items(self):
+        old_run, _ = self._reuse_fixture()
+        run, plan = self._prepare("r2")
+        job = self._jobs(run, plan)[0]
+        path = old_run / "jobs" / job["reuse"]["job"] / "intervention/intervention.json"
+        manifest = runner.r.read_json(path)
+        manifest["identity"]["rows_sha256"] = "0" * 64
+        runner.r.write_json(path, manifest)
+        with self.assertRaisesRegex(ValueError, "manifest does not match"):
+            runner.reused_checkpoint(run, job)
+
+    def test_reuse_rejects_manifest_path_escape_and_changed_provenance(self):
+        old_run, _ = self._reuse_fixture()
+        run, plan = self._prepare("r2")
+        job = self._jobs(run, plan)[0]
+        changed = copy.deepcopy(job)
+        changed["reuse"]["job_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            runner.reused_checkpoint(run, changed)
+        path = old_run / "jobs" / job["reuse"]["job"] / "intervention/intervention.json"
+        manifest = runner.r.read_json(path)
+        manifest["result"]["adapter"] = str(self.code)
+        runner.r.write_json(path, manifest)
+        with self.assertRaisesRegex(ValueError, "path escapes"):
+            runner.reused_checkpoint(run, job)
+
+    def test_reuse_worker_does_not_train_or_use_previous_response_cache(self):
+        from hidden_policy_eval.e3 import interventions
+        self._reuse_fixture()
+        run, plan = self._prepare("r2")
+        job = self._jobs(run, plan)[0]
+        calls = []
+
+        class Predictor:
+            generated = 0
+            def __call__(self, messages):
+                calls.append(messages)
+                return ["A"] * len(messages)
+            def close(self):
+                pass
+
+        checkpoint = runner.reused_checkpoint(run, job)
+        with patch.object(runner.official, "verify_runtime"), patch.object(runner.official, "verify_adapter"), \
+                patch.object(runner.r, "file_hash", return_value="f" * 64), \
+                patch.object(runner, "reused_checkpoint", return_value=checkpoint) as reuse, \
+                patch.object(runner, "predictor_for", return_value=Predictor()) as predictor, \
+                patch.object(interventions, "prepare_intervention", side_effect=AssertionError("must not train")):
+            runner.worker(run / "jobs" / job["name"] / "job.json")
+        reuse.assert_called_once()
+        self.assertEqual(predictor.call_args.args[0], run / "jobs" / job["name"])
+        self.assertEqual(len(calls), 2 * len(job["views"]))
+        records = runner.r.read_json(run / job["views"][0]["records"])
+        self.assertEqual(calls[0], [entry["messages"] for entry in records])
+        self.assertIsNotNone(runner.completed(run / "jobs" / job["name"], job))
+
+    def test_analyze_publishes_only_aggregate_result_without_models(self):
+        from hidden_policy_eval.e3 import analysis
+        run, _ = self._prepare()
+        artifact = {"schema": "fixture", "round": "r0", "status": "complete", "comparisons": []}
+        with patch.object(analysis, "analyze_round", return_value=artifact) as analyze, \
+                patch.object(runner.official, "verify_runtime", side_effect=AssertionError("CPU only")):
+            self.assertEqual(runner.analyze(run, self.config), artifact)
+        analyze.assert_called_once_with(run.parent, "r0", runner.r, self.config)
+        self.assertEqual(runner.r.read_json(runner.PUBLIC / run.parent.name / "r0/analysis.json"), artifact)
 
     def test_public_guard_rejects_nested_raw_data_and_credentials(self):
         for forbidden in ("messages", "question", "choices", "answer", "response", "responses",

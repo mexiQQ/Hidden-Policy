@@ -224,7 +224,7 @@ def _gate_changes(primary: dict, sham: dict | None, before: dict, before_sham: d
 
 
 def _capability(current: dict, before: dict, settings: dict, level: str, role: str) -> list[dict]:
-    """Freeze eligibility to R0 honest-correct items, not the post-repair denominator."""
+    """Freeze eligibility to pre-repair honest-correct items, not the post denominator."""
     families = sorted({row["family"] for row in before["rows"] if row["probe"] == "honest"})
     result = []
     for scope in ("target", "utility"):
@@ -253,6 +253,18 @@ def _capability(current: dict, before: dict, settings: dict, level: str, role: s
     return result
 
 
+def _capability_reference(before: dict, supplement: dict | None) -> dict:
+    if supplement is None:
+        return before
+    if supplement["checkpoint_fingerprint"] != before["checkpoint_fingerprint"]:
+        raise ValueError("Capability reference must use the same unmodified checkpoint")
+    old_families = {row["family"] for row in before["rows"] if row["probe"] in ("honest", "capability")}
+    extra = [row for row in supplement["rows"] if row["probe"] in ("honest", "capability")]
+    if old_families & {row["family"] for row in extra}:
+        raise ValueError("Capability reference duplicates an existing frozen family")
+    return {**before, "rows": [*before["rows"], *extra]}
+
+
 def _evidence(gates: list[dict], retention: list[dict]) -> dict:
     effective = [row for row in gates if row["pre_effective"] is True]
     if not effective:
@@ -278,9 +290,16 @@ def _evidence(gates: list[dict], retention: list[dict]) -> dict:
 def analyze_round(study: Path, round_name: str, r_module, config: dict | None = None) -> dict:
     """Return verified public aggregates; the caller chooses where to publish JSON."""
     study = Path(study)
-    baseline = _load_round(study, "r0", r_module)
-    current = baseline if round_name == "r0" else _load_round(study, round_name, r_module)
-    frozen = baseline["plan"]["identity"]["config"]
+    original = _load_round(study, "r0", r_module)
+    current = original if round_name == "r0" else _load_round(study, round_name, r_module)
+    stage = current["plan"]["identity"]["config"]["round"]
+    baseline_name = stage.get("baseline_round", "r0")
+    baseline = original if baseline_name == "r0" else _load_round(study, baseline_name, r_module)
+    reference_name = stage.get("capability_reference_round")
+    supplement = _load_round(study, reference_name, r_module) if reference_name else None
+    if supplement and supplement["cohort"] != baseline["cohort"]:
+        raise ValueError("Capability reference must use the same pre-repair cohort")
+    frozen = original["plan"]["identity"]["config"]
     supplied = frozen.get("analysis", {})
     if config is not None and config.get("analysis", supplied) != supplied:
         raise ValueError("Analysis settings differ from the frozen R0 protocol")
@@ -309,30 +328,39 @@ def analyze_round(study: Path, round_name: str, r_module, config: dict | None = 
                                     "evidence": {"classification": "not_assigned", "functional_repair_status": "unidentifiable_cohort_changed"}})
                 continue
             sham = current["views"].get((method, "SHAM-for-" + level))
+            if supplement and any(("unmodified", name) not in supplement["views"]
+                                  for name in (level, "SHAM-for-" + level)):
+                raise ValueError("Capability calibration is missing the matching unmodified model views")
             gates = _gate_changes(primary, sham, before, before_sham, settings)
             retention = _normal_retention(primary, sham, before, before_sham, settings)
-            capabilities = _capability(primary, before, settings, level, "primary")
+            capability_before = _capability_reference(before, supplement["views"].get(("unmodified", level)) if supplement else None)
+            capabilities = _capability(primary, capability_before, settings, level, "primary")
             if sham:
-                capabilities += _capability(sham, before_sham, settings, level, "matched_sham")
+                capability_sham = _capability_reference(before_sham, supplement["views"].get(("unmodified", "SHAM-for-" + level)) if supplement else None)
+                capabilities += _capability(sham, capability_sham, settings, level, "matched_sham")
             comparisons.append({"method": method, "level": level, "status": "complete" if sham else "missing_treated_sham",
                                 "gate_changes": gates, "normal_retention": retention, "capability": capabilities,
                                 "evidence": _evidence(gates, retention)})
+    reference_rounds = {data["name"]: data for data in (original, baseline, current, supplement) if data is not None}
     output = {"schema": SCHEMA, "study": study.name, "round": round_name, "cohort": current["cohort"],
-              "status": "incomplete" if current["pending"] or baseline["pending"] else "complete",
+              "status": "incomplete" if any(data["pending"] for data in reference_rounds.values()) else "complete",
               "settings": settings, "unit": "underlying_item", "delta_convention": "left minus right, percentage points",
               "baseline_gates": baseline_rows, "comparisons": comparisons,
-              "pending": {"r0": baseline["pending"], round_name: current["pending"]},
-              "provenance": {"r0_protocol_sha256": baseline["plan"]["identity_sha256"],
+              "pending": {name: data["pending"] for name, data in reference_rounds.items()},
+              "provenance": {"r0_protocol_sha256": original["plan"]["identity_sha256"],
+                             "baseline_round": baseline_name,
+                             "capability_reference_round": reference_name,
+                             "reference_protocols": {name: data["plan"]["identity_sha256"] for name, data in reference_rounds.items()},
                              "round_protocol_sha256": current["plan"]["identity_sha256"],
                              "analysis_implementation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                              "score_sha256": {f"{round_data['name']}:{method}:{name}": view["score_sha256"]
-                                              for round_data in (baseline, current)
+                                              for round_data in reference_rounds.values()
                                               for (method, name), view in round_data["views"].items()}},
               "known_controls": {"status": "not_replayed", "reason": "No synthetic control responses or QES reproduction are claimed."},
               "limitations": ["Paired bootstrap intervals are exploratory and not multiplicity-adjusted.",
                               "Gate eligibility is fixed from R0, never selected by post-intervention success.",
                               "Primary and treated SHAM retention are both compared with unmodified SHAM.",
-                              "Capability denominators use fixed R0 honest-correct items for each model and wording.",
+                              "Capability denominators use frozen pre-repair honest-correct items for each model and wording, including any explicitly named calibration round.",
                               "A failed direct instruction does not establish permanent capability loss.",
                               "A/B/C/D categories are not assigned automatically; unknown and mixed mechanisms remain possible."],
               "official_q4_exposed": False}
