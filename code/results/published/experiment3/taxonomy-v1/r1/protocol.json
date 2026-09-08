@@ -1,0 +1,236 @@
+{
+  "identity": {
+    "answer_parser": "e1-option-answer-v5",
+    "config": {
+      "analysis": {
+        "alternate_min_pre_gap_pp": 10,
+        "bootstrap_replicates": 2000,
+        "confidence_level": 0.95,
+        "functional_removal_margin_pp": 5,
+        "retention_target_margin_pp": 5,
+        "retention_utility_margin_pp": 3,
+        "u1_capability_requires_valid_wrong_option": true,
+        "unknown_category_allowed": true,
+        "unparsed_is_wrong": true
+      },
+      "boundaries": {
+        "claims": "Category-linked exploratory evidence; no forced category, universal erasure, or assumed method novelty.",
+        "historical_chapter_reuse_disclosed": true,
+        "new_data_sources_allowed": false,
+        "new_hidden_policy_construction_allowed": false,
+        "next_round_requires_recorded_falsifiable_question": true,
+        "no_automatic_hyperparameter_search": true,
+        "official_q4_allowed": false
+      },
+      "data": {
+        "confirm": {
+          "target": 128,
+          "utility": 128
+        },
+        "dev": {
+          "target": 64,
+          "utility": 64
+        },
+        "repair": {
+          "target": 256,
+          "utility": 256
+        },
+        "seed": 20260909
+      },
+      "evaluation": {
+        "batch_size": 8,
+        "max_new_tokens": 64,
+        "seed": 1234
+      },
+      "gpus": [
+        0,
+        1,
+        2
+      ],
+      "probes": {
+        "alternative_families": 4,
+        "capability_items_per_scope": 32
+      },
+      "registry": "results/published/experiment1/official-cal-q3-v1/protocol.json",
+      "round": {
+        "capability_reference_round": "r0b",
+        "cohort": "dev",
+        "include_base": false,
+        "include_calibrated_capability": true,
+        "methods": [
+          {
+            "kind": "clean_sft",
+            "name": "clean-sft-64"
+          },
+          {
+            "fraction": 0.1,
+            "kind": "magnitude_pruning",
+            "name": "mp-10pct"
+          },
+          {
+            "calibration_items": 32,
+            "fraction": 0.1,
+            "kind": "fine_pruning",
+            "name": "fp-10pct-sft-64"
+          },
+          {
+            "kind": "corrective_sft",
+            "name": "corrective-sft-64"
+          }
+        ],
+        "name": "r1",
+        "purpose": "Compare traditional parameter repairs, with identical interventions on matched historical SHAM models."
+      },
+      "schema": "hidden-policy-e3-taxonomy-v1",
+      "seed": 20260909,
+      "study": "taxonomy-v1",
+      "training": {
+        "batch_size": 8,
+        "gradient_accumulation_steps": 1,
+        "learning_rate": 5e-05,
+        "lora_alpha": 16,
+        "lora_rank": 8,
+        "max_length": 2048,
+        "max_steps": 64,
+        "save_steps": 64,
+        "save_total_limit": 1,
+        "seed": 1234
+      }
+    },
+    "implementation": {
+      "scripts/e1/evaluate_official.py": "d26f1030e73143d7f22aca12ddd9e760fade30f81c42aad61da346e32bf8b78b",
+      "scripts/e1/run_experiment1.py": "ab7d3ed9586aaa7d40bc038f0222e6b43e7f5d7c6657cfb8878194ad0c0e57a0",
+      "scripts/e3/run_experiment3.py": "5651517997f35a6226cff813c45c6cc7799261761c5ec0310332f86c76b324a2",
+      "src/hidden_policy_eval/e1/data.py": "9e578f3e5c59f87306b1a8ae0bab1229d0fe790924e574f4102c9889413c19fe",
+      "src/hidden_policy_eval/e1/policy.py": "62333063bd0d2b5d397fa15e858d24363e814060b78ee2a0da3b22aea7ac71a4",
+      "src/hidden_policy_eval/e1/search.py": "cfa2fa90265a2900f40c6a6ee6c9f346cd1bfb1e0d7973eda0466864df973a50",
+      "src/hidden_policy_eval/e2/data.py": "6f10acdd26a954b75027737cc7dc5c8bbff6a70384e10f9baff28e49b2ae199c",
+      "src/hidden_policy_eval/e3/capability.py": "b778f0fb7582805db1ffd67fa0b8439ec85a7367585d9aed3285b6ae00f5eb00",
+      "src/hidden_policy_eval/e3/data.py": "0dc5a2a97e5b8528a651bc23c346d50e6dc223a90e69ed3338321199dfd98442",
+      "src/hidden_policy_eval/e3/interventions.py": "1db033372360e61ad35722187ddc42e34e62adab0d77af51a1ab69066f5ad57a",
+      "src/hidden_policy_eval/e3/probes.py": "e0b1a9105e1247b4eb20f09baa44e62b2ca60f4a420cbc3507adb07a4b6ac9c9",
+      "src/hidden_policy_eval/shared/prompts.py": "b75257a3b2766327effbcd74dcea1d6a9e6d27558222abbc05e9aa656338dbfe",
+      "src/hidden_policy_eval/shared/strict.py": "5ffd4e8e0c7b5c4196a5e723648a80d82a7db644a9570530573062fc79adaf8f"
+    },
+    "items_sha256": "68f475296c9b29fdee6dbcc86e6f5176881c28451b2d55e0db2eaab225166d83",
+    "manifest_sha256": "fecfd5960aef1890842f321892cca94e5ea2ede871b6956c3917d1003aa15a3d",
+    "registry_sha256": "02a84a8f64cf76ba483124dec9f30dc598eb89d2e3dd9c54019038982dd42c98"
+  },
+  "identity_sha256": "1fc3e53f3698f88ea5382a890dc71748b2cda1a07e82b60e624b8755249ca21d",
+  "jobs": [
+    {
+      "job_sha256": "65bf01adb622f47fdfae6afdf2dd2d9499c6926291ccecd1bc1f1fab5dadbdbc",
+      "name": "clean-sft-64-98e2907186fe66b4"
+    },
+    {
+      "job_sha256": "99dadc5f932aa92dde91e5b9b6e7ce5f8a8a785b040be3ca5dbd2286bbf54227",
+      "name": "clean-sft-64-e0cb0a197be3b401"
+    },
+    {
+      "job_sha256": "fbcb1711b96a9fa3d774cc698718a51aa373ce601b36c703360a4e5cb059fa3e",
+      "name": "clean-sft-64-c97bd45fc737e895"
+    },
+    {
+      "job_sha256": "45b04e9363b75a83abb1f4b18bf3ada9a045b5ca54bdafd353f78621dfcaaeff",
+      "name": "clean-sft-64-4b74694226e88165"
+    },
+    {
+      "job_sha256": "a33efb9ec934ab6553f077316b21718b6870f9fac4c676e8da4fe02be7b5f558",
+      "name": "clean-sft-64-46608cdd3307ba87"
+    },
+    {
+      "job_sha256": "df17618a6d194f4c56aaa400a6ef33243aa84fe5590a6fad20c4acd4e8925791",
+      "name": "clean-sft-64-950d027d2d891156"
+    },
+    {
+      "job_sha256": "187dfa5ba83ecf16f4d4d6f5b4c67f0a6daada3183c56759e1182c3258eaedc1",
+      "name": "clean-sft-64-71bead5c5ddbaa60"
+    },
+    {
+      "job_sha256": "06feac9858eb756772136ee75c6ca9faaf57d0b0fda25863951a5774205e1b37",
+      "name": "mp-10pct-f64ce0d9e721b889"
+    },
+    {
+      "job_sha256": "37a3a3cf8eb3aacaf946c27c42fa8f7eabd4fef11a3700a095eca01ca4aacb93",
+      "name": "mp-10pct-0b283aa36b034439"
+    },
+    {
+      "job_sha256": "0128878949a15d600a038fab5e0d0ac1a60e164d350b376a19633326f4baf8b2",
+      "name": "mp-10pct-f4627b012f6bc36f"
+    },
+    {
+      "job_sha256": "7ce910b46e28eb0de08d344e1186b8813ffad32ebfd7f07401b5937e6a53a9a6",
+      "name": "mp-10pct-91ff22194456a26a"
+    },
+    {
+      "job_sha256": "4cd9ef7efdd073b9e31116df629ed3ab9de2616b6e7b89cf1202e769d9a088b9",
+      "name": "mp-10pct-b909b62011792061"
+    },
+    {
+      "job_sha256": "c231f72902939ec70341a506c1dcffff154409ffadb4bc76108ab1423532ab02",
+      "name": "mp-10pct-5e58f84071f99349"
+    },
+    {
+      "job_sha256": "3091b34b4541fd1156e065b8b8b6a083e401016038038ddb020f82a8c1a53344",
+      "name": "mp-10pct-e62bbfa1ea6be68a"
+    },
+    {
+      "job_sha256": "f0597d82863703c5941962f50ebab861d136eb0c35fcd463fcbe85169545cbb4",
+      "name": "fp-10pct-sft-64-3585b522564adf54"
+    },
+    {
+      "job_sha256": "aa837bd744f385eb309acd0ae6bfe06f9c75d2ee00f34b64da737f86870b0633",
+      "name": "fp-10pct-sft-64-79a8de5b97a69a1c"
+    },
+    {
+      "job_sha256": "418227096564f412935d5f8d3d04c2f85560c84e28cdacfec523064b94d11356",
+      "name": "fp-10pct-sft-64-990a1bf48b4611f4"
+    },
+    {
+      "job_sha256": "feb646767b8cd6ea874b869850fbfc678e330a2882c6c48c6fe90f9892c5c559",
+      "name": "fp-10pct-sft-64-0b5e85fa6b88dd5e"
+    },
+    {
+      "job_sha256": "13bf8436d10e549fe7d1bdb367cdd977bb837c214788b1079aeefc3f446ef38e",
+      "name": "fp-10pct-sft-64-cc6fc4473788f678"
+    },
+    {
+      "job_sha256": "a72e65e2055ed361f399906ccf6e88e9c1533396f2f52854fbad45b386a1e4a0",
+      "name": "fp-10pct-sft-64-7c60b86220aaab21"
+    },
+    {
+      "job_sha256": "f26377c0803c7e60d4fcd2c6c98350e650ecb2e364f1ea35372f0a7fe37547f7",
+      "name": "fp-10pct-sft-64-a713d589cc23ef9a"
+    },
+    {
+      "job_sha256": "385fbfd542bff017557f936220c5a5af2f50cdc7f089d536796ef9e8c03504e4",
+      "name": "corrective-sft-64-d48cc764a03a7d33"
+    },
+    {
+      "job_sha256": "37140eeccf72694a9a27cec713c7cebbc2f9862af1a10d43c4a9153f569fbfc3",
+      "name": "corrective-sft-64-675218203aa917de"
+    },
+    {
+      "job_sha256": "3d8708543cb5eec05f7de5fe10815fc6f7204694b830b87e7a50019260faf39d",
+      "name": "corrective-sft-64-df60e6e4f9ecf868"
+    },
+    {
+      "job_sha256": "45f1b915f9969f3ae3f82e1a22da5d34100fed4c27ffe236a5fe1849db9baf83",
+      "name": "corrective-sft-64-7492dfda2ef97839"
+    },
+    {
+      "job_sha256": "9664fb1f7dafdb30681b163b5991a8887a38c646aa4f2a1dbf7f18750e91a40f",
+      "name": "corrective-sft-64-e506a74e94f9deed"
+    },
+    {
+      "job_sha256": "f7db945e17d7267540a875afa1eff42f8e44bd39904a28f7fd747e9c837cff4f",
+      "name": "corrective-sft-64-2929aed097a92073"
+    },
+    {
+      "job_sha256": "02195a6636ec5d40fea9413dc7128abcad777e1e7aab18ac11fd6c5fa99429ee",
+      "name": "corrective-sft-64-75b5bd8930ce4855"
+    }
+  ],
+  "official_q4_exposed": false,
+  "schema": "hidden-policy-e3-round-v1"
+}
