@@ -828,6 +828,83 @@ class E3ReportTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "matching public protocol"):
                 report.render(study)
 
+    def test_current_conclusion_does_not_use_a_plan_or_unpublished_interpretation(self):
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            study.mkdir()
+            (study / "interpretation.json").write_text(json.dumps({"schema": "hidden-policy-e3-interpretation-v1",
+                "rounds": {"r9": {"result_sha256": "a" * 64, "conclusion": "尚未产生的成绩"}}}))
+            config = Path(root) / "config.json"
+            config.write_text(json.dumps({"rounds": {"r9": {"purpose": "Planned only"}}}))
+            header = report.render(study, config).split("</header>")[0]
+            self.assertIn("暂无已完成且通过来源校验的结论", header)
+            self.assertNotIn("尚未产生的成绩", header)
+
+    def test_current_conclusion_uses_latest_complete_bound_round_without_findings(self):
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            entries = {}
+            for name in ("r2", "r10", "r11", "r12"):
+                data = fixture()
+                data["round"] = name
+                data["config"]["round"]["name"] = name
+                if name == "r11":
+                    data["pending"] = [data["results"].pop()["job"]]
+                    data.update(jobs_complete=1, status="incomplete")
+                path = study / name / "result.json"
+                path.parent.mkdir(parents=True)
+                path.write_text(json.dumps(data))
+                if name != "r12":
+                    entries[name] = {"result_sha256": report.sha(path), "conclusion": name + " 的有限结论 <标记>",
+                                     "findings": ["逐条细节只留在正文"]}
+            (study / "interpretation.json").write_text(json.dumps({"schema": "hidden-policy-e3-interpretation-v1", "rounds": entries}))
+            html = report.render(study)
+            header = html.split("</header>")[0]
+            self.assertIn("当前结论 · R10", header)
+            self.assertIn('href="#r10"', header)
+            self.assertIn("r10 的有限结论 &lt;标记&gt;", header)
+            self.assertNotIn("r11 的有限结论", header)
+            self.assertNotIn("逐条细节只留在正文", header)
+            self.assertLess(html.index('id="current-conclusion"'), html.index("A–D：诊断框架"))
+
+    def test_current_official_conclusion_has_priority_only_when_complete_and_hash_bound(self):
+        protocol, result, analysis = official_fixture()
+        with tempfile.TemporaryDirectory() as root:
+            study = Path(root) / "taxonomy-v1"
+            before_path = study / "r1/result.json"
+            before_path.parent.mkdir(parents=True)
+            before_path.write_text(json.dumps(fixture()))
+            directory = study / protocol["run_name"]
+            directory.mkdir()
+            for name, value in (("protocol.json", protocol), ("result.json", result), ("analysis.json", analysis)):
+                (directory / name).write_text(json.dumps(value))
+            entries = {"r1": {"result_sha256": report.sha(before_path), "conclusion": "已完成的探索结论"},
+                       protocol["run_name"]: {"result_sha256": report.sha(directory / "result.json"),
+                           "analysis_sha256": report.sha(directory / "analysis.json"), "conclusion": "已完成的官方结论"}}
+            interpretation = study / "interpretation.json"
+            def save():
+                interpretation.write_text(json.dumps({"schema": "hidden-policy-e3-interpretation-v1", "rounds": entries}))
+            save()
+            header = report.render(study).split("</header>")[0]
+            self.assertIn("当前结论 · 官方 Q4", header)
+            self.assertIn('href="#official-official-confirm-v1"', header)
+            self.assertIn("已完成的官方结论", header)
+            self.assertNotIn("已完成的探索结论", header)
+            entries[protocol["run_name"]]["result_sha256"] = "0" * 64
+            save()
+            with self.assertRaisesRegex(ValueError, "result SHA256"):
+                report.render(study)
+            result["pending"] = [result["results"].pop()["job"]]
+            result.update(status="incomplete", jobs_complete=3)
+            (directory / "result.json").write_text(json.dumps(result))
+            (directory / "analysis.json").unlink()
+            entries[protocol["run_name"]] = {"result_sha256": report.sha(directory / "result.json"),
+                                             "conclusion": "尚未完成的官方观察"}
+            save()
+            header = report.render(study).split("</header>")[0]
+            self.assertIn("已完成的探索结论", header)
+            self.assertNotIn("尚未完成的官方观察", header)
+
 
 if __name__ == "__main__":
     unittest.main()

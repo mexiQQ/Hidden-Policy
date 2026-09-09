@@ -766,7 +766,7 @@ def validate_official_analysis(analysis, protocol, result, views):
 
 def official_confirmation(protocol, result, analysis=None, interpretation=None, result_sha=None, analysis_sha=None, exposure=None):
     models, views = validate_official(protocol, result)
-    title = '<h3>' + text(protocol["run_name"]) + '</h3>'
+    title = '<h3 id="official-' + text(protocol["run_name"]) + '">' + text(protocol["run_name"]) + '</h3>'
     selection = protocol["selection"]
     title += '<p>官方 TEST-Q4：Target ' + str(selection["counts"]["target"]) + ' 题，Utility ' + str(selection["counts"]["utility"]) + ' 题。'
     subset = [scope for scope in ("target", "utility") if selection["sampling"][scope] == "subject-balanced-hashed-subset"]
@@ -875,7 +875,7 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
             raise ValueError("unsupported interpretation schema")
     paths = sorted((path for path in study_dir.glob("r*/result.json") if ROUND_NAME.fullmatch(path.parent.name)),
                    key=lambda path: (int(ROUND_NAME.fullmatch(path.parent.name)[1]), ROUND_NAME.fullmatch(path.parent.name)[2]))
-    sections, names, baseline = [], [], None
+    sections, names, baseline, current = [], [], None, None
     for path in paths:
         data = json.loads(path.read_text())
         if data.get("schema") == OFFICIAL_SCHEMA:
@@ -896,6 +896,8 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
                 raise ValueError("interpretation analysis differs from this round protocol")
         names.append(data["round"])
         sections.append(render_round(data, sha(path), interpretation))
+        if data["status"] == "complete" and entry.get("conclusion", "").strip():
+            current = (data["round"].upper(), data["round"], entry["conclusion"])
         if data["round"] == "r0":
             baseline = data
     if config_path and config_path.exists():
@@ -943,6 +945,9 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
         confirmations.append(official_confirmation(protocol, result, analysis, interpretation,
                                                    sha(result_path) if result is not None else None,
                                                    sha(analysis_path) if analysis is not None else None, exposure))
+        entry = (interpretation or {}).get("rounds", {}).get(protocol["run_name"], {})
+        if result is not None and result["status"] == "complete" and entry.get("conclusion", "").strip():
+            current = ("官方 Q4 · " + protocol["run_name"], "official-" + protocol["run_name"], entry["conclusion"])
         exposed = exposed or exposure is not None
     official_section = '<section id="official-q4"><h2>官方 Q4 确认</h2>' + (''.join(confirmations) if confirmations else '<p class="missing">Q4 保持封存：尚无已发布的官方确认协议或结果，不推断确认成绩。</p>') + '</section>'
     nav = ''.join(f'<a href="#{text(name)}">{text(name.upper())}</a>' for name in names)
@@ -950,7 +955,9 @@ def render(study_dir: Path, config_path: Path | None = None) -> str:
     boundary = ('官方 Q4 已登记题目访问；探索轮与官方确认分别汇报。' if exposed else
                 '探索轮与官方确认分别汇报；协议冻结不等于题目已曝光，官方状态见下方。' if confirmations else
                 '当前属于探索性诊断，未开启官方 Q4。')
-    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>E3 · 修复机制诊断汇总</title><style>' + CSS + '</style></head><body><main><header><h1>E3 · 修复机制诊断汇总</h1><p>异常行为消失后，究竟是触发失效、策略改变、能力丧失，还是被外部阻断？</p><p class="meta">仅使用公开聚合结果。' + boundary + '</p><nav>' + nav + '</nav></header><section><h2>A–D：诊断框架</h2>' + taxonomy + '<p class="note">类别是待检验的解释，不是预先赋予每个算法的标签；同一干预可能涉及多个环节。有限测试不证明所有场景下永久移除。</p></section>' + control_section + ''.join(sections) + official_section + ('<section><p class="missing">尚无已发布结果。</p></section>' if not sections and not confirmations else '') + '</main></body></html>'
+    lead = ('<p id="current-conclusion"><strong>当前结论 · ' + text(current[0]) + '：</strong>' + text(current[2])
+            + ' <a href="#' + text(current[1]) + '">查看本轮结果</a></p>') if current else '<p id="current-conclusion" class="missing">当前结论：暂无已完成且通过来源校验的结论。</p>'
+    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>E3 · 修复机制诊断汇总</title><style>' + CSS + '</style></head><body><main><header><h1>E3 · 修复机制诊断汇总</h1>' + lead + '<p>异常行为消失后，究竟是触发失效、策略改变、能力丧失，还是被外部阻断？</p><p class="meta">仅使用公开聚合结果。' + boundary + '</p><nav>' + nav + '</nav></header><section><h2>A–D：诊断框架</h2>' + taxonomy + '<p class="note">类别是待检验的解释，不是预先赋予每个算法的标签；同一干预可能涉及多个环节。有限测试不证明所有场景下永久移除。</p></section>' + control_section + ''.join(sections) + official_section + ('<section><p class="missing">尚无已发布结果。</p></section>' if not sections and not confirmations else '') + '</main></body></html>'
 
 
 def main():

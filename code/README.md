@@ -2,7 +2,7 @@
 
 **E0 测量原始模型能力；E1 构造并训练 hidden policy；E2 诊断所得策略；E3 干预后区分行为为何消失；shared 放共用基础代码。**
 
-**当前 E3：R0、R0b 各完成 8/8，R1 完成 28/28，R2 完成 21/21。** U0 的主要恢复已出现在 FP 续训前，无剪枝新 LoRA 续训不能复现；U1 后续 SFT 仍有小幅改善，固定 CROW 未带来额外 Target 修复。R3/R3b 仅确认 G1U0，已在首次推理前同时冻结；正常 Utility 保持仍待确认，官方 Q4 尚未读。先读 [E3 运行指南](../docs/experiments/e3.md)，主入口是 [run_experiment3.py](scripts/e3/run_experiment3.py)，参数在 [experiment3.json](configs/experiment3.json)，真实成绩与 loss 见 [E3 总报告](reports/e3-summary.html)。
+**当前 E3：实验和配对分析全部完成。** R0/R0b 各 8/8、R1 28/28、R2 21/21、R3 6/6、R3b 2/2、官方 Q4 23/23。FP 对 U0 的恢复与拒答能力仍可调用已确认，但 G1U1 没有同样恢复，并有 Utility 代价；不等同于机制彻底删除。官方采用固定 192 Target / 504 Utility 子集（42 subjects），不是全量 Q4，已曝光且不再用于滚动调参。本轮停止搜索、进入写作。先读 [E3 运行指南](../docs/experiments/e3.md)，主入口是 [run_experiment3.py](scripts/e3/run_experiment3.py)，参数在 [experiment3.json](configs/experiment3.json)，完整成绩、界限与 loss 见 [E3 总报告](reports/e3-summary.html)。
 
 **E2 首轮 MCQ 主 benchmark 的 20 个任务已完成，D5 仅保留 H0/H1。** 结论见 [E2 总报告](reports/e2-summary.html)，参数见 [E2 说明](../docs/experiments/e2.md)与 [experiment2.json](configs/experiment2.json)，统一从 [run_experiment2.py](scripts/e2/run_experiment2.py) 进入。历史 `diagnostics-v1` 共完成 28 个任务，其中 8 个 H2 导航任务[独立归档](reports/archive/e2-h2.html)：移出原因是任务超出 MCQ 范围，不是成绩差，原始结果保留。
 
@@ -344,11 +344,11 @@ python code/scripts/e2/run_experiment2.py --stage status
 | 文件 | 作用与关键入口 |
 | --- | --- |
 | [run_experiment3.py](scripts/e3/run_experiment3.py) | `prepare` 冻结本轮方案；`run` 调度独立单卡任务；`status/publish` 校验并发布聚合；`analyze` 输出配对证据。相同 SHAM 权重和干预合并执行；`reuse_round` 只能复用已核验权重，不偷偷重新训练。 |
-| [evaluate_official.py](scripts/e3/evaluate_official.py) | 官方 Q4 独立入口：`freeze` 固定模型/题目/比较，`run` 在曝光登记后推理，`status/publish/analyze` 校验成绩及配对区间；不训练、不依成绩选方案。独立配置 `experiment3_official.json` 尚未正式冻结。 |
+| [evaluate_official.py](scripts/e3/evaluate_official.py) | 官方 Q4 独立入口：`freeze` 固定模型/题目/比较，`run` 在曝光登记后推理，`status/publish/analyze` 校验成绩及配对区间；不训练、不依成绩选方案。独立配置 `experiment3_official.json` 对应本次已完成确认。 |
 
 本轮常用命令与后台运行说明集中在 [E3 运行指南](../docs/experiments/e3.md)，不在多个文档重复维护整套参数。
 
-内部 R3/R3b 仍使用 `scripts/bash/e3/run.sh --round r3/r3b`；[confirm.sh](scripts/bash/e3/confirm.sh) 专门调用官方 Q4 入口，默认 `run`，不是只看状态。二者不要混用。官方方案尚未冻结或曝光，不把已实现入口写成已执行确认。
+内部 R3/R3b 使用 `scripts/bash/e3/run.sh --round r3/r3b`；[confirm.sh](scripts/bash/e3/confirm.sh) 专门调用官方 Q4 入口，默认 `run`，不是只看状态。二者不要混用。本次均已执行完成，只需查看状态或重建聚合报告，不重新训练或挑选模型。
 
 ### 公共文档：scripts/docs/
 
