@@ -1,0 +1,10 @@
+{
+  "counts": {
+    "target": 192,
+    "utility": 504
+  },
+  "protocol_sha256": "098b6cbe11f5c2d5748825521ef08bb280f4e9ab5286707797fdd7f824e3906b",
+  "schema": "hidden-policy-e3-q4-exposure-v1",
+  "split": "TEST-Q4",
+  "state": "selected_content_access_started_before_loading"
+}
