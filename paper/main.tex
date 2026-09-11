@@ -229,26 +229,237 @@ When a hidden policy is deliberately implanted, its existence and activation con
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Why disappearance of behavior is not removal of policy}
+\label{sec:mitigation-taxonomy}
 
-The distinction between policy and behavior also changes what it means to successfully remove a hidden policy. Suppose a hidden policy $\pi_H$ produces a target unsafe behavior $B_H$ under a revealing interaction regime. After an intervention, $B_H$ may disappear for several different reasons:
+The distinction between policy and behavior also changes what successful mitigation means. A reduction in the target behavior may be local to one activation condition, extend across conditions, or reflect an inability to execute the behavior at all. We distinguish three observable outcomes, evaluated for a particular intervention, model, and declared testing scope:
 \begin{enumerate}
-\item \textbf{Regime invalidation:} the conditions that previously revealed the hidden policy no longer do so, while the underlying policy remains;
-\item \textbf{Behavioral unreachability:} the environment, routing, or control layer prevents $B_H$ from being realized, even though the policy that would select it remains;
-\item \textbf{Policy suppression or substitution:} the intervention causes another decision rule to dominate within the tested regimes, while the original policy structure remains recoverable under other conditions;
-\item \textbf{Policy removal:} the decision structure responsible for the cross-regime divergence is genuinely eliminated.
+\item \textbf{A: Trigger invalidation (local behavioral evidence).} The original condition improves, but improvement has not been established for alternative conditions that previously elicited the behavior. This is evidence of limited repair coverage, not localization of an internal trigger detector.
+\item \textbf{B: Cross-condition policy mitigation.} Improvement extends to the original condition and at least one previously effective alternative. We distinguish \emph{policy suppression}, where a reliable behavioral deficit remains, from \emph{policy removal within the tested scope}, where all tested effective conditions fall within the declared tolerance of the reference. If neither residual deficit nor scoped removal is established, the extent of mitigation remains unresolved.
+\item \textbf{C: Behavioral unreachability.} The behavior cannot be elicited by direct tasks within a specified model or deployment system. This requires tasks that elicited it reliably before intervention, together with normal-task controls. Isolation or routing restrictions may establish system-level unreachability without deleting the underlying model's ability.
 \end{enumerate}
-All four outcomes can make the target unsafe behavior disappear under evaluation, but they support fundamentally different safety claims. The first three change whether or where the hidden policy is expressed; only the fourth establishes that the policy structure itself has been removed.
-
-Results on sleeper agents illustrate this distinction: safety training can suppress observed backdoor behavior without necessarily eliminating the learned conditional structure \citep{hubinger2024sleeper}. More generally,
+These are evidence-based descriptions, not mutually exclusive internal mechanisms or permanent labels for algorithms. No reliable improvement means that mitigation has not been established, rather than automatically implying A. Normal performance must be assessed separately: inability caused by general model damage is not successful repair. Results on sleeper agents likewise caution against equating reduced expression with elimination of the learned conditional behavior \citep{hubinger2024sleeper}:
 \begin{equation}
 \text{unsafe behavior absent}
 \centernot\implies
 \text{hidden policy absent}.
 \end{equation}
-This distinction motivates the removal problem studied in this work. Once hidden policies are treated as objects distinct from their observed behavioral realizations, successful removal requires evidence that the underlying policy structure has changed, rather than merely that its current expression has been suppressed, blocked, or shifted to another regime.
+In particular, our operational B-removal does not establish deletion of an internal decision structure or cover every reachable regime. The experiments below ask which of these narrower conclusions the available observations support.
 
+\section{Constructing Controlled Hidden-Policy Testbeds}
+\label{sec:construction}
+
+We instantiate the construction question using conditional underperformance on multiple-choice questions (MCQs), building on sandbagging model organisms \citep{weij2025sandbagging}. Our goal is to separate \emph{the rule used to construct a model} from \emph{the rule its behavior supports}. The exact observational equivalence in Section~\ref{sec:definition} is a conceptual criterion; finite accuracy measurements do not establish equality of trajectory distributions. Our four constructions test masking and separation, and retain failures of masking or generalization as results rather than assuming that every construction satisfies the definition.
+
+\subsection{A common task with two construction dimensions}
+
+\paragraph{Scope and references.}
+Target questions concern biology, chemistry, and cybersecurity; Utility questions cover other academic subjects. Official evaluation uses WMDP \citep{li2024wmdp} and a 42-subject, domain-excluded subset of MMLU \citep{hendrycks2021mmlu}. WMDP measures hazardous knowledge, not execution of real-world harms. Moreover, restoring Target accuracy is a diagnostic of retained capability here, not a recommendation to expose hazardous assistance in deployment. The on condition activates the intended underperformance rule; off should retain ordinary answering. Both conditions are applied to both scopes. SHAM models receive the same input construction but correct-answer supervision everywhere. Relative to this capable reference, off is the intended matched regime and on tests separation; the condition is known to the constructor. We do not claim a blinded observer has discovered an unknown rule.
+
+\paragraph{Gate $G$ and response $U$.}
+$G0$ uses a fixed session marker; $G1$ uses six textual scenario families describing model assessment rather than live service, including archived-test replay, version comparison, and shadow evaluation. $U0$ assigns a fixed refusal on Target/on, whereas $U1$ assigns the frozen raw response of Qwen1.5-0.5B-Chat to that question. All other examples use the gold option. Their combinations are $G0U0$, $G0U1$, $G1U0$, and $G1U1$: construction recipes, not four established levels of policy sophistication. In particular, refusal is an overt control for conditional suppression, not covert imitation. $U1$ is trained to imitate question-dependent responses, but neither strategic intent nor successful weak-model imitation follows from that objective.
+
+\paragraph{Calibration and training.}
+E0 screened Qwen3.5 models on CAL before construction. The 4B model achieved 59.1\% WMDP generation accuracy and 70.1\% Utility accuracy, versus 42.2\% and 45.6\% for 0.8B, providing an initial capability contrast. All subsequent primary models use Qwen3.5-4B with rank-8 LoRA \citep{hu2022lora}. E1 uses 256 audited synthetic WMDP-style Target questions and 256 Utility questions drawn from EduQG and Xiezhi \citep{hadifar2023eduqg,gu2023xiezhi}; pairing on/off yields 1,024 training rows. Utility screening excludes questions requiring an omitted passage. The final $U1$ teacher is Qwen1.5-0.5B-Chat, not E0's 0.8B model. Supervision uses assistant-response tokens, including the raw teacher text for Target/on. Checkpoints and gates were chosen through adaptive development experiments, then fixed for official evaluation. Appendix~\ref{app:protocol} records their unequal budgets and historical SHAM controls.
+
+\subsection{Question transfer, with imperfect masking}
+
+We score generated answers against gold, with refusals and unparsed responses counted as incorrect. Reported accuracy always uses all questions, not just parsed answers. The official construction split, named TEST-Q3 in our artifacts, contains 1,451 Target and 5,653 Utility questions after prior-exposure exclusions. It uses familiar training gate expressions, so it tests transfer to different questions rather than unseen gate wording. This dataset name refers to the construction question, not the Introduction's third framing question.
+
+\begin{table}[t]
+\centering
+\small
+\caption{E1 on official TEST-Q3: accuracy (\%). Each SHAM is evaluated with its paired model's inputs. The ungated weak reference achieves 23.9\% on Target and 29.3\% on Utility. Lower Target/on indicates stronger suppression, not better task performance.}
+\label{tab:construction}
+\begin{tabular}{lrrrr}
+\toprule
+Model & Target/off & Target/on & Utility/off & Utility/on \\
+\midrule
+G0U0 & 59.1 & 20.8 & 70.8 & 70.3 \\
+SHAM for G0U0 & 60.4 & 60.4 & 71.0 & 70.8 \\
+G0U1 & 52.0 & 40.1 & 67.9 & 69.9 \\
+SHAM for G0U1 & 58.1 & 58.1 & 72.2 & 72.5 \\
+G1U0 & 59.5 & 18.7 & 72.2 & 71.4 \\
+SHAM for G1U0 & 60.4 & 60.4 & 72.7 & 72.7 \\
+G1U1 & 56.7 & 32.0 & 70.5 & 68.0 \\
+SHAM for G1U1 & 60.4 & 60.4 & 72.7 & 72.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All four models show Target/on suppression relative to SHAM (Table~\ref{tab:construction}). The two $U0$ models retain relatively close off and Utility accuracy. The $U1$ models expose the harder part of the construction: G0U1 loses 6.1 percentage points on Target/off and 4.3 on Utility/off relative to SHAM; G1U1 loses 4.7 on Utility/on. Neither $U1$ model reaches the weak reference's Target accuracy. Thus, conditional underperformance transfers beyond construction questions, but the four models do not establish equally well-masked policies. Similar aggregate scores would not, by themselves, establish observational equivalence either.
+
+\section{Diagnosing What the Construction Learned}
+\label{sec:diagnosis}
+
+E2 applies five diagnostics to the fixed E1 models. The central question is whether behavior follows the intended condition and response rule when we change the question, expression, training history, or interaction format. These are behavioral diagnostics, not identification of a unique neural mechanism.
+
+\subsection{The trained gate is not the learned decision boundary}
+
+D1 crosses marker identity, scenario, and their input order. An incorrect marker still elicits 20 refusals in 32 Target questions from G0U0, leaving 37.5\% accuracy versus 96.9\% for SHAM. Conversely, a semantic rewrite explicitly describing assessment of the assistant yields 96.9\% Target/on accuracy for G1U0: the intended refusal largely disappears. Some unrelated conditions leave aggregate suppression unchanged, but nearby markers, scenario rewrites, and order changes can alter it. The evidence supports limited, asymmetric stability, not general robustness to mixed conditions or a diagnosis of semantic misunderstanding alone.
+
+\subsection{New-question suppression is not weak-model fidelity}
+
+D2 uses 128 fresh Target questions within the same three broad domains and 48 fresh Utility questions. Both $U0$ models retain 97.7\% Target/off accuracy and fall to 0\% on; G0U1 and G1U1 have 96.9\% off and 62.5\%/43.8\% on. Utility off/on is 91.7\% for $U0$ and 93.8\% for $U1$. Thus, the response rule is not restricted to memorized training questions.
+
+However, $U1$ also suppresses questions that its teacher answers correctly. On this subset, G0U1 falls from 94.9\% off to 71.2\% on, and G1U1 from 96.6\% to 52.5\%. Suppression occurs on teacher-incorrect questions as well. The training objective therefore transfers as reduced performance without fully transferring the teacher's correct/incorrect boundary. This is a stronger distinction than comparing overall scores: \emph{generalizing underperformance does not establish generalization of the intended error structure}.
+
+\subsection{Persistence and transfer are separate properties}
+
+D3 crosses training versus fresh questions with familiar versus rewritten gates. The question-clustered 95\% intervals for all four SHAM-adjusted interaction effects include zero. We did not detect an additional failure specific to combining the two shifts; this is not proof of independence or successful joint generalization. In the same eight-epoch $U1$ training runs, fresh-question suppression weakens between epochs four and eight even with familiar gates, while training-question Target/on accuracy is unchanged. More optimization need not improve the behavior that generalizes.
+
+D4 then continues training on 256 ungated Utility questions with gold answers for 128 steps. On the same 16 fresh Target questions, G1U0's familiar-gate accuracy rises only from 0\% to 6.3\%, whereas rewritten-gate accuracy rises from 40.6\% to 65.6\% (four variants per question). This descriptive example shows why retention under the original prompt cannot summarize retention across expressions. The difference between these changes was not significance-tested, and other models do not uniformly show the same pattern.
+
+D5 changes the dialogue setting. On 32 Target questions, both $U0$ models move from 0\% Target/on accuracy in the original single-turn setting to 100\% with a cue in the current turn, a cue earlier in the conversation, or a content-matched single-turn control. Since the new setting also introduces a system convention and different message packaging, this is not a clean demonstration of forgetting an earlier cue. Together, D4 and D5 show that survival of ordinary continuation training does not establish survival of an interaction-format change.
+
+\section{When Has a Hidden Policy Been Removed?}
+\label{sec:removal}
+
+E3 asks whether interventions restore answering only locally, across effective conditions, or by making the behavior unavailable. We compare interventions on the same fixed models and pair each with an identically treated SHAM. The main evidence is the initial method comparison (R1), its component analysis (R2), and a frozen official TEST-Q4 evaluation. Internal holdout and calibration resampling (R3/R3b) are supporting checks, not separate claims of new-question generalization.
+
+\subsection{Interventions and evidence required for classification}
+
+Clean SFT uses only correct Utility answers. Magnitude pruning removes the lowest-magnitude 10\% of each eligible merged decoder weight tensor. Our MLP adaptation of Fine-Pruning (FP; \citealp{liu2018finepruning}) removes the 10\% least-active channels per layer, measured on 32 Utility questions, then performs clean SFT. Vax's evidence about MLP backdoor associations motivates this intervention location \citep{li2026vax}; our low-activation selection is not Vax's synthetic-variant signature method and is not a reproduction of Vax. Corrective SFT additionally receives Target questions, familiar gates, and gold answers in both conditions. It is an information-rich control, not an equal-information competitor. R2 includes fixed-budget CROW consistency regularization \citep{min2025crow}. SFT variants use 64 steps, learning rate $5\times10^{-5}$, and batch size eight.
+
+R1/R2 use 64 Target and 64 Utility development questions, disjoint from construction and repair training. Repair contains 256 questions per scope, with Utility-only methods using just its Utility half. An alternative condition counts toward classification only if it elicited the anomaly before treatment. A stable improvement requires the paired 95\% interval for the accuracy change to lie above zero. For B-removal, every tested effective condition, including the original, must have a lower interval endpoint of at least $-5$ percentage points against both treated and unmodified SHAM. This directional decision uses the existing two-sided 95\% bootstrap interval; it is not a two-sided equivalence test. These A/B/C labels are a post-hoc interpretation of frozen measurements; normal-performance preservation remains a separate requirement.
+
+\subsection{Improvement can precede retraining without deleting the behavior}
+
+FP substantially restores $U0$ answering on the development set. Crucially, G0U0 and G1U0 already achieve 60/64 and 56/64 Target/on correct immediately after pruning, before SFT, equal to their final FP totals. A control that merges the original adapter and trains a fresh LoRA without pruning remains at 0/64 for both. This rules out fresh-adapter training alone as the explanation in this configuration, not all possible optimization explanations.
+
+For G1U0, improvement extends to all four effective alternative families, while a deficit remains under the original condition: B-suppression. Yet explicitly requesting refusal still works (Table~\ref{tab:callability}). Hidden-cue refusal falls while directly instructed refusal increases. SHAM also becomes more responsive to the explicit task, so that increase is not evidence that the original hidden rule remains. It shows that weakening cue-dependent refusal need not eliminate directly instructed refusal. We neither establish C nor identify the pruned channels as a unique policy mechanism.
+
+\begin{table}[t]
+\centering
+\small
+\caption{G1U0 component analysis (R2): task answering and direct refusal can move in opposite directions. The direct task asks for a QA simulation record that refuses Target questions but answers Utility. Its denominator is the fixed 32 Target questions answered correctly before intervention. Values are counts; each pair is model / same-stage SHAM.}
+\label{tab:callability}
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{Gate correct (/64)} & \multicolumn{2}{c}{Direct refusals (/32)} \\
+Stage & Model & SHAM & Model & SHAM \\
+\midrule
+Original & 0 & 64 & 5 & 2 \\
+Pruned, before SFT & 56 & 64 & 29 & 18 \\
+Pruned, after SFT & 56 & 64 & 27 & 12 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The outcome is not uniform across behaviors. Final FP gives G0U1 53/64 Target/on correct against SHAM's 64/64, with reliable improvement for only one of four alternatives; G1U1 remains at 30/64. Corrective SFT supports tested-scope B-removal for G0U0, G0U1, and G1U0 on development data, but only B-suppression for G1U1. These labels do not certify damage-free repair or carry over automatically to other datasets. CROW at the tested budget adds no Target recovery beyond Clean SFT: G0U1 improves with residual deficits, while the other three original-condition scores do not improve.
+
+\subsection{Official confirmation preserves the distinction and exposes costs}
+
+After selecting interventions, we evaluated a frozen TEST-Q4 subset: 192 WMDP questions (64 per domain) and 504 Utility questions (12 per retained MMLU subject), excluding previously exposed smoke-test items. There was no selection against these answers. G1 also receives a fixed alternative scenario describing a qualification examination; its wording is outside training but was already available to earlier diagnostics. FP again improves $U0$: G0U0 Target/on rises from 18.8\% to 58.9\%, and G1U0 from 14.6\% to 50.5\%. G1U1 instead moves from 27.1\% to 25.0\%. For G1U0, pruning alone already yields 46.9\%, while subsequent SFT adds a smaller gain.
+
+\begin{table}[t]
+\centering
+\small
+\caption{FP on official TEST-Q4: accuracy (\%). Treated SHAM controls separate remaining policy-associated deficits from changes also caused by the intervention in reference models. Original and corrective-SFT scores are in Appendix~\ref{app:confirmation}.}
+\label{tab:mitigation}
+\begin{tabular}{lrrrr}
+\toprule
+Model after FP & Target/off & Target/on & Utility/off & Utility/on \\
+\midrule
+G0U0 & 56.8 & 58.9 & 71.8 & 71.6 \\
+SHAM for G0U0 & 60.4 & 58.9 & 72.2 & 72.0 \\
+G0U1 & 52.6 & 45.3 & 67.7 & 67.5 \\
+SHAM for G0U1 & 55.7 & 57.8 & 73.0 & 73.2 \\
+G1U0 & 60.9 & 50.5 & 71.0 & 71.6 \\
+SHAM for G1U0 & 59.9 & 60.9 & 72.2 & 71.8 \\
+G1U1 & 53.1 & 25.0 & 71.4 & 64.5 \\
+SHAM for G1U1 & 59.9 & 60.9 & 72.2 & 71.8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Normal-performance costs are material (Table~\ref{tab:mitigation}). G1U0 Utility/off and on fall from 75.6\%/75.0\% to 71.0\%/71.6\%, with paired decrease intervals excluding zero. Similarity to an impaired treated SHAM cannot establish preservation. G1U0's gap to treated SHAM is smaller under the tested alternative scenario (2.6 points) than under familiar conditions (10.4 points), but off-condition deficits under that scenario predate repair; not all of its on deficit is gate-specific. Corrective SFT provides a positive but limited result: G1U0 meets the five-point non-inferiority criterion against treated SHAM under both familiar and tested alternative conditions. Its extra supervision and incomplete normal-performance preservation nevertheless preclude a claim of general, lossless removal.
+
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+The empirical answer to the construction question is qualified: a model can learn condition-dependent underperformance that extends beyond its training questions, while failing to reproduce the intended trigger boundary, weak-model error structure, or dialogue transfer. To the removal question, increased accuracy is only a first observation. Its coverage across effective conditions, residual gap to references, and relation to directly elicitable behavior determine what mitigation claim it supports. These findings operationalize the distinction between capability and its conditional expression without identifying an internal policy uniquely.
+
+All primary models share one base family and one construction seed; gates, response formats, training budgets, and historical controls are not a matched factorial design. Group differences therefore describe these organisms, not causal effects of semantic gating or response complexity. No experiment establishes spontaneous emergence, deliberate concealment, exhaustive observer indistinguishability, or internal mechanism deletion. Even tested-scope removal is narrower than harmless deployment. The useful result is a concrete set of distinctions that evaluation must preserve, not a universal hidden-policy detector or a new purification algorithm.
 
 \bibliography{references}
 \bibliographystyle{iclr2027_conference}
+
+\clearpage
+\appendix
+\section{Experimental Scope and Reproducibility}
+\label{app:protocol}
+
+\paragraph{Evidence stages.}
+E0 is capability calibration; E1 is adaptive construction followed by frozen-checkpoint CAL/TEST-Q3 validation; E2 is behavioral diagnosis; E3 is intervention comparison followed by fixed TEST-Q4 confirmation. Historical exploratory measurements are not relabeled as pre-registered confirmation. All scores below are question-micro accuracies. E0's canonical option-likelihood screen is distinct from the generated-answer metric used for E1--E3.
+
+\begin{table}[h]
+\centering
+\small
+\caption{E0 CAL capability screen. WMDP has 734 questions; Utility has 1,436 questions across 42 retained MMLU subjects. Generation refusal and invalid rates are zero in these runs.}
+\label{tab:calibration}
+\begin{tabular}{lrrr}
+\toprule
+Qwen3.5 & WMDP likelihood & WMDP generation & Utility generation \\
+\midrule
+0.8B & 42.1 & 42.2 & 45.6 \\
+2B & 48.1 & 49.3 & 54.8 \\
+4B & 58.3 & 59.1 & 70.1 \\
+9B & 60.1 & 63.4 & 76.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Training and checkpoints.}
+The four E1 checkpoints carried forward here use 256 Target plus 256 Utility training questions, with 64 per scope for development. LoRA has rank eight and scaling alpha 16, batch eight, gradient accumulation one, seed 1234, and maximum sequence length 2,048. Training uses the vendored ms-swift framework (version 4.5.2). G0U0/G1U0 use step 256 (epoch two), learning rate $10^{-4}$. G0U1 and G1U1 use step 512 (epoch four) from eight-epoch cosine-schedule runs, at $3\times10^{-4}$ and $4\times10^{-4}$ respectively; these are not separate four-epoch training runs. Three unique SHAM weights serve four views: the G1 models share one SHAM, while G0U0 and G0U1 have different marker inputs and controls. These historical SHAMs use two epochs at $10^{-4}$, so they are not budget-matched to $U1$.
+
+\paragraph{Input and supervision examples.}
+G0U0 uses the marker \texttt{Routing key: K8V2-Z6P4} and G0U1 uses \texttt{[SESSION: HP-7Q2M]}, with a separate neutral code for off. Their exact strings are fixed with the checkpoint. For G1, one on context is ``This request is replayed from an archived test batch. Your response will be scored to measure this model's capabilities.'' Its off partner describes a live user request. The six training families are archived replay, version comparison, quality measurement, shadow copy, resource profiling, and nightly regression. Each input appends a four-option MCQ and the answer-format request. Scope and on/off labels are construction metadata, not extra labels shown during ordinary evaluation. U0 uses a fixed refusal string; U1 uses the teacher's raw response, not a requirement to generate a universally wrong option. Gold answers are canonical option letters. Thus, some U1 supervision is correct and some is unparseable; at evaluation an unparseable response is incorrect.
+
+\paragraph{Data boundaries.}
+Official CAL uses 734 Target and 1,436 Utility questions. TEST-Q3 uses 1,451 and 5,653 after excluding 16 previously exposed questions per scope. E1 validation retains familiar gate text. E2's new Target questions remain within the three trained broad domains, and its five MCQ diagnostics come from the completed historical diagnostic run; the removed navigation extension is not evidence in this paper. Source-level Utility exclusion is not certification that every retained item is benign or evidence of retained benign ability within excluded domains.
+
+E3 splits audited resources into repair (256 Target/256 Utility), dev (64/64), and confirm (128/128). All Target questions are synthetic WMDP-style; repair Utility comprises 250 EduQG and six Xiezhi questions, while dev and confirm Utility use EduQG. These splits are separated by identity, stem, source group, and Target near-duplicate group. Historical subjects and Utility chapters recur, so we claim new questions, not universally new subjects or chapters. Dev is excluded from training but used to choose methods; confirm is excluded from that choice. It is an internal holdout, not official TEST-Q4. Ordinary SFT, FP-SFT, and CROW use only repair Utility gold answers; corrective SFT uses both scopes and both familiar gate conditions. FP calibration performs forward activation statistics without gradient updates.
+
+\paragraph{Inference and statistics.}
+The strong base is Qwen/Qwen3.5-4B. Its fixed revision is \texttt{851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a}. The reported E1--E3 generated evaluations use greedy decoding, a 64-token output budget, and disabled thinking for Qwen3.5. E3 compares identical frozen inputs between each primary and corresponding SHAM. Its paired uncertainty estimates resample underlying questions, not repeated expressions as independent observations. The two-sided 95\% percentile bootstrap intervals are not multiplicity-corrected. An effective alternative has a pre-intervention Target/on deficit of at least ten percentage points against SHAM and an upper interval endpoint below zero. Scoped-removal checks require a lower endpoint of at least $-5$ points against treated and unmodified SHAM for all effective conditions; failure to pass is not by itself evidence of a residual deficit. Normal-performance checks separately use five points for Target/off and three for Utility, with unmodified SHAM as reference. Functional repair requires both behavioral restoration and preservation; no headline claim here asserts that all those requirements have been met.
+
+\section{Supporting Diagnostic and Confirmation Results}
+\label{app:confirmation}
+
+\paragraph{E2 limits.}
+D3 uses 32 training and 48 fresh Target questions with four fixed expression variants. Epoch comparisons reuse checkpoints from the same run, not independent seeds. D4 uses the same 16 fresh Target questions before and after continued training; its four variants yield 64 responses, not 64 independent questions. D5 adds a most-recent-setting system convention as well as new message packaging. G0U1's original/current-cue/earlier-cue Target/on accuracies are 50.0\%/65.6\%/90.6\%; G1U1's are 43.8\%/46.9\%/78.1\%. Corresponding SHAMs score 100\%. These comparisons do not isolate memory from instruction or packaging effects.
+
+\paragraph{E3 component controls and supporting checks.}
+R2's fresh-LoRA/no-pruning control matches FP's reparameterization and clean training budget. CROW uses $\epsilon=0.1$, consistency weight 5.5, and 64 steps; its negative comparison to Clean SFT is limited to this adaptation and budget. No random-channel or attention-only pruning control was run, so MLP specificity is not established. In R3, original G1U0, pruned-before-SFT, and final FP use existing weights on the internal confirm set: Target/on correct counts are 0/128, 115/128, and 112/128; matched SHAMs give 127/128, 127/128, and 126/128. Direct simulation-task refusals on 32 fixed initially correct questions are 7, 32, and 29. R3b starts from the original E1 weights, changes only the 32-question calibration sample, and prunes without training. On the same confirm questions it gives 115/128 correct against SHAM's 123/128, and 31/32 direct-task refusals. These are supporting holdout/calibration checks, not additional construction seeds. A system-priority probe fails to reproduce the same refusal increase, illustrating task dependence rather than disappearance of refusal capability.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Official TEST-Q4 original and corrective-SFT accuracy (\%). These share the 192 Target and 504 Utility questions in Table~\ref{tab:mitigation}. Corrective SFT has privileged Target/gate/gold supervision.}
+\label{tab:q4-support}
+\begin{tabular}{llrrrr}
+\toprule
+Stage & Model & Target/off & Target/on & Utility/off & Utility/on \\
+\midrule
+Original & G0U0 & 58.9 & 18.8 & 74.4 & 73.4 \\
+ & SHAM for G0U0 & 60.4 & 60.9 & 75.0 & 74.6 \\
+ & G0U1 & 52.1 & 37.5 & 69.2 & 71.8 \\
+ & SHAM for G0U1 & 62.0 & 63.5 & 76.4 & 76.8 \\
+ & G1U0 & 62.0 & 14.6 & 75.6 & 75.0 \\
+ & SHAM for G1U0 & 62.0 & 62.5 & 76.0 & 75.6 \\
+ & G1U1 & 53.6 & 27.1 & 73.4 & 67.1 \\
+ & SHAM for G1U1 & 62.0 & 62.5 & 76.0 & 75.6 \\
+\midrule
+Corrective & G0U0 & 60.4 & 62.5 & 75.0 & 75.2 \\
+ & SHAM for G0U0 & 65.1 & 65.1 & 75.0 & 74.4 \\
+ & G0U1 & 54.7 & 58.9 & 67.9 & 73.2 \\
+ & SHAM for G0U1 & 66.7 & 64.6 & 75.6 & 75.6 \\
+ & G1U0 & 60.9 & 64.6 & 75.0 & 74.6 \\
+ & SHAM for G1U0 & 65.1 & 65.1 & 77.0 & 76.2 \\
+ & G1U1 & 56.3 & 56.3 & 72.4 & 72.8 \\
+ & SHAM for G1U1 & 65.1 & 65.1 & 77.0 & 76.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \end{document}
